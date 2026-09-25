@@ -24,22 +24,37 @@ async fn usage(
   headers: HeaderMap,
   Json(batch): Json<UsageBatch>,
 ) -> (StatusCode, Json<UsageReport>) {
-  received.authorizations.lock().unwrap().push(
-    headers["authorization"].to_str().unwrap().to_string(),
-  );
+  received
+    .authorizations
+    .lock()
+    .unwrap()
+    .push(headers["authorization"].to_str().unwrap().to_string());
   let accepted = batch.records.len() as u64;
   received.batches.lock().unwrap().push(batch);
   let status = {
     let mut statuses = received.statuses.lock().unwrap();
-    if statuses.is_empty() { StatusCode::OK } else { statuses.remove(0) }
+    if statuses.is_empty() {
+      StatusCode::OK
+    } else {
+      statuses.remove(0)
+    }
   };
-  (status, Json(UsageReport { accepted, duplicates: 0, rejected: vec![] }))
+  (
+    status,
+    Json(UsageReport {
+      accepted,
+      duplicates: 0,
+      rejected: vec![],
+    }),
+  )
 }
 
 async fn serve(statuses: Vec<StatusCode>) -> (String, Received) {
   let received = Received::default();
   *received.statuses.lock().unwrap() = statuses;
-  let app = Router::new().route("/usage", post(usage)).with_state(received.clone());
+  let app = Router::new()
+    .route("/usage", post(usage))
+    .with_state(received.clone());
   let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
   let url = format!("http://{}/usage", listener.local_addr().unwrap());
   tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
@@ -77,7 +92,10 @@ async fn wait_for_batches(received: &Received, count: usize) {
     }
     tokio::time::sleep(Duration::from_millis(10)).await;
   }
-  panic!("expected {count} batches, got {}", received.batches.lock().unwrap().len());
+  panic!(
+    "expected {count} batches, got {}",
+    received.batches.lock().unwrap().len()
+  );
 }
 
 #[tokio::test(flavor = "multi_thread")]
@@ -92,7 +110,10 @@ async fn sends_a_batch_when_it_is_full_signed_with_the_metering_scope() {
   wait_for_batches(&received, 1).await;
   let batch = received.batches.lock().unwrap()[0].clone();
   assert_eq!(batch.service, "tts");
-  assert_eq!(batch.records.iter().map(|r| r.quantity).collect::<Vec<_>>(), vec![1, 2, 3]);
+  assert_eq!(
+    batch.records.iter().map(|r| r.quantity).collect::<Vec<_>>(),
+    vec![1, 2, 3]
+  );
   assert_eq!(batch.records[0].project_id, Uuid::from_u128(1));
   assert_eq!(batch.records[0].principal_id, Some(Uuid::from_u128(2)));
   assert!(received.authorizations.lock().unwrap()[0].contains("/metering/vgr4_request"));
@@ -118,7 +139,10 @@ async fn server_errors_are_retried_with_the_same_record_ids() {
   reporter.shutdown().await;
   let batches = received.batches.lock().unwrap();
   assert_eq!(batches.len(), 2);
-  assert_eq!(batches[0].records[0].record_id, batches[1].records[0].record_id);
+  assert_eq!(
+    batches[0].records[0].record_id,
+    batches[1].records[0].record_id
+  );
 }
 
 #[tokio::test(flavor = "multi_thread")]
@@ -143,7 +167,10 @@ async fn a_full_buffer_drops_records_and_shutdown_sends_the_rest() {
   }
   reporter.shutdown().await;
   let batches = received.batches.lock().unwrap();
-  let quantities: Vec<i64> = batches.iter().flat_map(|b| b.records.iter().map(|r| r.quantity)).collect();
+  let quantities: Vec<i64> = batches
+    .iter()
+    .flat_map(|b| b.records.iter().map(|r| r.quantity))
+    .collect();
   assert_eq!(quantities, vec![1, 2]);
 }
 
@@ -155,7 +182,9 @@ async fn transient_failures_are_retried_until_the_batch_is_delivered() {
   reporter.shutdown().await;
   let batches = received.batches.lock().unwrap();
   assert_eq!(batches.len(), 9);
-  assert!(batches.iter().all(|b| b.records[0].record_id == batches[0].records[0].record_id));
+  assert!(batches
+    .iter()
+    .all(|b| b.records[0].record_id == batches[0].records[0].record_id));
 }
 
 #[tokio::test(flavor = "multi_thread")]

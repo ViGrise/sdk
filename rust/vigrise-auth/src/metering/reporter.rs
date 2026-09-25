@@ -35,7 +35,11 @@ pub struct UsageReporterConfig {
 }
 
 impl UsageReporterConfig {
-  pub fn new(endpoint: impl Into<String>, credentials: Credentials, service: impl Into<String>) -> Self {
+  pub fn new(
+    endpoint: impl Into<String>,
+    credentials: Credentials,
+    service: impl Into<String>,
+  ) -> Self {
     Self {
       endpoint: endpoint.into(),
       credentials,
@@ -108,7 +112,11 @@ impl UsageReporter {
   }
 }
 
-async fn run(config: UsageReporterConfig, mut receiver: mpsc::Receiver<UsageRecord>, shutdown: Arc<Notify>) {
+async fn run(
+  config: UsageReporterConfig,
+  mut receiver: mpsc::Receiver<UsageRecord>,
+  shutdown: Arc<Notify>,
+) {
   let http = reqwest::Client::builder()
     .timeout(Duration::from_secs(10))
     .build()
@@ -169,8 +177,8 @@ async fn send(http: &reqwest::Client, config: &UsageReporterConfig, records: Vec
         return;
       }
       Err(Failure::Transient(reason)) => {
-        let expired = oldest
-          .is_some_and(|t| Utc::now() - t > chrono::Duration::hours(MAX_RETRY_AGE_HOURS));
+        let expired =
+          oldest.is_some_and(|t| Utc::now() - t > chrono::Duration::hours(MAX_RETRY_AGE_HOURS));
         if expired {
           tracing::error!(%reason, count, "usage batch dropped: its records are too old to report");
           return;
@@ -188,14 +196,23 @@ enum Failure {
   Permanent(String),
 }
 
-async fn attempt_send(http: &reqwest::Client, config: &UsageReporterConfig, batch: &UsageBatch) -> Result<UsageReport, Failure> {
+async fn attempt_send(
+  http: &reqwest::Client,
+  config: &UsageReporterConfig,
+  batch: &UsageBatch,
+) -> Result<UsageReport, Failure> {
   let mut request = http
     .post(&config.endpoint)
     .json(batch)
     .build()
     .map_err(|e| Failure::Permanent(e.to_string()))?;
-  sign_reqwest(&mut request, &config.credentials, SIGNING_SERVICE, Utc::now())
-    .map_err(|e| Failure::Permanent(e.to_string()))?;
+  sign_reqwest(
+    &mut request,
+    &config.credentials,
+    SIGNING_SERVICE,
+    Utc::now(),
+  )
+  .map_err(|e| Failure::Permanent(e.to_string()))?;
   let response = http
     .execute(request)
     .await
@@ -206,7 +223,9 @@ async fn attempt_send(http: &reqwest::Client, config: &UsageReporterConfig, batc
   }
   if !status.is_success() {
     let body = response.text().await.unwrap_or_default();
-    return Err(Failure::Permanent(format!("platform returned {status}: {body}")));
+    return Err(Failure::Permanent(format!(
+      "platform returned {status}: {body}"
+    )));
   }
   response
     .json::<UsageReport>()
