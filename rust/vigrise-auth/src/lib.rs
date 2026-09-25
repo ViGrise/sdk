@@ -7,8 +7,10 @@ pub mod authorization;
 pub mod canonical;
 pub mod credentials;
 pub mod error;
+pub mod signer;
 pub mod signing;
 
 pub use authorization::AuthorizationHeader;
 pub use credentials::{Credentials, CredentialsError};
 pub use error::AuthError;
+pub use signer::{sign_request, SignedRequestHeaders};
