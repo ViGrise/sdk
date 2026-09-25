@@ -48,14 +48,17 @@ impl Credentials {
 
   /// Resolution order: `VIGRISE_ACCESS_KEY_ID` + `VIGRISE_SECRET_ACCESS_KEY`,
   /// then the `VIGRISE_PROFILE` profile (default `default`) of
-  /// `VIGRISE_SHARED_CREDENTIALS_FILE` (default `~/.vigrise/credentials`).
+  /// `VIGRISE_SHARED_CREDENTIALS_FILE` (default `.vigrise/credentials` under
+  /// `HOME`, or `USERPROFILE` on Windows).
   pub fn resolve_with(lookup: impl Fn(&str) -> Option<String>) -> Result<Self, CredentialsError> {
     if let (Some(id), Some(secret)) = (lookup(ENV_ACCESS_KEY_ID), lookup(ENV_SECRET_ACCESS_KEY)) {
       return Ok(Self::new(id, secret));
     }
-    let path = lookup(ENV_CREDENTIALS_FILE)
-      .map(PathBuf::from)
-      .or_else(|| lookup("HOME").map(|home| Path::new(&home).join(".vigrise").join("credentials")));
+    let path = lookup(ENV_CREDENTIALS_FILE).map(PathBuf::from).or_else(|| {
+      lookup("HOME")
+        .or_else(|| lookup("USERPROFILE"))
+        .map(|home| Path::new(&home).join(".vigrise").join("credentials"))
+    });
     let profile = lookup(ENV_PROFILE).unwrap_or_else(|| "default".to_string());
     let Some(path) = path else {
       return Err(CredentialsError::NotFound("~/.vigrise/credentials".into()));
@@ -78,6 +81,8 @@ impl Credentials {
 pub fn parse_profile(contents: &str, profile: &str) -> Option<Credentials> {
   let mut in_profile = false;
   let (mut id, mut secret) = (None, None);
+  // Editors on Windows commonly prefix UTF-8 files with a byte order mark.
+  let contents = contents.strip_prefix('\u{feff}').unwrap_or(contents);
   for line in contents.lines() {
     let line = line.trim();
     if line.is_empty() || line.starts_with('#') || line.starts_with(';') {
@@ -122,6 +127,27 @@ mod tests {
   fn parses_crlf_line_endings() {
     let crlf = FILE.replace('\n', "\r\n");
     assert_eq!(parse_profile(&crlf, "ci").unwrap().access_key_id, "VGAKCI");
+  }
+
+  #[test]
+  fn parses_file_with_utf8_bom() {
+    let bom =
+      "\u{feff}[default]\r\nvigrise_access_key_id = VGAKBOM\r\nvigrise_secret_access_key = s\r\n";
+    assert_eq!(
+      parse_profile(bom, "default").unwrap().access_key_id,
+      "VGAKBOM"
+    );
+  }
+
+  #[test]
+  fn falls_back_to_userprofile_without_home() {
+    let dir = std::env::temp_dir().join(format!("vigrise-userprofile-{}", std::process::id()));
+    std::fs::create_dir_all(dir.join(".vigrise")).unwrap();
+    std::fs::write(dir.join(".vigrise").join("credentials"), FILE).unwrap();
+    let env: HashMap<&str, String> = [("USERPROFILE", dir.display().to_string())].into();
+    let creds = Credentials::resolve_with(|k| env.get(k).cloned());
+    std::fs::remove_dir_all(&dir).unwrap();
+    assert_eq!(creds.unwrap().access_key_id, "VGAKDEFAULT");
   }
 
   #[test]

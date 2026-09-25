@@ -64,8 +64,14 @@ pub fn parse_string_to_sign(value: &str) -> Result<ParsedStringToSign, AuthError
   let [algorithm, timestamp, scope, hash] = lines.as_slice() else {
     return Err(invalid());
   };
+  let shape_ok = timestamp.len() == 16
+    && timestamp.bytes().enumerate().all(|(i, b)| match i {
+      8 => b == b'T',
+      15 => b == b'Z',
+      _ => b.is_ascii_digit(),
+    });
   if *algorithm != ALGORITHM
-    || timestamp.len() != 16
+    || !shape_ok
     || chrono::NaiveDateTime::parse_from_str(timestamp, TIMESTAMP_FORMAT).is_err()
   {
     return Err(invalid());
@@ -74,7 +80,7 @@ pub fn parse_string_to_sign(value: &str) -> Result<ParsedStringToSign, AuthError
   let [date, service, terminator] = scope_parts.as_slice() else {
     return Err(invalid());
   };
-  if *terminator != TERMINATOR || !timestamp.starts_with(date) || service.is_empty() {
+  if *terminator != TERMINATOR || *date != &timestamp[..8] || service.is_empty() {
     return Err(invalid());
   }
   if hash.len() != 64
@@ -111,6 +117,29 @@ mod tests {
     let parsed = parse_string_to_sign(&sts).unwrap();
     assert_eq!(parsed.date, "20261001");
     assert_eq!(parsed.service, "tts");
+  }
+
+  #[test]
+  fn parse_rejects_partial_or_empty_scope_date() {
+    for date in ["", "2026", "2026100"] {
+      let sts = format!(
+        "{ALGORITHM}\n20261001T120000Z\n{date}/tts/{TERMINATOR}\n{}",
+        "a".repeat(64)
+      );
+      assert!(
+        parse_string_to_sign(&sts).is_err(),
+        "accepted scope date {date:?}"
+      );
+    }
+  }
+
+  #[test]
+  fn parse_rejects_non_digit_timestamp() {
+    let sts = format!(
+      "{ALGORITHM}\n202610 1T120000Z\n202610 1/tts/{TERMINATOR}\n{}",
+      "a".repeat(64)
+    );
+    assert!(parse_string_to_sign(&sts).is_err());
   }
 
   #[test]

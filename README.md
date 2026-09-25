@@ -31,7 +31,8 @@ Resolved in this order:
 1. Explicit `Credentials::new(access_key_id, secret)`.
 2. `VIGRISE_ACCESS_KEY_ID` and `VIGRISE_SECRET_ACCESS_KEY`.
 3. Profile `VIGRISE_PROFILE` (default `default`) in
-   `VIGRISE_SHARED_CREDENTIALS_FILE` (default `~/.vigrise/credentials`):
+   `VIGRISE_SHARED_CREDENTIALS_FILE` (default `~/.vigrise/credentials`, or
+   `%USERPROFILE%\.vigrise\credentials` on Windows):
 
 ```ini
 [default]

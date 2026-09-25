@@ -1,0 +1,29 @@
+{
+  "credentials": {
+    "access_key_id": "VGAKEXAMPLE7TESTKEY",
+    "secret_access_key": "wJalrXUtnFEMI0K7MDENGbPxRfiCYEXAMPLEKEY01"
+  },
+  "service": "tts",
+  "time": "20261001T120000Z",
+  "description": "Non-default port is part of the signed host",
+  "request": {
+    "method": "GET",
+    "path": "/v1/models",
+    "query": "",
+    "headers": [
+      [
+        "Host",
+        "localhost:8080"
+      ]
+    ],
+    "body": ""
+  },
+  "expected": {
+    "payload_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "signed_headers": "host;x-vgr-content-sha256;x-vgr-date",
+    "canonical_request": "GET\n/v1/models\n\nhost:localhost:8080\nx-vgr-content-sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\nx-vgr-date:20261001T120000Z\n\nhost;x-vgr-content-sha256;x-vgr-date\ne3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "string_to_sign": "VGR4-HMAC-SHA256\n20261001T120000Z\n20261001/tts/vgr4_request\n59aed7bc02b27ae7835fd80101ba4ec6ee78debedd84ca09fc3bb6a0040cd56a",
+    "signature": "bedc9d4c6a95f45a3a022d1286f5ed111651920b8c269b56b8a1487f4ebb2eb1",
+    "authorization": "VGR4-HMAC-SHA256 Credential=VGAKEXAMPLE7TESTKEY/20261001/tts/vgr4_request, SignedHeaders=host;x-vgr-content-sha256;x-vgr-date, Signature=bedc9d4c6a95f45a3a022d1286f5ed111651920b8c269b56b8a1487f4ebb2eb1"
+  }
+}

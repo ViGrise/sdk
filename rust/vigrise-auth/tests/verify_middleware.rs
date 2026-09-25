@@ -286,3 +286,70 @@ async fn allow_without_principal_fails_closed() {
   assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE);
   assert_eq!(json["error"]["code"], "ServiceUnavailable");
 }
+
+/// HTTP/2 carries the host in `:authority`, which servers expose as the URI
+/// authority with no `Host` header.
+#[tokio::test]
+async fn http2_request_without_host_header_verifies_from_authority() {
+  let mut request = signed("/v1/audio/speech", BODY, SECRET);
+  request.headers_mut().remove("host");
+  *request.uri_mut() = "http://tts.test/v1/audio/speech".parse().unwrap();
+  let (status, json, _) = send(app(true, false), request).await;
+  assert_eq!(status, StatusCode::OK, "{json}");
+}
+
+/// Allows everything and records the context it was asked about.
+struct CaptureContext {
+  seen: std::sync::Mutex<Option<Map<String, Value>>>,
+}
+
+impl Authorizer for CaptureContext {
+  fn authorize<'a>(
+    &'a self,
+    request: &'a AuthorizeRequest,
+  ) -> vigrise_auth::verify::AuthorizeFuture<'a> {
+    *self.seen.lock().unwrap() = Some(request.context.clone());
+    Box::pin(async move {
+      Ok(AuthorizeResponse {
+        decision: Decision::Allow,
+        error: None,
+        principal: Some(Principal {
+          vrn: "vrn:vigrise:iam:p:user/u".into(),
+          id: Uuid::nil(),
+          principal_type: "User".into(),
+          name: "u".into(),
+          project_id: Uuid::nil(),
+          organization_id: Uuid::nil(),
+        }),
+        project_plan: None,
+      })
+    })
+  }
+}
+
+/// Appending proxies (nginx `$proxy_add_x_forwarded_for`, cloud load
+/// balancers) put the client-supplied value first and the address they saw last.
+#[tokio::test]
+async fn forwarded_source_ip_is_the_entry_added_by_the_trusted_proxy() {
+  let capture = Arc::new(CaptureContext {
+    seen: std::sync::Mutex::new(None),
+  });
+  let verifier = Arc::new(Verifier {
+    service: "tts".into(),
+    authorizer: capture.clone(),
+    resolver: Arc::new(RouteResolver),
+    max_body_bytes: 1024,
+    trust_forwarded_headers: true,
+  });
+  let app = Router::new()
+    .route("/v1/audio/speech", post(|| async { "ok" }))
+    .layer(axum::middleware::from_fn_with_state(verifier, verify));
+  let mut request = signed("/v1/audio/speech", BODY, SECRET);
+  request
+    .headers_mut()
+    .insert("x-forwarded-for", "6.6.6.6, 203.0.113.9".parse().unwrap());
+  let (status, _, _) = send(app, request).await;
+  assert_eq!(status, StatusCode::OK);
+  let seen = capture.seen.lock().unwrap().clone().unwrap();
+  assert_eq!(seen["vgr:SourceIp"], "203.0.113.9");
+}

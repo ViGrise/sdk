@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::net::SocketAddr;
 use std::sync::Arc;
 
@@ -6,8 +7,8 @@ use axum::extract::{ConnectInfo, OriginalUri, Request, State};
 use axum::middleware::Next;
 use axum::response::{IntoResponse, Response};
 use bytes::Bytes;
-use http::header;
 use http::request::Parts;
+use http::{header, HeaderMap, HeaderValue, Uri};
 use http_body_util::{BodyExt, LengthLimitError, Limited};
 use serde_json::{json, Value};
 
@@ -27,7 +28,9 @@ pub struct Verifier {
   pub resolver: Arc<dyn ActionResolver>,
   pub max_body_bytes: usize,
   /// Take client IP and scheme from `x-forwarded-for` / `x-forwarded-proto`.
-  /// Enable only behind a proxy that overwrites these headers.
+  /// The source IP is the rightmost `x-forwarded-for` entry, the one the
+  /// directly connected proxy appended. Enable only when exactly one trusted
+  /// proxy sits in front of the service and clients cannot reach it directly.
   pub trust_forwarded_headers: bool,
 }
 
@@ -120,11 +123,12 @@ async fn authorize(
     .get::<OriginalUri>()
     .map(|original| original.0.clone())
     .unwrap_or_else(|| parts.uri.clone());
+  let headers = headers_with_host(&parts.headers, &uri)?;
   let canonical = canonical_request(
     parts.method.as_str(),
     uri.path(),
     uri.query().unwrap_or(""),
-    &parts.headers,
+    &headers,
     &auth.signed_headers,
     &payload_hash,
   )?;
@@ -170,13 +174,32 @@ async fn authorize(
   }
 }
 
+/// HTTP/2 carries the host in the `:authority` pseudo-header, which servers
+/// expose as the URI authority without a `Host` header.
+fn headers_with_host<'a>(
+  headers: &'a HeaderMap,
+  uri: &Uri,
+) -> Result<Cow<'a, HeaderMap>, AuthError> {
+  if headers.contains_key(header::HOST) {
+    return Ok(Cow::Borrowed(headers));
+  }
+  let Some(authority) = uri.authority() else {
+    return Ok(Cow::Borrowed(headers));
+  };
+  let host = HeaderValue::from_str(authority.as_str())
+    .map_err(|_| AuthError::IncompleteSignature("Request authority is not a valid host".into()))?;
+  let mut owned = headers.clone();
+  owned.insert(header::HOST, host);
+  Ok(Cow::Owned(owned))
+}
+
 fn global_context(verifier: &Verifier, parts: &Parts) -> Vec<(&'static str, Value)> {
   let mut context = Vec::new();
   let forwarded_ip = verifier
     .trust_forwarded_headers
     .then(|| header_str(parts, "x-forwarded-for"))
     .flatten()
-    .and_then(|v| v.split(',').next())
+    .and_then(|v| v.rsplit(',').next())
     .map(|ip| ip.trim().to_string());
   let source_ip = forwarded_ip.or_else(|| {
     parts
