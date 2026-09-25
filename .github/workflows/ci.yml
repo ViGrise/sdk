@@ -16,7 +16,7 @@ jobs:
       - name: Vectors are regenerated from inputs
         run: |
           python3 test-vectors/generate.py
-          git diff --exit-code test-vectors/vgr4
+          test -z "$(git status --porcelain test-vectors)"
 
   rust:
     runs-on: ubuntu-latest
@@ -33,3 +33,34 @@ jobs:
       - run: cargo clippy --features reqwest -- -D warnings
       - run: cargo clippy --all-targets --features verify -- -D warnings
       - run: cargo test --features verify
+
+  typescript:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: typescript
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+
+  python:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: python
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: pip install -e ".[test]"
+      - run: python -m pytest -q

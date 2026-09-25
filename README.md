@@ -7,6 +7,8 @@ services that accept VGR4 requests.
 | --- | --- |
 | `test-vectors/` | Reference implementation (`generate.py`) and shared VGR4 vectors |
 | `rust/vigrise-auth` | Rust signer (`reqwest` feature) and service verifier (`verify` feature) |
+| `typescript` | `@vigrise/auth`: `signRequest`, `signedFetch`, `resolveCredentials` (Node 18+) |
+| `python` | `vigrise-auth`: `sign_request`, `VigriseAuth` for requests, `VigriseHttpxAuth` for httpx (Python 3.9+) |
 
 ## VGR4 in one paragraph
 
@@ -23,6 +25,25 @@ specification lives in the platform repo:
 writes `test-vectors/vgr4/*.json` with expected canonical request, string to
 sign, signature and Authorization header. Every SDK must pass every vector. CI
 fails when the committed vectors differ from a fresh generation.
+
+## Usage
+
+```ts
+import { signedFetch } from "@vigrise/auth";
+const res = await signedFetch("https://tts.vigrise.com/v1/voices", {}, { service: "tts" });
+```
+
+```python
+import requests
+from vigrise_auth.requests_auth import VigriseAuth
+requests.get("https://tts.vigrise.com/v1/voices", auth=VigriseAuth("tts"))
+```
+
+```rust
+let mut request = client.get("https://tts.vigrise.com/v1/voices").build()?;
+vigrise_auth::reqwest_signer::sign_reqwest(&mut request, &Credentials::resolve()?, "tts", chrono::Utc::now())?;
+client.execute(request).await?;
+```
 
 ## Credentials
 
