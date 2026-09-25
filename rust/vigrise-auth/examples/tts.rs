@@ -1,4 +1,4 @@
-//! Calls the Vigrise TTS gateway with a VGR4 signature.
+//! Calls the ViGrise TTS gateway with a VGR4 signature.
 //!
 //! `cargo run --example tts --features reqwest -- <gateway url> [voice]`
 //! lists voices, or synthesizes "Xin chào" with `voice`. Credentials come from

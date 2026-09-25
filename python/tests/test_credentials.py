@@ -20,7 +20,7 @@ def test_resolution_order(tmp_path):
     (tmp_path / ".vigrise").mkdir()
     (tmp_path / ".vigrise" / "credentials").write_text(FILE)
     assert resolve_credentials(env={"USERPROFILE": str(tmp_path), "VIGRISE_PROFILE": "ci"}).access_key_id == "VGAKCI"
-    with pytest.raises(LookupError, match="No Vigrise credentials"):
+    with pytest.raises(LookupError, match="No ViGrise credentials"):
         resolve_credentials(env={"HOME": str(tmp_path / "none")})
 
 

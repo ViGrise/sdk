@@ -23,6 +23,6 @@ describe("credentials", () => {
     mkdirSync(join(home, ".vigrise"));
     writeFileSync(join(home, ".vigrise", "credentials"), FILE);
     expect(resolveCredentials({ env: { USERPROFILE: home, VIGRISE_PROFILE: "ci" } }).accessKeyId).toBe("VGAKCI");
-    expect(() => resolveCredentials({ env: { HOME: join(home, "none") } })).toThrow(/No Vigrise credentials/);
+    expect(() => resolveCredentials({ env: { HOME: join(home, "none") } })).toThrow(/No ViGrise credentials/);
   });
 });

@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 rust-version = "1.85"
 license = "Apache-2.0"
-description = "VGR4 request signing and verification for Vigrise services"
+description = "VGR4 request signing and verification for ViGrise services"
 
 [features]
 default = []

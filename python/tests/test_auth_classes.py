@@ -7,8 +7,8 @@ import pytest
 import requests
 
 from vigrise_auth import Credentials
-from vigrise_auth.httpx_auth import VigriseHttpxAuth
-from vigrise_auth.requests_auth import VigriseAuth
+from vigrise_auth.httpx_auth import ViGriseHttpxAuth
+from vigrise_auth.requests_auth import ViGriseAuth
 
 AUTH = re.compile(
     r"^VGR4-HMAC-SHA256 Credential=VGAKTEST/\d{8}/tts/vgr4_request, "
@@ -43,7 +43,7 @@ CREDS = Credentials("VGAKTEST", "secret")
 
 def test_requests_auth_signs(server):
     url, seen = server
-    response = requests.post(f"{url}/v1/audio/speech", json={"input": "xin chào"}, auth=VigriseAuth("tts", CREDS))
+    response = requests.post(f"{url}/v1/audio/speech", json={"input": "xin chào"}, auth=ViGriseAuth("tts", CREDS))
     assert response.text == "ok"
     headers, body = seen[0]
     assert AUTH.match(headers.get("Authorization")), headers.get("Authorization")
@@ -52,7 +52,7 @@ def test_requests_auth_signs(server):
 
 def test_httpx_auth_signs(server):
     url, seen = server
-    response = httpx.post(f"{url}/v1/audio/speech", json={"input": "a"}, auth=VigriseHttpxAuth("tts", CREDS))
+    response = httpx.post(f"{url}/v1/audio/speech", json={"input": "a"}, auth=ViGriseHttpxAuth("tts", CREDS))
     assert response.text == "ok"
     assert AUTH.match(seen[0][0].get("Authorization"))
 
@@ -62,13 +62,13 @@ def test_streaming_bodies_are_rejected():
         yield b"x"
 
     with pytest.raises(ValueError, match="Streaming"):
-        requests.Request("POST", "http://127.0.0.1:9/x", data=chunks(), auth=VigriseAuth("tts", CREDS)).prepare()
+        requests.Request("POST", "http://127.0.0.1:9/x", data=chunks(), auth=ViGriseAuth("tts", CREDS)).prepare()
 
 
 def test_httpx_signs_repeated_signed_headers_as_sent(server):
     url, seen = server
     headers = httpx.Headers([("x-vgr-meta", "a"), ("x-vgr-meta", "b")])
-    response = httpx.post(f"{url}/v1/audio/speech", content=b"x", headers=headers, auth=VigriseHttpxAuth("tts", CREDS))
+    response = httpx.post(f"{url}/v1/audio/speech", content=b"x", headers=headers, auth=ViGriseHttpxAuth("tts", CREDS))
     assert response.text == "ok"
     sent_headers, body = seen[0]
     from vigrise_auth.canonical import canonical_request, sha256_hex

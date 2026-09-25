@@ -1,6 +1,6 @@
-# Vigrise SDK
+# ViGrise SDK
 
-Request signing (VGR4) for calling Vigrise services, and verification for
+Request signing (VGR4) for calling ViGrise services, and verification for
 services that accept VGR4 requests.
 
 | Path | Contents |
@@ -8,7 +8,7 @@ services that accept VGR4 requests.
 | `test-vectors/` | Reference implementation (`generate.py`) and shared VGR4 vectors |
 | `rust/vigrise-auth` | Rust signer (`reqwest` feature) and service verifier (`verify` feature) |
 | `typescript` | `@vigrise/auth`: `signRequest`, `signedFetch`, `resolveCredentials` (Node 18+) |
-| `python` | `vigrise-auth`: `sign_request`, `VigriseAuth` for requests, `VigriseHttpxAuth` for httpx (Python 3.9+) |
+| `python` | `vigrise-auth`: `sign_request`, `ViGriseAuth` for requests, `ViGriseHttpxAuth` for httpx (Python 3.9+) |
 
 ## VGR4 in one paragraph
 
@@ -35,8 +35,8 @@ const res = await signedFetch("https://tts.vigrise.com/v1/voices", {}, { service
 
 ```python
 import requests
-from vigrise_auth.requests_auth import VigriseAuth
-requests.get("https://tts.vigrise.com/v1/voices", auth=VigriseAuth("tts"))
+from vigrise_auth.requests_auth import ViGriseAuth
+requests.get("https://tts.vigrise.com/v1/voices", auth=ViGriseAuth("tts"))
 ```
 
 ```rust

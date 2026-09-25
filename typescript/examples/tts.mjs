@@ -1,4 +1,4 @@
-// Calls the Vigrise TTS gateway with a VGR4 signature.
+// Calls the ViGrise TTS gateway with a VGR4 signature.
 // node examples/tts.mjs <gateway url> [voice]   (run `npm run build` first)
 import { signedFetch } from "../dist/index.js";
 

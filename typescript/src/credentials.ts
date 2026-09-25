@@ -59,7 +59,7 @@ export function resolveCredentials(options: ResolveOptions = {}): Credentials {
   }
   const found = contents === undefined ? undefined : parseProfile(contents, profile);
   if (!found) {
-    throw new Error(`No Vigrise credentials found in the environment or ${path ?? "~/.vigrise/credentials"} [${profile}]`);
+    throw new Error(`No ViGrise credentials found in the environment or ${path ?? "~/.vigrise/credentials"} [${profile}]`);
   }
   return found;
 }

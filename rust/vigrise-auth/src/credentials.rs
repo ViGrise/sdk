@@ -23,7 +23,7 @@ impl fmt::Debug for Credentials {
 
 #[derive(Debug, thiserror::Error)]
 pub enum CredentialsError {
-  #[error("no Vigrise credentials found in the environment or {0}")]
+  #[error("no ViGrise credentials found in the environment or {0}")]
   NotFound(String),
   #[error("failed to read credentials file {path}: {source}")]
   Io {

@@ -1,4 +1,4 @@
-"""`httpx` integration: `httpx.post(url, json=..., auth=VigriseHttpxAuth("tts"))`."""
+"""`httpx` integration: `httpx.post(url, json=..., auth=ViGriseHttpxAuth("tts"))`."""
 
 from typing import Generator, Optional
 
@@ -8,7 +8,7 @@ from .credentials import Credentials, resolve_credentials
 from .signer import sign_request
 
 
-class VigriseHttpxAuth(httpx.Auth):
+class ViGriseHttpxAuth(httpx.Auth):
     requires_request_body = True
 
     def __init__(self, service: str, credentials: Optional[Credentials] = None):

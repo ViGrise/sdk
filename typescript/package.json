@@ -1,7 +1,7 @@
 {
   "name": "@vigrise/auth",
   "version": "0.1.0",
-  "description": "VGR4 request signing for calling Vigrise services",
+  "description": "VGR4 request signing for calling ViGrise services",
   "license": "Apache-2.0",
   "type": "module",
   "engines": {

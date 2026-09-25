@@ -51,5 +51,5 @@ def resolve_credentials(explicit: Optional[Credentials] = None, env: Optional[Ma
         except OSError:
             found = None
     if found is None:
-        raise LookupError(f"No Vigrise credentials found in the environment or {path or '~/.vigrise/credentials'} [{profile}]")
+        raise LookupError(f"No ViGrise credentials found in the environment or {path or '~/.vigrise/credentials'} [{profile}]")
     return found

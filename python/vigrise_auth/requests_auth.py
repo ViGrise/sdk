@@ -1,4 +1,4 @@
-"""`requests` integration: `requests.post(url, json=..., auth=VigriseAuth("tts"))`."""
+"""`requests` integration: `requests.post(url, json=..., auth=ViGriseAuth("tts"))`."""
 
 from typing import Optional
 
@@ -8,7 +8,7 @@ from .credentials import Credentials, resolve_credentials
 from .signer import sign_request
 
 
-class VigriseAuth(requests.auth.AuthBase):
+class ViGriseAuth(requests.auth.AuthBase):
     def __init__(self, service: str, credentials: Optional[Credentials] = None):
         self.service = service
         self.credentials = credentials
