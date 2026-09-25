@@ -547,3 +547,31 @@ async fn leases_are_released_when_the_body_is_dropped_unread() {
   drop(response);
   assert_eq!(released.lock().unwrap().len(), 1);
 }
+
+#[tokio::test]
+async fn leases_are_released_when_the_request_is_cancelled_before_the_response() {
+  let released: Arc<std::sync::Mutex<Vec<Vec<String>>>> = Arc::default();
+  let verifier = Arc::new(Verifier {
+    service: "tts".into(),
+    authorizer: Arc::new(LeasingPlatform {
+      released: Arc::clone(&released),
+    }),
+    resolver: Arc::new(EstimatingResolver),
+    max_body_bytes: 1024,
+    trust_forwarded_headers: false,
+  });
+  let pending = || async {
+    std::future::pending::<()>().await;
+    "never"
+  };
+  let app = Router::new()
+    .route("/v1/audio/speech", post(pending))
+    .layer(axum::middleware::from_fn_with_state(verifier, verify));
+  let cancelled = tokio::time::timeout(
+    std::time::Duration::from_millis(100),
+    app.oneshot(signed("/v1/audio/speech", BODY, SECRET)),
+  )
+  .await;
+  assert!(cancelled.is_err());
+  assert_eq!(*released.lock().unwrap(), vec![vec!["lease-1".to_string()]]);
+}

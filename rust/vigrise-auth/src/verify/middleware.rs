@@ -79,22 +79,23 @@ pub async fn verify(
 
   match authorize(&verifier, &parts, &body).await {
     Ok(authorized) => {
-      let leases = authorized.leases.clone();
+      // Held from the moment the slots exist, so a cancelled request or a
+      // panicking handler returns them as well as a finished response.
+      let guard = (!authorized.leases.is_empty()).then(|| ReleaseGuard {
+        authorizer: Arc::clone(&verifier.authorizer),
+        leases: authorized.leases.clone(),
+      });
       parts.extensions.insert(authorized);
       let response = next.run(Request::from_parts(parts, Body::from(body))).await;
-      if leases.is_empty() {
-        return response;
+      match guard {
+        Some(guard) => response.map(|body| {
+          Body::new(ReleasingBody {
+            inner: body,
+            guard: Some(guard),
+          })
+        }),
+        None => response,
       }
-      let guard = ReleaseGuard {
-        authorizer: Arc::clone(&verifier.authorizer),
-        leases,
-      };
-      response.map(|body| {
-        Body::new(ReleasingBody {
-          inner: body,
-          guard: Some(guard),
-        })
-      })
     }
     Err(error) => error.into_response(),
   }
