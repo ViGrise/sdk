@@ -7,25 +7,29 @@
   "engines": {
     "node": ">=18"
   },
-  "main": "./dist/index.js",
+  "main": "./dist/cjs/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
+      "import": "./dist/index.js",
+      "require": "./dist/cjs/index.js"
     }
   },
   "files": [
     "dist"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
+    "build": "tsc -p tsconfig.build.json && tsc -p tsconfig.cjs.json && node -e \"require('fs').writeFileSync('dist/cjs/package.json', JSON.stringify({type: 'commonjs'}))\"",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "check:package": "node scripts/check-package.cjs",
+    "prepublishOnly": "npm run build && npm run check:package"
   },
   "devDependencies": {
     "@types/node": "^22.20.4",
     "typescript": "^5.9.3",
     "vitest": "^3.2.7"
-  }
+  },
+  "module": "./dist/index.js"
 }
