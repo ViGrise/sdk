@@ -3,6 +3,7 @@
 //! VGR4 follows AWS Signature Version 4 without the region component: the
 //! credential scope is `<yyyymmdd>/<service>/vgr4_request`.
 
+pub mod canonical;
 pub mod error;
 
 pub use error::AuthError;
