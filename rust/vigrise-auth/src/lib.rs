@@ -5,5 +5,6 @@
 
 pub mod canonical;
 pub mod error;
+pub mod signing;
 
 pub use error::AuthError;
