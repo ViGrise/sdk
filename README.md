@@ -1,0 +1,48 @@
+# Vigrise SDK
+
+Request signing (VGR4) for calling Vigrise services, and verification for
+services that accept VGR4 requests.
+
+| Path | Contents |
+| --- | --- |
+| `test-vectors/` | Reference implementation (`generate.py`) and shared VGR4 vectors |
+| `rust/vigrise-auth` | Rust signer (`reqwest` feature) and service verifier (`verify` feature) |
+
+## VGR4 in one paragraph
+
+VGR4 is AWS Signature Version 4 without the region component. The credential
+scope is `<yyyymmdd>/<service>/vgr4_request`, the signing key is derived as
+`HMAC(HMAC(HMAC("VGR4" + secret, date), service), "vgr4_request")`, and every
+signature covers `host`, `x-vgr-date` and `x-vgr-content-sha256`. The full
+specification lives in the platform repo:
+`docs/superpowers/specs/2026-09-25-catalog-iam-1a-design.md`, section 7.
+
+## Test vectors
+
+`test-vectors/inputs/*.json` hold requests; `python3 test-vectors/generate.py`
+writes `test-vectors/vgr4/*.json` with expected canonical request, string to
+sign, signature and Authorization header. Every SDK must pass every vector. CI
+fails when the committed vectors differ from a fresh generation.
+
+## Credentials
+
+Resolved in this order:
+
+1. Explicit `Credentials::new(access_key_id, secret)`.
+2. `VIGRISE_ACCESS_KEY_ID` and `VIGRISE_SECRET_ACCESS_KEY`.
+3. Profile `VIGRISE_PROFILE` (default `default`) in
+   `VIGRISE_SHARED_CREDENTIALS_FILE` (default `~/.vigrise/credentials`):
+
+```ini
+[default]
+vigrise_access_key_id = VGAK...
+vigrise_secret_access_key = ...
+```
+
+## Services behind a proxy
+
+The signature covers the `Host` header. A reverse proxy in front of a VGR4
+service must forward the client's original `Host` (for nginx,
+`proxy_set_header Host $host;`). A rewritten host fails with
+`SignatureDoesNotMatch`, and the error body carries the `string_to_sign` the
+service computed for debugging.
