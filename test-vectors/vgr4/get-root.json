@@ -1,0 +1,29 @@
+{
+  "credentials": {
+    "access_key_id": "VGAKEXAMPLE7TESTKEY",
+    "secret_access_key": "wJalrXUtnFEMI0K7MDENGbPxRfiCYEXAMPLEKEY01"
+  },
+  "service": "tts",
+  "time": "20261001T120000Z",
+  "description": "GET with empty path and no query",
+  "request": {
+    "method": "GET",
+    "path": "",
+    "query": "",
+    "headers": [
+      [
+        "Host",
+        "tts.vigrise.com"
+      ]
+    ],
+    "body": ""
+  },
+  "expected": {
+    "payload_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "signed_headers": "host;x-vgr-content-sha256;x-vgr-date",
+    "canonical_request": "GET\n/\n\nhost:tts.vigrise.com\nx-vgr-content-sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\nx-vgr-date:20261001T120000Z\n\nhost;x-vgr-content-sha256;x-vgr-date\ne3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "string_to_sign": "VGR4-HMAC-SHA256\n20261001T120000Z\n20261001/tts/vgr4_request\n5db7d492be4df94407b29f686e7b685137ec1f5f88b172f670248ce6520e1c82",
+    "signature": "40b0f45d678727548e1d5214428860091ffd16a6c0f2a418db341f0b0859bb34",
+    "authorization": "VGR4-HMAC-SHA256 Credential=VGAKEXAMPLE7TESTKEY/20261001/tts/vgr4_request, SignedHeaders=host;x-vgr-content-sha256;x-vgr-date, Signature=40b0f45d678727548e1d5214428860091ffd16a6c0f2a418db341f0b0859bb34"
+  }
+}

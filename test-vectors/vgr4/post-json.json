@@ -1,0 +1,33 @@
+{
+  "credentials": {
+    "access_key_id": "VGAKEXAMPLE7TESTKEY",
+    "secret_access_key": "wJalrXUtnFEMI0K7MDENGbPxRfiCYEXAMPLEKEY01"
+  },
+  "service": "tts",
+  "time": "20261001T120000Z",
+  "description": "POST JSON body with content-type",
+  "request": {
+    "method": "POST",
+    "path": "/v1/audio/speech",
+    "query": "",
+    "headers": [
+      [
+        "Host",
+        "tts.vigrise.com"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ]
+    ],
+    "body": "{\"model\":\"haley-v1\",\"input\":\"Xin chào\",\"voice\":\"haley-f1\"}"
+  },
+  "expected": {
+    "payload_hash": "90b2478f545dd08cd481571cad4c301eafb26f8105defd6bbb9d5fc99bf744c5",
+    "signed_headers": "content-type;host;x-vgr-content-sha256;x-vgr-date",
+    "canonical_request": "POST\n/v1/audio/speech\n\ncontent-type:application/json\nhost:tts.vigrise.com\nx-vgr-content-sha256:90b2478f545dd08cd481571cad4c301eafb26f8105defd6bbb9d5fc99bf744c5\nx-vgr-date:20261001T120000Z\n\ncontent-type;host;x-vgr-content-sha256;x-vgr-date\n90b2478f545dd08cd481571cad4c301eafb26f8105defd6bbb9d5fc99bf744c5",
+    "string_to_sign": "VGR4-HMAC-SHA256\n20261001T120000Z\n20261001/tts/vgr4_request\n80bb3db1df87b8caa5264a155ec42a6eb172c709efb05467ac517429c7152970",
+    "signature": "352eb0275aa181809f19bcad5f8bc34746bb2ecd27fa1b865222115654015e69",
+    "authorization": "VGR4-HMAC-SHA256 Credential=VGAKEXAMPLE7TESTKEY/20261001/tts/vgr4_request, SignedHeaders=content-type;host;x-vgr-content-sha256;x-vgr-date, Signature=352eb0275aa181809f19bcad5f8bc34746bb2ecd27fa1b865222115654015e69"
+  }
+}

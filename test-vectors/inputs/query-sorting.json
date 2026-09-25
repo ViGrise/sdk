@@ -1,0 +1,21 @@
+{
+  "credentials": {
+    "access_key_id": "VGAKEXAMPLE7TESTKEY",
+    "secret_access_key": "wJalrXUtnFEMI0K7MDENGbPxRfiCYEXAMPLEKEY01"
+  },
+  "service": "tts",
+  "time": "20261001T120000Z",
+  "description": "Repeated keys, empty values, reserved characters and literal plus",
+  "request": {
+    "method": "GET",
+    "path": "/v1/voices",
+    "query": "lang=vi&b=2&a=&lang=en&q=a+b%20c&x=%2A",
+    "headers": [
+      [
+        "Host",
+        "tts.vigrise.com"
+      ]
+    ],
+    "body": ""
+  }
+}

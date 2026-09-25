@@ -1,0 +1,25 @@
+{
+  "credentials": {
+    "access_key_id": "VGAKEXAMPLE7TESTKEY",
+    "secret_access_key": "wJalrXUtnFEMI0K7MDENGbPxRfiCYEXAMPLEKEY01"
+  },
+  "service": "tts",
+  "time": "20261001T120000Z",
+  "description": "Header values with surrounding and internal whitespace",
+  "request": {
+    "method": "GET",
+    "path": "/v1/models",
+    "query": "",
+    "headers": [
+      [
+        "Host",
+        "tts.vigrise.com"
+      ],
+      [
+        "X-Vgr-Meta",
+        "  a   b\tc  "
+      ]
+    ],
+    "body": ""
+  }
+}
