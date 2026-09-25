@@ -1,0 +1,29 @@
+{
+  "credentials": {
+    "access_key_id": "VGAKEXAMPLE7TESTKEY",
+    "secret_access_key": "wJalrXUtnFEMI0K7MDENGbPxRfiCYEXAMPLEKEY01"
+  },
+  "service": "tts",
+  "time": "20261001T120000Z",
+  "description": "Headers outside host, content-type and x-vgr-* are not signed",
+  "request": {
+    "method": "GET",
+    "path": "/v1/voices",
+    "query": "",
+    "headers": [
+      [
+        "Host",
+        "tts.vigrise.com"
+      ],
+      [
+        "User-Agent",
+        "sdk/1.0"
+      ],
+      [
+        "Accept",
+        "application/json"
+      ]
+    ],
+    "body": ""
+  }
+}
