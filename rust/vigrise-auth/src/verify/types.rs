@@ -1,6 +1,10 @@
+use std::collections::BTreeMap;
+
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use uuid::Uuid;
+
+pub use crate::QuotaStatus;
 
 /// Body of `POST /internal/v1/authorize`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -11,6 +15,9 @@ pub struct AuthorizeRequest {
   pub action: String,
   pub resources: Vec<String>,
   pub context: Map<String, Value>,
+  /// Usage the request is expected to consume, per catalog usage dimension.
+  #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+  pub usage: BTreeMap<String, i64>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -45,6 +52,8 @@ pub struct AuthorizeResponse {
   pub principal: Option<Principal>,
   #[serde(default, skip_serializing_if = "Option::is_none")]
   pub project_plan: Option<String>,
+  #[serde(default, skip_serializing_if = "Vec::is_empty")]
+  pub quotas: Vec<QuotaStatus>,
 }
 
 /// Inserted into request extensions for handlers behind the verify middleware.
@@ -52,4 +61,6 @@ pub struct AuthorizeResponse {
 pub struct Authorized {
   pub principal: Principal,
   pub project_plan: Option<String>,
+  /// Quotas checked for this request, for services to expose limits to callers.
+  pub quotas: Vec<QuotaStatus>,
 }

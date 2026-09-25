@@ -50,6 +50,7 @@ impl Authorizer for FakePlatform {
         }),
         principal: None,
         project_plan: None,
+        quotas: vec![],
       };
       let parsed = parse_string_to_sign(&request.string_to_sign).unwrap();
       let key = derive_signing_key(SECRET, &parsed.date, &parsed.service);
@@ -68,6 +69,7 @@ impl Authorizer for FakePlatform {
           error: None,
           principal: None,
           project_plan: None,
+          quotas: vec![],
         });
       }
       Ok(AuthorizeResponse {
@@ -82,6 +84,7 @@ impl Authorizer for FakePlatform {
           organization_id: Uuid::nil(),
         }),
         project_plan: Some("Pro".into()),
+        quotas: vec![],
       })
     })
   }
@@ -117,6 +120,7 @@ impl ActionResolver for RouteResolver {
       action: action.into(),
       resources: vec![format!("vrn:vigrise:tts:${{ProjectId}}:voice/{voice}")],
       context,
+      usage: Default::default(),
     })
   }
 }
@@ -322,6 +326,7 @@ impl Authorizer for CaptureContext {
           organization_id: Uuid::nil(),
         }),
         project_plan: None,
+        quotas: vec![],
       })
     })
   }
@@ -352,4 +357,98 @@ async fn forwarded_source_ip_is_the_entry_added_by_the_trusted_proxy() {
   assert_eq!(status, StatusCode::OK);
   let seen = capture.seen.lock().unwrap().clone().unwrap();
   assert_eq!(seen["vgr:SourceIp"], "203.0.113.9");
+}
+
+/// Allows every signed request, echoing the resolver's usage estimate as a
+/// quota status, or denies it as over quota.
+struct QuotaPlatform {
+  exhausted: bool,
+}
+
+impl Authorizer for QuotaPlatform {
+  fn authorize<'a>(
+    &'a self,
+    request: &'a AuthorizeRequest,
+  ) -> vigrise_auth::verify::AuthorizeFuture<'a> {
+    Box::pin(async move {
+      let status = vigrise_auth::QuotaStatus {
+        service: "tts".into(),
+        code: "characters-per-month".into(),
+        value: Some(10_000),
+        used: *request.usage.get("characters").unwrap_or(&-1),
+      };
+      if self.exhausted {
+        return Ok(AuthorizeResponse {
+          decision: Decision::Deny,
+          error: Some(ErrorBody {
+            code: "ServiceQuotaExceeded".into(),
+            message: "Quota tts/characters-per-month is exhausted".into(),
+          }),
+          principal: None,
+          project_plan: None,
+          quotas: vec![status],
+        });
+      }
+      Ok(AuthorizeResponse {
+        decision: Decision::Allow,
+        error: None,
+        principal: Some(Principal {
+          vrn: "vrn:vigrise:iam:p:user/ci-bot".into(),
+          id: Uuid::nil(),
+          principal_type: "User".into(),
+          name: "ci-bot".into(),
+          project_id: Uuid::nil(),
+          organization_id: Uuid::nil(),
+        }),
+        project_plan: Some("Free".into()),
+        quotas: vec![status],
+      })
+    })
+  }
+}
+
+/// Resolves every request to SynthesizeSpeech with a fixed estimate of 8 characters.
+struct EstimatingResolver;
+
+impl ActionResolver for EstimatingResolver {
+  fn resolve(&self, _parts: &Parts, _body: &Bytes) -> Result<ResolvedAction, AuthError> {
+    Ok(ResolvedAction {
+      action: "tts:SynthesizeSpeech".into(),
+      resources: vec!["vrn:vigrise:tts:${ProjectId}:voice/haley-f1".into()],
+      context: Map::new(),
+      usage: [("characters".to_string(), 8)].into_iter().collect(),
+    })
+  }
+}
+
+fn quota_app(exhausted: bool) -> Router {
+  let verifier = Arc::new(Verifier {
+    service: "tts".into(),
+    authorizer: Arc::new(QuotaPlatform { exhausted }),
+    resolver: Arc::new(EstimatingResolver),
+    max_body_bytes: 1024,
+    trust_forwarded_headers: false,
+  });
+  let handler = |Extension(auth): Extension<Authorized>| async move {
+    format!("{}:{}", auth.quotas[0].code, auth.quotas[0].used)
+  };
+  Router::new()
+    .route("/v1/audio/speech", post(handler))
+    .layer(axum::middleware::from_fn_with_state(verifier, verify))
+}
+
+#[tokio::test]
+async fn usage_estimate_reaches_the_platform_and_statuses_reach_the_handler() {
+  let (status, _, text) = send(quota_app(false), signed("/v1/audio/speech", BODY, SECRET)).await;
+  assert_eq!(status, StatusCode::OK);
+  assert_eq!(text, "characters-per-month:8");
+}
+
+#[tokio::test]
+async fn exhausted_quota_is_429_with_the_quota() {
+  let (status, json, _) = send(quota_app(true), signed("/v1/audio/speech", BODY, SECRET)).await;
+  assert_eq!(status, StatusCode::TOO_MANY_REQUESTS);
+  assert_eq!(json["error"]["code"], "ServiceQuotaExceeded");
+  assert_eq!(json["error"]["quota"]["code"], "characters-per-month");
+  assert_eq!(json["error"]["quota"]["value"], 10_000);
 }

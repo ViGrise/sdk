@@ -21,6 +21,11 @@ pub enum AuthError {
   AccessDenied(String),
   #[error("{0}")]
   ServiceNotAvailableForPlan(String),
+  #[error("{message}")]
+  ServiceQuotaExceeded {
+    message: String,
+    quota: Option<crate::QuotaStatus>,
+  },
   #[error("{0}")]
   RequestEntityTooLarge(String),
   #[error("{0}")]
@@ -45,6 +50,7 @@ impl AuthError {
       AuthError::RequestExpired(_) => "RequestExpired",
       AuthError::AccessDenied(_) => "AccessDenied",
       AuthError::ServiceNotAvailableForPlan(_) => "ServiceNotAvailableForPlan",
+      AuthError::ServiceQuotaExceeded { .. } => "ServiceQuotaExceeded",
       AuthError::RequestEntityTooLarge(_) => "RequestEntityTooLarge",
       AuthError::ServiceUnavailable(_) => "ServiceUnavailable",
       AuthError::Rejected { code, .. } => code,
@@ -61,6 +67,7 @@ impl AuthError {
       AuthError::AccessDenied(_) | AuthError::ServiceNotAvailableForPlan(_) => {
         StatusCode::FORBIDDEN
       }
+      AuthError::ServiceQuotaExceeded { .. } => StatusCode::TOO_MANY_REQUESTS,
       AuthError::RequestEntityTooLarge(_) => StatusCode::PAYLOAD_TOO_LARGE,
       AuthError::ServiceUnavailable(_) => StatusCode::SERVICE_UNAVAILABLE,
       AuthError::Rejected { status, .. } => *status,
@@ -80,6 +87,10 @@ impl AuthError {
       },
       "RequestExpired" => AuthError::RequestExpired(message),
       "ServiceNotAvailableForPlan" => AuthError::ServiceNotAvailableForPlan(message),
+      "ServiceQuotaExceeded" => AuthError::ServiceQuotaExceeded {
+        message,
+        quota: None,
+      },
       _ => AuthError::AccessDenied(message),
     }
   }
@@ -98,9 +109,16 @@ mod tests {
       "RequestExpired",
       "AccessDenied",
       "ServiceNotAvailableForPlan",
+      "ServiceQuotaExceeded",
     ] {
       assert_eq!(AuthError::from_code(code, "m".into()).code(), code);
     }
+  }
+
+  #[test]
+  fn quota_exceeded_is_429() {
+    let err = AuthError::from_code("ServiceQuotaExceeded", "m".into());
+    assert_eq!(err.status(), StatusCode::TOO_MANY_REQUESTS);
   }
 
   #[test]

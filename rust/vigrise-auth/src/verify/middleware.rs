@@ -19,7 +19,7 @@ use crate::signer::{X_VGR_CONTENT_SHA256, X_VGR_DATE};
 use crate::signing::string_to_sign;
 use crate::verify::client::Authorizer;
 use crate::verify::resolver::ActionResolver;
-use crate::verify::types::{AuthorizeRequest, Authorized, Decision};
+use crate::verify::types::{AuthorizeRequest, AuthorizeResponse, Authorized, Decision};
 
 pub struct Verifier {
   /// Catalog namespace this service owns, for example `tts`.
@@ -43,6 +43,12 @@ impl IntoResponse for AuthError {
     } = &self
     {
       error["string_to_sign"] = Value::String(sts.clone());
+    }
+    if let AuthError::ServiceQuotaExceeded {
+      quota: Some(quota), ..
+    } = &self
+    {
+      error["quota"] = serde_json::to_value(quota).expect("quota status serializes");
     }
     (self.status(), axum::Json(json!({ "error": error }))).into_response()
   }
@@ -147,26 +153,37 @@ async fn authorize(
     action: resolved.action,
     resources: resolved.resources,
     context,
+    usage: resolved.usage,
   };
-  let response = verifier.authorizer.authorize(&request).await?;
+  let AuthorizeResponse {
+    decision,
+    error,
+    principal,
+    project_plan,
+    quotas,
+  } = verifier.authorizer.authorize(&request).await?;
 
-  match (response.decision, response.principal) {
+  match (decision, principal) {
     (Decision::Allow, Some(principal)) => Ok(Authorized {
       principal,
-      project_plan: response.project_plan,
+      project_plan,
+      quotas,
     }),
     (Decision::Allow, None) => Err(AuthError::ServiceUnavailable(
       "Authorization response is missing the principal".into(),
     )),
     (Decision::Deny, _) => {
-      let (code, message) = response
-        .error
+      let (code, message) = error
         .map(|e| (e.code, e.message))
         .unwrap_or_else(|| ("AccessDenied".into(), "Access denied".into()));
       Err(match AuthError::from_code(&code, message) {
         AuthError::SignatureDoesNotMatch { message, .. } => AuthError::SignatureDoesNotMatch {
           message,
           string_to_sign: Some(sts),
+        },
+        AuthError::ServiceQuotaExceeded { message, .. } => AuthError::ServiceQuotaExceeded {
+          message,
+          quota: quotas.into_iter().next(),
         },
         other => other,
       })

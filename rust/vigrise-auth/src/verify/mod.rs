@@ -9,4 +9,6 @@ mod types;
 pub use client::{AuthorizeClient, AuthorizeFuture, Authorizer};
 pub use middleware::{verify, Verifier};
 pub use resolver::{ActionResolver, ResolvedAction};
-pub use types::{AuthorizeRequest, AuthorizeResponse, Authorized, Decision, ErrorBody, Principal};
+pub use types::{
+  AuthorizeRequest, AuthorizeResponse, Authorized, Decision, ErrorBody, Principal, QuotaStatus,
+};

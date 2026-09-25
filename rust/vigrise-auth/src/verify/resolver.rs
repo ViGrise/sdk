@@ -1,3 +1,5 @@
+use std::collections::BTreeMap;
+
 use bytes::Bytes;
 use http::request::Parts;
 use serde_json::{Map, Value};
@@ -13,6 +15,8 @@ pub struct ResolvedAction {
   pub resources: Vec<String>,
   /// Service-specific condition keys declared in the catalog.
   pub context: Map<String, Value>,
+  /// Usage estimate per catalog usage dimension, checked against quotas.
+  pub usage: BTreeMap<String, i64>,
 }
 
 /// Maps an incoming request to its catalog action. Returning an error rejects

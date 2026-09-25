@@ -69,6 +69,7 @@ fn request() -> AuthorizeRequest {
     action: "tts:SynthesizeSpeech".into(),
     resources: vec![],
     context: Map::new(),
+    usage: Default::default(),
   }
 }
 
