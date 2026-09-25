@@ -1,0 +1,22 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "vigrise-auth"
+version = "0.1.0"
+description = "VGR4 request signing for calling Vigrise services"
+license = "Apache-2.0"
+requires-python = ">=3.9"
+dependencies = []
+
+[project.optional-dependencies]
+requests = ["requests>=2.28"]
+httpx = ["httpx>=0.24"]
+test = ["pytest>=7", "requests>=2.28", "httpx>=0.24"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["vigrise_auth"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
