@@ -10,6 +10,11 @@ pub mod error;
 pub mod signer;
 pub mod signing;
 
+#[cfg(feature = "reqwest")]
+pub mod reqwest_signer;
+#[cfg(feature = "verify")]
+pub mod verify;
+
 pub use authorization::AuthorizationHeader;
 pub use credentials::{Credentials, CredentialsError};
 pub use error::AuthError;
