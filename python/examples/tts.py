@@ -1,0 +1,19 @@
+"""Calls the Vigrise TTS gateway with a VGR4 signature.
+
+python examples/tts.py <gateway url> [voice]
+"""
+
+import sys
+
+import requests
+
+from vigrise_auth.requests_auth import VigriseAuth
+
+base = sys.argv[1]
+voice = sys.argv[2] if len(sys.argv) > 2 else None
+auth = VigriseAuth("tts")
+if voice:
+    response = requests.post(f"{base}/v1/audio/speech", json={"input": "Xin chào", "voice": voice, "response_format": "wav"}, auth=auth)
+else:
+    response = requests.get(f"{base}/v1/voices", auth=auth)
+print(response.status_code, len(response.content))
