@@ -17,6 +17,12 @@ pub type AuthorizeFuture<'a> =
 /// tests substitute their own implementation.
 pub trait Authorizer: Send + Sync + 'static {
   fn authorize<'a>(&'a self, request: &'a AuthorizeRequest) -> AuthorizeFuture<'a>;
+
+  /// Returns concurrency slots once a request ends. It must not block: the
+  /// middleware calls it when a response body finishes or is dropped.
+  fn release(&self, leases: Vec<String>) {
+    let _ = leases;
+  }
 }
 
 /// Calls the platform authorize endpoint, signing each call with the service's
@@ -108,5 +114,47 @@ impl Authorizer for AuthorizeClient {
         AuthError::ServiceUnavailable("Authorization is unavailable".into())
       })
     })
+  }
+
+  fn release(&self, leases: Vec<String>) {
+    if leases.is_empty() {
+      return;
+    }
+    let Some(endpoint) = self
+      .endpoint
+      .strip_suffix("/authorize")
+      .map(|base| format!("{base}/leases/release"))
+    else {
+      tracing::error!(endpoint = %self.endpoint, "cannot derive the lease release endpoint");
+      return;
+    };
+    let http = self.http.clone();
+    let credentials = self.credentials.clone();
+    tokio::spawn(async move {
+      let result = async {
+        let mut request = http
+          .post(&endpoint)
+          .json(&serde_json::json!({ "leases": leases }))
+          .build()
+          .map_err(|e| e.to_string())?;
+        sign_reqwest(
+          &mut request,
+          &credentials,
+          AuthorizeClient::SIGNING_SERVICE,
+          Utc::now(),
+        )
+        .map_err(|e| e.to_string())?;
+        let response = http.execute(request).await.map_err(|e| e.to_string())?;
+        if response.status().is_success() {
+          Ok(())
+        } else {
+          Err(format!("platform returned {}", response.status()))
+        }
+      }
+      .await;
+      if let Err(reason) = result {
+        tracing::warn!(%reason, "releasing concurrency leases failed; they expire on their own");
+      }
+    });
   }
 }

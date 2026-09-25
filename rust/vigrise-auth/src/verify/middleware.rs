@@ -44,10 +44,7 @@ impl IntoResponse for AuthError {
     {
       error["string_to_sign"] = Value::String(sts.clone());
     }
-    if let AuthError::ServiceQuotaExceeded {
-      quota: Some(quota), ..
-    } = &self
-    {
+    if let Some(quota) = self.quota() {
       error["quota"] = serde_json::to_value(quota).expect("quota status serializes");
     }
     (self.status(), axum::Json(json!({ "error": error }))).into_response()
@@ -82,10 +79,67 @@ pub async fn verify(
 
   match authorize(&verifier, &parts, &body).await {
     Ok(authorized) => {
+      let leases = authorized.leases.clone();
       parts.extensions.insert(authorized);
-      next.run(Request::from_parts(parts, Body::from(body))).await
+      let response = next.run(Request::from_parts(parts, Body::from(body))).await;
+      if leases.is_empty() {
+        return response;
+      }
+      let guard = ReleaseGuard {
+        authorizer: Arc::clone(&verifier.authorizer),
+        leases,
+      };
+      response.map(|body| {
+        Body::new(ReleasingBody {
+          inner: body,
+          guard: Some(guard),
+        })
+      })
     }
     Err(error) => error.into_response(),
+  }
+}
+
+/// Returns the request's concurrency slots exactly once, when dropped.
+struct ReleaseGuard {
+  authorizer: Arc<dyn Authorizer>,
+  leases: Vec<String>,
+}
+
+impl Drop for ReleaseGuard {
+  fn drop(&mut self) {
+    self.authorizer.release(std::mem::take(&mut self.leases));
+  }
+}
+
+/// A response body that releases the request's leases when it has been sent
+/// completely or is dropped, for example when the client disconnects mid-stream.
+struct ReleasingBody {
+  inner: Body,
+  guard: Option<ReleaseGuard>,
+}
+
+impl http_body::Body for ReleasingBody {
+  type Data = Bytes;
+  type Error = axum::Error;
+
+  fn poll_frame(
+    mut self: std::pin::Pin<&mut Self>,
+    cx: &mut std::task::Context<'_>,
+  ) -> std::task::Poll<Option<Result<http_body::Frame<Bytes>, Self::Error>>> {
+    let polled = std::pin::Pin::new(&mut self.inner).poll_frame(cx);
+    if let std::task::Poll::Ready(None) = polled {
+      self.guard.take();
+    }
+    polled
+  }
+
+  fn is_end_stream(&self) -> bool {
+    self.inner.is_end_stream()
+  }
+
+  fn size_hint(&self) -> http_body::SizeHint {
+    self.inner.size_hint()
   }
 }
 
@@ -162,6 +216,7 @@ async fn authorize(
     principal,
     project_plan,
     quotas,
+    leases,
   } = verifier.authorizer.authorize(&request).await?;
 
   match (decision, principal) {
@@ -170,6 +225,7 @@ async fn authorize(
       project_plan,
       quotas,
       usage,
+      leases,
     }),
     (Decision::Allow, None) => Err(AuthError::ServiceUnavailable(
       "Authorization response is missing the principal".into(),
@@ -183,11 +239,12 @@ async fn authorize(
           message,
           string_to_sign: Some(sts),
         },
-        AuthError::ServiceQuotaExceeded { message, .. } => AuthError::ServiceQuotaExceeded {
-          message,
-          quota: quotas.into_iter().next(),
-        },
-        other => other,
+        mut other => {
+          if let Some(quota) = other.quota_mut() {
+            *quota = quotas.into_iter().next();
+          }
+          other
+        }
       })
     }
   }

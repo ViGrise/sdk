@@ -82,6 +82,7 @@ fn authorized() -> Authorized {
     project_plan: Some("Free".into()),
     quotas: vec![],
     usage: Default::default(),
+    leases: vec![],
   }
 }
 

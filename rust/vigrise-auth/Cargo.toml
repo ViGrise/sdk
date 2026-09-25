@@ -9,7 +9,7 @@ description = "VGR4 request signing and verification for ViGrise services"
 [features]
 default = []
 reqwest = ["dep:reqwest"]
-verify = ["reqwest", "dep:axum", "dep:bytes", "dep:http-body-util", "dep:tokio", "dep:uuid", "dep:tracing"]
+verify = ["reqwest", "dep:axum", "dep:bytes", "dep:http-body", "dep:http-body-util", "dep:tokio", "tokio/rt", "dep:uuid", "dep:tracing"]
 metering = ["verify", "tokio/sync", "tokio/rt", "tokio/macros", "uuid/v4", "chrono/serde"]
 
 [dependencies]
@@ -26,6 +26,7 @@ thiserror = "2"
 reqwest = { version = "0.13", optional = true, default-features = false, features = ["json", "rustls"] }
 axum = { version = "0.8", optional = true, default-features = false }
 bytes = { version = "1", optional = true }
+http-body = { version = "1", optional = true }
 http-body-util = { version = "0.1", optional = true }
 tokio = { version = "1", optional = true, features = ["time"] }
 uuid = { version = "1", optional = true, features = ["serde"] }

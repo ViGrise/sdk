@@ -26,6 +26,16 @@ pub enum AuthError {
     message: String,
     quota: Option<crate::QuotaStatus>,
   },
+  #[error("{message}")]
+  Throttling {
+    message: String,
+    quota: Option<crate::QuotaStatus>,
+  },
+  #[error("{message}")]
+  LimitExceeded {
+    message: String,
+    quota: Option<crate::QuotaStatus>,
+  },
   #[error("{0}")]
   RequestEntityTooLarge(String),
   #[error("{0}")]
@@ -51,6 +61,8 @@ impl AuthError {
       AuthError::AccessDenied(_) => "AccessDenied",
       AuthError::ServiceNotAvailableForPlan(_) => "ServiceNotAvailableForPlan",
       AuthError::ServiceQuotaExceeded { .. } => "ServiceQuotaExceeded",
+      AuthError::Throttling { .. } => "ThrottlingException",
+      AuthError::LimitExceeded { .. } => "LimitExceeded",
       AuthError::RequestEntityTooLarge(_) => "RequestEntityTooLarge",
       AuthError::ServiceUnavailable(_) => "ServiceUnavailable",
       AuthError::Rejected { code, .. } => code,
@@ -67,10 +79,32 @@ impl AuthError {
       AuthError::AccessDenied(_) | AuthError::ServiceNotAvailableForPlan(_) => {
         StatusCode::FORBIDDEN
       }
-      AuthError::ServiceQuotaExceeded { .. } => StatusCode::TOO_MANY_REQUESTS,
+      AuthError::ServiceQuotaExceeded { .. }
+      | AuthError::Throttling { .. }
+      | AuthError::LimitExceeded { .. } => StatusCode::TOO_MANY_REQUESTS,
       AuthError::RequestEntityTooLarge(_) => StatusCode::PAYLOAD_TOO_LARGE,
       AuthError::ServiceUnavailable(_) => StatusCode::SERVICE_UNAVAILABLE,
       AuthError::Rejected { status, .. } => *status,
+    }
+  }
+
+  /// The quota a quota, rate or concurrency denial refers to.
+  pub fn quota(&self) -> Option<&crate::QuotaStatus> {
+    match self {
+      AuthError::ServiceQuotaExceeded { quota, .. }
+      | AuthError::Throttling { quota, .. }
+      | AuthError::LimitExceeded { quota, .. } => quota.as_ref(),
+      _ => None,
+    }
+  }
+
+  /// Mutable access to the quota slot of a quota, rate or concurrency denial.
+  pub fn quota_mut(&mut self) -> Option<&mut Option<crate::QuotaStatus>> {
+    match self {
+      AuthError::ServiceQuotaExceeded { quota, .. }
+      | AuthError::Throttling { quota, .. }
+      | AuthError::LimitExceeded { quota, .. } => Some(quota),
+      _ => None,
     }
   }
 
@@ -88,6 +122,14 @@ impl AuthError {
       "RequestExpired" => AuthError::RequestExpired(message),
       "ServiceNotAvailableForPlan" => AuthError::ServiceNotAvailableForPlan(message),
       "ServiceQuotaExceeded" => AuthError::ServiceQuotaExceeded {
+        message,
+        quota: None,
+      },
+      "ThrottlingException" => AuthError::Throttling {
+        message,
+        quota: None,
+      },
+      "LimitExceeded" => AuthError::LimitExceeded {
         message,
         quota: None,
       },
@@ -110,15 +152,23 @@ mod tests {
       "AccessDenied",
       "ServiceNotAvailableForPlan",
       "ServiceQuotaExceeded",
+      "ThrottlingException",
+      "LimitExceeded",
     ] {
       assert_eq!(AuthError::from_code(code, "m".into()).code(), code);
     }
   }
 
   #[test]
-  fn quota_exceeded_is_429() {
-    let err = AuthError::from_code("ServiceQuotaExceeded", "m".into());
-    assert_eq!(err.status(), StatusCode::TOO_MANY_REQUESTS);
+  fn quota_rate_and_concurrency_denials_are_429() {
+    for code in [
+      "ServiceQuotaExceeded",
+      "ThrottlingException",
+      "LimitExceeded",
+    ] {
+      let err = AuthError::from_code(code, "m".into());
+      assert_eq!(err.status(), StatusCode::TOO_MANY_REQUESTS, "{code}");
+    }
   }
 
   #[test]

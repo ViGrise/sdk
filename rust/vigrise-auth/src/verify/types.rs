@@ -54,6 +54,9 @@ pub struct AuthorizeResponse {
   pub project_plan: Option<String>,
   #[serde(default, skip_serializing_if = "Vec::is_empty")]
   pub quotas: Vec<QuotaStatus>,
+  /// Concurrency slots held for this request; released when it ends.
+  #[serde(default, skip_serializing_if = "Vec::is_empty")]
+  pub leases: Vec<String>,
 }
 
 /// Inserted into request extensions for handlers behind the verify middleware.
@@ -65,4 +68,7 @@ pub struct Authorized {
   pub quotas: Vec<QuotaStatus>,
   /// The usage estimate the request was authorized for, per usage dimension.
   pub usage: BTreeMap<String, i64>,
+  /// Concurrency slots held for this request; the middleware releases them
+  /// when the response body ends or is dropped.
+  pub leases: Vec<String>,
 }

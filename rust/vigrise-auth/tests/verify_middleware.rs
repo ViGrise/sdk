@@ -51,6 +51,7 @@ impl Authorizer for FakePlatform {
         principal: None,
         project_plan: None,
         quotas: vec![],
+        leases: vec![],
       };
       let parsed = parse_string_to_sign(&request.string_to_sign).unwrap();
       let key = derive_signing_key(SECRET, &parsed.date, &parsed.service);
@@ -70,6 +71,7 @@ impl Authorizer for FakePlatform {
           principal: None,
           project_plan: None,
           quotas: vec![],
+          leases: vec![],
         });
       }
       Ok(AuthorizeResponse {
@@ -85,6 +87,7 @@ impl Authorizer for FakePlatform {
         }),
         project_plan: Some("Pro".into()),
         quotas: vec![],
+        leases: vec![],
       })
     })
   }
@@ -327,6 +330,7 @@ impl Authorizer for CaptureContext {
         }),
         project_plan: None,
         quotas: vec![],
+        leases: vec![],
       })
     })
   }
@@ -387,6 +391,7 @@ impl Authorizer for QuotaPlatform {
           principal: None,
           project_plan: None,
           quotas: vec![status],
+          leases: vec![],
         });
       }
       Ok(AuthorizeResponse {
@@ -402,6 +407,7 @@ impl Authorizer for QuotaPlatform {
         }),
         project_plan: Some("Free".into()),
         quotas: vec![status],
+        leases: vec![],
       })
     })
   }
@@ -471,4 +477,73 @@ async fn handlers_see_the_usage_the_request_was_authorized_for() {
   let (status, _, text) = send(app, signed("/v1/audio/speech", BODY, SECRET)).await;
   assert_eq!(status, StatusCode::OK);
   assert_eq!(text, "Some(8)");
+}
+
+/// Allows every request with one lease and records every release.
+struct LeasingPlatform {
+  released: Arc<std::sync::Mutex<Vec<Vec<String>>>>,
+}
+
+impl Authorizer for LeasingPlatform {
+  fn authorize<'a>(
+    &'a self,
+    _request: &'a AuthorizeRequest,
+  ) -> vigrise_auth::verify::AuthorizeFuture<'a> {
+    Box::pin(async move {
+      Ok(AuthorizeResponse {
+        decision: Decision::Allow,
+        error: None,
+        principal: Some(Principal {
+          vrn: "vrn:vigrise:iam:p:user/ci-bot".into(),
+          id: Uuid::nil(),
+          principal_type: "User".into(),
+          name: "ci-bot".into(),
+          project_id: Uuid::nil(),
+          organization_id: Uuid::nil(),
+        }),
+        project_plan: Some("Free".into()),
+        quotas: vec![],
+        leases: vec!["lease-1".into()],
+      })
+    })
+  }
+
+  fn release(&self, leases: Vec<String>) {
+    self.released.lock().unwrap().push(leases);
+  }
+}
+
+fn leasing_app(released: Arc<std::sync::Mutex<Vec<Vec<String>>>>) -> Router {
+  let verifier = Arc::new(Verifier {
+    service: "tts".into(),
+    authorizer: Arc::new(LeasingPlatform { released }),
+    resolver: Arc::new(EstimatingResolver),
+    max_body_bytes: 1024,
+    trust_forwarded_headers: false,
+  });
+  let handler = |Extension(auth): Extension<Authorized>| async move { auth.leases.join(",") };
+  Router::new()
+    .route("/v1/audio/speech", post(handler))
+    .layer(axum::middleware::from_fn_with_state(verifier, verify))
+}
+
+#[tokio::test]
+async fn leases_are_released_once_when_the_body_ends() {
+  let released = Arc::default();
+  let (status, _, text) = send(leasing_app(Arc::clone(&released)), signed("/v1/audio/speech", BODY, SECRET)).await;
+  assert_eq!(status, StatusCode::OK);
+  assert_eq!(text, "lease-1");
+  assert_eq!(*released.lock().unwrap(), vec![vec!["lease-1".to_string()]]);
+}
+
+#[tokio::test]
+async fn leases_are_released_when_the_body_is_dropped_unread() {
+  let released: Arc<std::sync::Mutex<Vec<Vec<String>>>> = Arc::default();
+  let response = leasing_app(Arc::clone(&released))
+    .oneshot(signed("/v1/audio/speech", BODY, SECRET))
+    .await
+    .unwrap();
+  assert!(released.lock().unwrap().is_empty());
+  drop(response);
+  assert_eq!(released.lock().unwrap().len(), 1);
 }

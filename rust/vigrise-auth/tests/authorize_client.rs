@@ -109,3 +109,35 @@ async fn service_rejected_by_platform_does_not_retry() {
   assert_eq!(err.code(), "ServiceUnavailable");
   assert_eq!(calls.load(Ordering::SeqCst), 1);
 }
+
+#[tokio::test]
+async fn release_posts_the_leases_signed_under_the_iam_scope() {
+  let received: Arc<std::sync::Mutex<Vec<(String, Value)>>> = Arc::default();
+  let recorder = received.clone();
+  let app = Router::new().route(
+    "/api/internal/v1/leases/release",
+    post(move |headers: HeaderMap, Json(body): Json<Value>| {
+      let recorder = recorder.clone();
+      async move {
+        let auth = AuthorizationHeader::parse(headers["authorization"].to_str().unwrap()).unwrap();
+        recorder.lock().unwrap().push((auth.service, body));
+        StatusCode::NO_CONTENT
+      }
+    }),
+  );
+  let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+  let addr = listener.local_addr().unwrap();
+  tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
+  let client = client(format!("http://{addr}/api/internal/v1/authorize"));
+  client.release(vec!["p:tts:concurrent-syntheses:1".into()]);
+  for _ in 0..200 {
+    if !received.lock().unwrap().is_empty() {
+      break;
+    }
+    tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+  }
+  let received = received.lock().unwrap();
+  assert_eq!(received.len(), 1);
+  assert_eq!(received[0].0, "iam");
+  assert_eq!(received[0].1, json!({ "leases": ["p:tts:concurrent-syntheses:1"] }));
+}
