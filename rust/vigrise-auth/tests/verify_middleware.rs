@@ -452,3 +452,23 @@ async fn exhausted_quota_is_429_with_the_quota() {
   assert_eq!(json["error"]["quota"]["code"], "characters-per-month");
   assert_eq!(json["error"]["quota"]["value"], 10_000);
 }
+
+#[tokio::test]
+async fn handlers_see_the_usage_the_request_was_authorized_for() {
+  let verifier = Arc::new(Verifier {
+    service: "tts".into(),
+    authorizer: Arc::new(QuotaPlatform { exhausted: false }),
+    resolver: Arc::new(EstimatingResolver),
+    max_body_bytes: 1024,
+    trust_forwarded_headers: false,
+  });
+  let handler = |Extension(auth): Extension<Authorized>| async move {
+    format!("{:?}", auth.usage.get("characters"))
+  };
+  let app = Router::new()
+    .route("/v1/audio/speech", post(handler))
+    .layer(axum::middleware::from_fn_with_state(verifier, verify));
+  let (status, _, text) = send(app, signed("/v1/audio/speech", BODY, SECRET)).await;
+  assert_eq!(status, StatusCode::OK);
+  assert_eq!(text, "Some(8)");
+}

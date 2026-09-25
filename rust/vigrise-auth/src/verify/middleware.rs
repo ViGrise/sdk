@@ -155,6 +155,7 @@ async fn authorize(
     context,
     usage: resolved.usage,
   };
+  let usage = request.usage.clone();
   let AuthorizeResponse {
     decision,
     error,
@@ -168,6 +169,7 @@ async fn authorize(
       principal,
       project_plan,
       quotas,
+      usage,
     }),
     (Decision::Allow, None) => Err(AuthError::ServiceUnavailable(
       "Authorization response is missing the principal".into(),

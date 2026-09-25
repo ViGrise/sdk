@@ -63,4 +63,6 @@ pub struct Authorized {
   pub project_plan: Option<String>,
   /// Quotas checked for this request, for services to expose limits to callers.
   pub quotas: Vec<QuotaStatus>,
+  /// The usage estimate the request was authorized for, per usage dimension.
+  pub usage: BTreeMap<String, i64>,
 }
