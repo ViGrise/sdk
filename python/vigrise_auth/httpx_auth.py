@@ -19,7 +19,7 @@ class VigriseHttpxAuth(httpx.Auth):
         signed = sign_request(
             request.method,
             str(request.url),
-            list(request.headers.items()),
+            request.headers.multi_items(),
             request.content,
             self.credentials or resolve_credentials(),
             self.service,

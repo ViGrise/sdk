@@ -63,3 +63,22 @@ def test_streaming_bodies_are_rejected():
 
     with pytest.raises(ValueError, match="Streaming"):
         requests.Request("POST", "http://127.0.0.1:9/x", data=chunks(), auth=VigriseAuth("tts", CREDS)).prepare()
+
+
+def test_httpx_signs_repeated_signed_headers_as_sent(server):
+    url, seen = server
+    headers = httpx.Headers([("x-vgr-meta", "a"), ("x-vgr-meta", "b")])
+    response = httpx.post(f"{url}/v1/audio/speech", content=b"x", headers=headers, auth=VigriseHttpxAuth("tts", CREDS))
+    assert response.text == "ok"
+    sent_headers, body = seen[0]
+    from vigrise_auth.canonical import canonical_request, sha256_hex
+    from vigrise_auth.signing import derive_signing_key, scope, signature, string_to_sign
+
+    auth = sent_headers.get("Authorization")
+    signed = auth.split("SignedHeaders=")[1].split(",")[0].split(";")
+    timestamp = sent_headers.get("x-vgr-date")
+    pairs = [(k.lower(), v) for k, v in sent_headers.items()]
+    creq = canonical_request("POST", "/v1/audio/speech", "", pairs, signed, sha256_hex(body))
+    sts = string_to_sign(timestamp, scope(timestamp[:8], "tts"), creq)
+    expected = signature(derive_signing_key("secret", timestamp[:8], "tts"), sts)
+    assert auth.endswith(f"Signature={expected}")
