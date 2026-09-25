@@ -11,6 +11,8 @@ mod quota;
 pub mod signer;
 pub mod signing;
 
+#[cfg(feature = "metering")]
+pub mod metering;
 #[cfg(feature = "reqwest")]
 pub mod reqwest_signer;
 #[cfg(feature = "verify")]
