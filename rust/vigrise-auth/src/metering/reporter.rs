@@ -12,6 +12,9 @@ use crate::reqwest_signer::sign_reqwest;
 use crate::verify::Authorized;
 
 const SIGNING_SERVICE: &str = "metering";
+/// Batches are retried while their oldest record is younger than this; the
+/// platform accepts records up to 24 hours old.
+const MAX_RETRY_AGE_HOURS: i64 = 23;
 
 #[derive(Debug, Clone)]
 pub struct UsageReporterConfig {
@@ -24,8 +27,11 @@ pub struct UsageReporterConfig {
   pub max_batch: usize,
   /// Records waiting to be sent; further records are dropped.
   pub capacity: usize,
+  /// First delay between retries of a batch; it doubles up to `max_backoff`.
   pub retry_backoff: Duration,
-  pub max_attempts: u32,
+  pub max_backoff: Duration,
+  /// How long `shutdown` waits for buffered usage to be sent.
+  pub shutdown_timeout: Duration,
 }
 
 impl UsageReporterConfig {
@@ -38,7 +44,8 @@ impl UsageReporterConfig {
       max_batch: 500,
       capacity: 10_000,
       retry_backoff: Duration::from_millis(200),
-      max_attempts: 5,
+      max_backoff: Duration::from_secs(30),
+      shutdown_timeout: Duration::from_secs(10),
     }
   }
 }
@@ -48,6 +55,7 @@ impl UsageReporterConfig {
 #[derive(Clone)]
 pub struct UsageReporter {
   sender: mpsc::Sender<UsageRecord>,
+  shutdown_timeout: Duration,
   shutdown: Arc<Notify>,
   task: Arc<Mutex<Option<JoinHandle<()>>>>,
 }
@@ -55,10 +63,12 @@ pub struct UsageReporter {
 impl UsageReporter {
   pub fn spawn(config: UsageReporterConfig) -> Self {
     let (sender, receiver) = mpsc::channel(config.capacity.max(1));
+    let shutdown_timeout = config.shutdown_timeout;
     let shutdown = Arc::new(Notify::new());
     let task = tokio::spawn(run(config, receiver, shutdown.clone()));
     Self {
       sender,
+      shutdown_timeout,
       shutdown,
       task: Arc::new(Mutex::new(Some(task))),
     }
@@ -79,13 +89,20 @@ impl UsageReporter {
     }
   }
 
-  /// Sends every buffered record, then stops the background task.
+  /// Sends every buffered record, then stops the background task. Gives up
+  /// after `shutdown_timeout`, so an unreachable platform cannot block exit.
   pub async fn shutdown(&self) {
     self.shutdown.notify_one();
     let task = self.task.lock().expect("reporter task lock").take();
-    if let Some(task) = task {
-      if let Err(e) = task.await {
-        tracing::error!(error = %e, "usage reporter task failed");
+    let Some(mut task) = task else {
+      return;
+    };
+    match tokio::time::timeout(self.shutdown_timeout, &mut task).await {
+      Ok(Ok(())) => {}
+      Ok(Err(e)) => tracing::error!(error = %e, "usage reporter task failed"),
+      Err(_) => {
+        task.abort();
+        tracing::error!("usage reporter stopped before sending all buffered usage");
       }
     }
   }
@@ -128,14 +145,18 @@ async fn run(config: UsageReporterConfig, mut receiver: mpsc::Receiver<UsageReco
   }
 }
 
+/// Retries network errors and server errors with the same record ids until the
+/// batch is delivered or its oldest record is about to leave the window the
+/// platform accepts. Refused batches are logged and dropped.
 async fn send(http: &reqwest::Client, config: &UsageReporterConfig, records: Vec<UsageRecord>) {
   let count = records.len();
+  let oldest = records.iter().map(|r| r.occurred_at).min();
   let batch = UsageBatch {
     service: config.service.clone(),
     records,
   };
   let mut backoff = config.retry_backoff;
-  for attempt in 1..=config.max_attempts.max(1) {
+  loop {
     match attempt_send(http, config, &batch).await {
       Ok(report) => {
         for rejected in report.rejected {
@@ -148,15 +169,18 @@ async fn send(http: &reqwest::Client, config: &UsageReporterConfig, records: Vec
         return;
       }
       Err(Failure::Transient(reason)) => {
-        tracing::warn!(%reason, attempt, "usage batch failed");
-        if attempt < config.max_attempts {
-          tokio::time::sleep(backoff).await;
-          backoff *= 2;
+        let expired = oldest
+          .is_some_and(|t| Utc::now() - t > chrono::Duration::hours(MAX_RETRY_AGE_HOURS));
+        if expired {
+          tracing::error!(%reason, count, "usage batch dropped: its records are too old to report");
+          return;
         }
+        tracing::warn!(%reason, count, "usage batch failed, retrying");
+        tokio::time::sleep(backoff).await;
+        backoff = (backoff * 2).min(config.max_backoff);
       }
     }
   }
-  tracing::error!(count, "usage batch dropped after retries");
 }
 
 enum Failure {

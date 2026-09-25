@@ -49,7 +49,8 @@ async fn serve(statuses: Vec<StatusCode>) -> (String, Received) {
 fn config(url: String) -> UsageReporterConfig {
   let mut config = UsageReporterConfig::new(url, Credentials::new("VGAKTESTKEY", "secret"), "tts");
   config.flush_interval = Duration::from_secs(3600);
-  config.retry_backoff = Duration::from_millis(10);
+  config.retry_backoff = Duration::from_millis(1);
+  config.max_backoff = Duration::from_millis(5);
   config
 }
 
@@ -144,4 +145,27 @@ async fn a_full_buffer_drops_records_and_shutdown_sends_the_rest() {
   let batches = received.batches.lock().unwrap();
   let quantities: Vec<i64> = batches.iter().flat_map(|b| b.records.iter().map(|r| r.quantity)).collect();
   assert_eq!(quantities, vec![1, 2]);
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn transient_failures_are_retried_until_the_batch_is_delivered() {
+  let (url, received) = serve(vec![StatusCode::SERVICE_UNAVAILABLE; 8]).await;
+  let reporter = UsageReporter::spawn(config(url));
+  reporter.record(&authorized(), "SynthesizeSpeech", "characters", 5);
+  reporter.shutdown().await;
+  let batches = received.batches.lock().unwrap();
+  assert_eq!(batches.len(), 9);
+  assert!(batches.iter().all(|b| b.records[0].record_id == batches[0].records[0].record_id));
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn shutdown_gives_up_at_its_deadline() {
+  let (url, _) = serve(vec![StatusCode::SERVICE_UNAVAILABLE; 100_000]).await;
+  let mut config = config(url);
+  config.shutdown_timeout = Duration::from_millis(200);
+  let reporter = UsageReporter::spawn(config);
+  reporter.record(&authorized(), "SynthesizeSpeech", "characters", 5);
+  tokio::time::timeout(Duration::from_secs(2), reporter.shutdown())
+    .await
+    .expect("shutdown returns once its deadline passes");
 }
