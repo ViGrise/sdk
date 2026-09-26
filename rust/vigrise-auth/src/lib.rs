@@ -7,6 +7,7 @@ pub mod authorization;
 pub mod canonical;
 pub mod credentials;
 pub mod error;
+pub mod provider;
 mod quota;
 pub mod signer;
 pub mod signing;
@@ -15,11 +16,14 @@ pub mod signing;
 pub mod metering;
 #[cfg(feature = "reqwest")]
 pub mod reqwest_signer;
+#[cfg(feature = "sts")]
+pub mod sts;
 #[cfg(feature = "verify")]
 pub mod verify;
 
 pub use authorization::AuthorizationHeader;
 pub use credentials::{Credentials, CredentialsError};
 pub use error::AuthError;
+pub use provider::{CredentialsFuture, CredentialsProvider};
 pub use quota::QuotaStatus;
 pub use signer::{sign_request, SignedRequestHeaders};

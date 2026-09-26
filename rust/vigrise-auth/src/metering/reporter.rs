@@ -7,7 +7,7 @@ use tokio::task::JoinHandle;
 use uuid::Uuid;
 
 use super::types::{UsageBatch, UsageRecord, UsageReport};
-use crate::credentials::Credentials;
+use crate::provider::CredentialsProvider;
 use crate::reqwest_signer::sign_reqwest;
 use crate::verify::Authorized;
 
@@ -20,7 +20,7 @@ const MAX_RETRY_AGE_HOURS: i64 = 23;
 pub struct UsageReporterConfig {
   /// Full URL, for example `https://platform.vigrise.com/api/internal/v1/usage`.
   pub endpoint: String,
-  pub credentials: Credentials,
+  pub credentials: Arc<dyn CredentialsProvider>,
   /// Catalog namespace the usage belongs to.
   pub service: String,
   pub flush_interval: Duration,
@@ -37,12 +37,12 @@ pub struct UsageReporterConfig {
 impl UsageReporterConfig {
   pub fn new(
     endpoint: impl Into<String>,
-    credentials: Credentials,
+    credentials: impl CredentialsProvider + 'static,
     service: impl Into<String>,
   ) -> Self {
     Self {
       endpoint: endpoint.into(),
-      credentials,
+      credentials: Arc::new(credentials),
       service: service.into(),
       flush_interval: Duration::from_secs(5),
       max_batch: 500,
@@ -201,6 +201,11 @@ async fn attempt_send(
   config: &UsageReporterConfig,
   batch: &UsageBatch,
 ) -> Result<UsageReport, Failure> {
+  let credentials = config
+    .credentials
+    .credentials()
+    .await
+    .map_err(|e| Failure::Transient(format!("service credentials are unavailable: {e}")))?;
   let mut request = http
     .post(&config.endpoint)
     .json(batch)
@@ -208,7 +213,7 @@ async fn attempt_send(
     .map_err(|e| Failure::Permanent(e.to_string()))?;
   sign_reqwest(
     &mut request,
-    &config.credentials,
+    &credentials,
     SIGNING_SERVICE,
     Utc::now(),
   )

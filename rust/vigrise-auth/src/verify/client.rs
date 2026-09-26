@@ -1,11 +1,12 @@
 use std::future::Future;
 use std::pin::Pin;
+use std::sync::Arc;
 use std::time::Duration;
 
 use chrono::Utc;
 use reqwest::StatusCode;
 
-use crate::credentials::Credentials;
+use crate::provider::CredentialsProvider;
 use crate::error::AuthError;
 use crate::reqwest_signer::sign_reqwest;
 use crate::verify::types::{AuthorizeRequest, AuthorizeResponse};
@@ -30,7 +31,7 @@ pub trait Authorizer: Send + Sync + 'static {
 pub struct AuthorizeClient {
   http: reqwest::Client,
   endpoint: String,
-  credentials: Credentials,
+  credentials: Arc<dyn CredentialsProvider>,
   retry_backoff: Duration,
 }
 
@@ -39,7 +40,7 @@ impl AuthorizeClient {
 
   /// `endpoint` is the full URL, for example
   /// `https://platform.vigrise.com/api/internal/v1/authorize`.
-  pub fn new(endpoint: impl Into<String>, credentials: Credentials) -> Self {
+  pub fn new(endpoint: impl Into<String>, credentials: impl CredentialsProvider + 'static) -> Self {
     let http = reqwest::Client::builder()
       .timeout(Duration::from_secs(2))
       .build()
@@ -47,12 +48,17 @@ impl AuthorizeClient {
     Self {
       http,
       endpoint: endpoint.into(),
-      credentials,
+      credentials: Arc::new(credentials),
       retry_backoff: Duration::from_millis(200),
     }
   }
 
   async fn attempt(&self, request: &AuthorizeRequest) -> Result<AuthorizeResponse, Attempt> {
+    let credentials = self
+      .credentials
+      .credentials()
+      .await
+      .map_err(|e| Attempt::Retryable(format!("service credentials are unavailable: {e}")))?;
     let mut http_request = self
       .http
       .post(&self.endpoint)
@@ -61,7 +67,7 @@ impl AuthorizeClient {
       .map_err(|e| Attempt::Fatal(e.to_string()))?;
     sign_reqwest(
       &mut http_request,
-      &self.credentials,
+      &credentials,
       Self::SIGNING_SERVICE,
       Utc::now(),
     )
@@ -129,9 +135,10 @@ impl Authorizer for AuthorizeClient {
       return;
     };
     let http = self.http.clone();
-    let credentials = self.credentials.clone();
+    let provider = Arc::clone(&self.credentials);
     tokio::spawn(async move {
       let result = async {
+        let credentials = provider.credentials().await.map_err(|e| e.to_string())?;
         let mut request = http
           .post(&endpoint)
           .json(&serde_json::json!({ "leases": leases }))

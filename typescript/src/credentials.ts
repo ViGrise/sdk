@@ -1,11 +1,9 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-export interface Credentials {
-  accessKeyId: string;
-  secretAccessKey: string;
-  sessionToken?: string;
-}
+import type { Credentials } from "./types.js";
+
+export type { Credentials } from "./types.js";
 
 /** Reads one profile of the INI-style shared credentials file. */
 export function parseProfile(contents: string, profile: string): Credentials | undefined {

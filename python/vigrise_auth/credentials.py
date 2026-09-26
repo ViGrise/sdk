@@ -1,7 +1,7 @@
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Mapping, Optional
+from typing import Callable, Mapping, Optional, Union
 
 
 @dataclass(frozen=True)
@@ -9,6 +9,21 @@ class Credentials:
     access_key_id: str
     secret_access_key: str = field(repr=False)
     session_token: Optional[str] = field(default=None, repr=False)
+
+
+CredentialsProvider = Callable[[], Credentials]
+"""Supplies the credentials to sign each request with, such as a refreshed role session."""
+
+CredentialsSource = Union[Credentials, CredentialsProvider]
+
+
+def credentials_from(source: Optional[CredentialsSource]) -> Credentials:
+    """Fixed credentials, a provider's current credentials, or the environment's."""
+    if source is None:
+        return resolve_credentials()
+    if isinstance(source, Credentials):
+        return source
+    return source()
 
 
 def parse_profile(contents: str, profile: str) -> Optional[Credentials]:

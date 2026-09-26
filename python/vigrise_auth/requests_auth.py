@@ -4,12 +4,12 @@ from typing import Optional
 
 import requests
 
-from .credentials import Credentials, resolve_credentials
+from .credentials import CredentialsSource, credentials_from
 from .signer import sign_request
 
 
 class ViGriseAuth(requests.auth.AuthBase):
-    def __init__(self, service: str, credentials: Optional[Credentials] = None):
+    def __init__(self, service: str, credentials: Optional[CredentialsSource] = None):
         self.service = service
         self.credentials = credentials
 
@@ -22,7 +22,7 @@ class ViGriseAuth(requests.auth.AuthBase):
             request.url or "",
             list(request.headers.items()),
             body,
-            self.credentials or resolve_credentials(),
+            credentials_from(self.credentials),
             self.service,
         )
         request.headers.update(signed)

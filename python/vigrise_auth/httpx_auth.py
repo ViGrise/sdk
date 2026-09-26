@@ -4,14 +4,14 @@ from typing import Generator, Optional
 
 import httpx
 
-from .credentials import Credentials, resolve_credentials
+from .credentials import CredentialsSource, credentials_from
 from .signer import sign_request
 
 
 class ViGriseHttpxAuth(httpx.Auth):
     requires_request_body = True
 
-    def __init__(self, service: str, credentials: Optional[Credentials] = None):
+    def __init__(self, service: str, credentials: Optional[CredentialsSource] = None):
         self.service = service
         self.credentials = credentials
 
@@ -21,7 +21,7 @@ class ViGriseHttpxAuth(httpx.Auth):
             str(request.url),
             request.headers.multi_items(),
             request.content,
-            self.credentials or resolve_credentials(),
+            credentials_from(self.credentials),
             self.service,
         )
         request.headers.update(signed)

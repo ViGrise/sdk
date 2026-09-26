@@ -9,7 +9,8 @@ description = "VGR4 request signing and verification for ViGrise services"
 [features]
 default = []
 reqwest = ["dep:reqwest"]
-verify = ["reqwest", "dep:axum", "dep:bytes", "dep:http-body", "dep:http-body-util", "dep:tokio", "tokio/rt", "dep:uuid", "dep:tracing"]
+sts = ["reqwest", "dep:tokio", "tokio/sync", "chrono/serde"]
+verify = ["sts", "dep:axum", "dep:bytes", "dep:http-body", "dep:http-body-util", "dep:tokio", "tokio/rt", "dep:uuid", "dep:tracing"]
 metering = ["verify", "tokio/sync", "tokio/rt", "tokio/macros", "uuid/v4", "chrono/serde"]
 
 [dependencies]
