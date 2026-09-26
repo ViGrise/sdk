@@ -6,9 +6,9 @@ services that accept VGR4 requests.
 | Path | Contents |
 | --- | --- |
 | `test-vectors/` | Reference implementation (`generate.py`) and shared VGR4 vectors |
-| `rust/vigrise-auth` | Rust signer (`reqwest` feature) and service verifier (`verify` feature) |
-| `typescript` | `@vigrise/auth`: `signRequest`, `signedFetch`, `resolveCredentials` (Node 18+) |
-| `python` | `vigrise-auth`: `sign_request`, `ViGriseAuth` for requests, `ViGriseHttpxAuth` for httpx (Python 3.9+) |
+| `rust/vigrise-auth` | Rust signer (`reqwest` feature), role sessions (`sts` feature: `AssumeRoleProvider`) and service verifier (`verify` feature) |
+| `typescript` | `@vigrise/auth`: `signRequest`, `signedFetch`, `resolveCredentials`, `assumeRole` (Node 18+); `@vigrise/auth/browser`: Web Crypto `signRequest` and `signedFetch` for browsers |
+| `python` | `vigrise-auth`: `sign_request`, `assume_role`, `ViGriseAuth` for requests, `ViGriseHttpxAuth` for httpx (Python 3.9+) |
 
 ## VGR4 in one paragraph
 
@@ -60,6 +60,50 @@ Resolved in this order:
 vigrise_access_key_id = VGAK...
 vigrise_secret_access_key = ...
 ```
+
+Temporary credentials of a role session (`VGST...`) also carry a session token:
+`VIGRISE_SESSION_TOKEN` or `vigrise_session_token`. Signers send it in the signed
+`x-vgr-security-token` header.
+
+## Role sessions
+
+`AssumeRole` (`POST https://platform.vigrise.com/api/v1/sts/assume-role`, signed
+under the `sts` scope with a long-term key) returns a session of a role that
+lasts 15 minutes up to the role's maximum. An optional session policy narrows
+what the session may do.
+
+A backend handing a web page a narrowed session:
+
+```ts
+import { assumeRole } from "@vigrise/auth";
+const session = await assumeRole(
+  { roleVrn, roleSessionName: `user-${userId}`, durationSeconds: 900,
+    sessionPolicy: { Version: "2026-10-01", Statement: { Effect: "Allow", Action: "tts:SynthesizeSpeech", Resource: "*" } } },
+  { endpoint: "https://platform.vigrise.com/api/v1/sts/assume-role" },
+);
+// send session.credentials to the page, which signs with @vigrise/auth/browser:
+import { signedFetch } from "@vigrise/auth/browser";
+await signedFetch(url, init, { service: "tts", credentials: session.credentials });
+```
+
+```python
+from vigrise_auth import assume_role
+session = assume_role(role_vrn, "nightly-job", endpoint="https://platform.vigrise.com/api/v1/sts/assume-role")
+requests.get(url, auth=ViGriseAuth("tts", session.credentials))
+```
+
+Rust keeps one session and refreshes it before it expires, five minutes early
+(or after 80 percent of a session shorter than 25 minutes):
+
+```rust
+let provider = AssumeRoleProvider::new(StsClient::new(sts_url, Credentials::resolve()?), role_vrn, "worker");
+let credentials = provider.credentials().await?;
+```
+
+ViGrise services use `vigrise_auth::sts::service_credentials`, which assumes
+`VIGRISE_ROLE_VRN` through `VIGRISE_STS_URL` when it is set. TypeScript and
+Python callers call `assumeRole` again before `expiration`; `signedFetch` and the
+auth classes also accept a function returning the current credentials.
 
 ## Services behind a proxy
 
