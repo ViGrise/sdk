@@ -104,3 +104,14 @@ def test_auth_classes_accept_a_credentials_provider(client):
     assert calls == [1]
     assert seen[0][0]["x-vgr-security-token"] == "v1.sealed"
     assert "Credential=VGSTABCDEFGHIJKLMNOP/" in seen[0][0]["authorization"]
+
+
+@pytest.mark.parametrize(
+    "text",
+    ["2026-09-26T10:30:00Z", "2026-09-26T10:30:00.123Z", "2026-09-26T10:30:00.123456789Z", "2026-09-26T10:30:00+00:00"],
+)
+def test_expirations_parse_whatever_their_fraction(text):
+    from vigrise_auth.sts import parse_timestamp
+
+    parsed = parse_timestamp(text)
+    assert parsed.replace(microsecond=0) == datetime(2026, 9, 26, 10, 30, tzinfo=timezone.utc)

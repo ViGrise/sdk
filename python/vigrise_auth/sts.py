@@ -1,6 +1,7 @@
 """STS `AssumeRole`: `assume_role(role_vrn, "web", endpoint=...)` returns a role session."""
 
 import json
+import re
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
@@ -24,6 +25,16 @@ class RoleSession:
     expiration: datetime
     role_vrn: str
     session_vrn: str
+
+
+_FRACTION = re.compile(r"\.(\d+)")
+
+
+def parse_timestamp(text: str) -> datetime:
+    """RFC 3339 timestamp with any fraction length; `fromisoformat` accepts only
+    3 or 6 fractional digits before Python 3.11."""
+    normalized = _FRACTION.sub(lambda m: "." + (m.group(1) + "000000")[:6], text.replace("Z", "+00:00"), count=1)
+    return datetime.fromisoformat(normalized)
 
 
 def assume_role(
@@ -63,7 +74,7 @@ def assume_role(
     issued = reply["credentials"]
     return RoleSession(
         credentials=Credentials(issued["access_key_id"], issued["secret_access_key"], issued["session_token"]),
-        expiration=datetime.fromisoformat(issued["expiration"].replace("Z", "+00:00")),
+        expiration=parse_timestamp(issued["expiration"]),
         role_vrn=reply["assumed_role"]["role_vrn"],
         session_vrn=reply["assumed_role"]["session_vrn"],
     )
