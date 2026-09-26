@@ -309,3 +309,93 @@ async fn an_expired_sign_in_falls_back_to_the_browser_and_logout_forgets_it() {
     .is_none());
   assert!(!dir.path().join("sso").join("dev.json").exists());
 }
+
+#[test]
+fn the_default_accounts_url_is_the_production_issuer() {
+  assert_eq!(
+    vigrise_cli::login::discovery_url(vigrise_cli::login::DEFAULT_ACCOUNTS_URL),
+    "https://accounts.vigrise.com/o/oauth2/.well-known/openid-configuration"
+  );
+  assert_eq!(
+    vigrise_cli::login::discovery_url("https://accounts.vigrise.com/o/oauth2/"),
+    "https://accounts.vigrise.com/o/oauth2/.well-known/openid-configuration"
+  );
+}
+
+#[tokio::test]
+async fn a_profile_holding_long_term_keys_is_left_alone() {
+  let (accounts_url, platform_url, _, _) = serve().await;
+  let dir = tempfile::tempdir().unwrap();
+  let original = "[dev]\nvigrise_access_key_id = VGAKLONGTERM\nvigrise_secret_access_key = s\n";
+  std::fs::write(dir.path().join("credentials"), original).unwrap();
+  let user = FakeUser::default();
+  let error = login(&options(dir.path(), &accounts_url, &platform_url), &user)
+    .await
+    .unwrap_err();
+  assert!(error.to_string().contains("VGAKLONGTERM"), "{error}");
+  assert!(
+    user.opened.lock().unwrap().is_empty(),
+    "refused before signing in"
+  );
+  assert_eq!(
+    std::fs::read_to_string(dir.path().join("credentials")).unwrap(),
+    original
+  );
+}
+
+/// Opens an idle connection and sends a callback with a foreign state to the
+/// loopback listener before following the real sign-in.
+#[derive(Default)]
+struct NoisyBrowser {
+  inner: FakeUser,
+}
+
+impl Ui for NoisyBrowser {
+  fn open_browser(&self, url: &str) {
+    let redirect = url::Url::parse(url)
+      .unwrap()
+      .query_pairs()
+      .find(|(key, _)| key == "redirect_uri")
+      .map(|(_, value)| value.to_string())
+      .unwrap();
+    let port = url::Url::parse(&redirect).unwrap().port().unwrap();
+    let url = url.to_string();
+    tokio::spawn(async move {
+      let idle = tokio::net::TcpStream::connect(("127.0.0.1", port))
+        .await
+        .unwrap();
+      let _ = reqwest::get(format!(
+        "http://127.0.0.1:{port}/callback?code=stolen&state=someone-else"
+      ))
+      .await;
+      let _ = reqwest::get(url).await;
+      drop(idle);
+    });
+    self.inner.opened.lock().unwrap().push(redirect);
+  }
+
+  fn show_device_code(&self, user_code: &str, verification_uri: &str, complete: Option<&str>) {
+    self
+      .inner
+      .show_device_code(user_code, verification_uri, complete);
+  }
+
+  fn choose_role(&self, roles: &[AssumableRole]) -> Option<usize> {
+    self.inner.choose_role(roles)
+  }
+}
+
+#[tokio::test]
+async fn idle_connections_and_foreign_callbacks_do_not_stop_the_sign_in() {
+  let (accounts_url, platform_url, _, _) = serve().await;
+  let dir = tempfile::tempdir().unwrap();
+  let browser = NoisyBrowser::default();
+  let session = tokio::time::timeout(
+    std::time::Duration::from_secs(20),
+    login(&options(dir.path(), &accounts_url, &platform_url), &browser),
+  )
+  .await
+  .expect("sign-in completes")
+  .unwrap();
+  assert_eq!(session.access_key_id, "VGSTIDT1");
+}

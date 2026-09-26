@@ -2,7 +2,8 @@ use std::io::{BufRead, Write};
 use std::path::PathBuf;
 
 use clap::{Parser, Subcommand};
-use vigrise_cli::login::{login, logout, AssumableRole, LoginOptions, Ui};
+use vigrise_cli::login::{login, logout, AssumableRole, LoginOptions, Ui, DEFAULT_ACCOUNTS_URL};
+use vigrise_cli::opener::browser_command;
 use vigrise_cli::profile::{describe_session, read_session};
 
 /// Sign in with your ViGrise account and get role session credentials for the
@@ -78,16 +79,9 @@ struct Terminal;
 impl Ui for Terminal {
   fn open_browser(&self, url: &str) {
     eprintln!("Opening your browser to sign in. If it does not open, visit:\n\n  {url}\n");
-    let opener: &[&str] = if cfg!(target_os = "macos") {
-      &["open"]
-    } else if cfg!(windows) {
-      &["cmd", "/C", "start", ""]
-    } else {
-      &["xdg-open"]
-    };
-    let _ = std::process::Command::new(opener[0])
-      .args(&opener[1..])
-      .arg(url)
+    let (program, args) = browser_command(std::env::consts::OS, url);
+    let _ = std::process::Command::new(program)
+      .args(args)
       .stdout(std::process::Stdio::null())
       .stderr(std::process::Stdio::null())
       .spawn();

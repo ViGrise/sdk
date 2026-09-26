@@ -13,9 +13,11 @@ use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
-use crate::profile::{remove_session, write_private, write_session, SessionProfile};
+use crate::profile::{access_key_id, remove_session, write_private, write_session, SessionProfile};
 
 const SCOPES: &str = "openid email offline_access";
+/// The Accounts issuer, where its OpenID configuration is published.
+pub const DEFAULT_ACCOUNTS_URL: &str = "https://accounts.vigrise.com/o/oauth2";
 /// How long the browser sign-in may take before the listener gives up.
 const BROWSER_TIMEOUT: Duration = Duration::from_secs(300);
 
@@ -31,11 +33,16 @@ pub enum LoginError {
   Io(#[from] std::io::Error),
   #[error("no role was chosen")]
   NoRole,
+  #[error("profile {profile} holds the long-term access key {access_key_id}; choose another profile with --profile")]
+  LongTermKeys {
+    profile: String,
+    access_key_id: String,
+  },
 }
 
 #[derive(Debug, Clone)]
 pub struct LoginOptions {
-  /// Accounts issuer, for example `https://accounts.vigrise.com/o`.
+  /// Accounts issuer, for example `https://accounts.vigrise.com/o/oauth2`.
   pub accounts_url: String,
   /// Platform base URL, for example `https://platform.vigrise.com`.
   pub platform_url: String,
@@ -133,11 +140,16 @@ fn random_token(bytes: usize) -> String {
   URL_SAFE_NO_PAD.encode(buffer)
 }
 
-async fn discover(http: &reqwest::Client, accounts_url: &str) -> Result<Discovery, LoginError> {
-  let url = format!(
+/// The OpenID configuration URL of an issuer (OpenID Connect Discovery 4).
+pub fn discovery_url(issuer: &str) -> String {
+  format!(
     "{}/.well-known/openid-configuration",
-    accounts_url.trim_end_matches('/')
-  );
+    issuer.trim_end_matches('/')
+  )
+}
+
+async fn discover(http: &reqwest::Client, accounts_url: &str) -> Result<Discovery, LoginError> {
+  let url = discovery_url(accounts_url);
   http
     .get(&url)
     .send()
@@ -178,56 +190,89 @@ fn describe(error: OAuthError) -> LoginError {
   })
 }
 
+/// How long one connection to the loopback listener may take to send its request.
+const REQUEST_READ_TIMEOUT: Duration = Duration::from_secs(5);
+
+/// Reads one request's target and answers it with a short page; `None` for
+/// connections that send no complete request in time.
+async fn read_callback(
+  mut stream: tokio::net::TcpStream,
+) -> Option<std::collections::HashMap<String, String>> {
+  let mut buffer = Vec::with_capacity(1024);
+  let read = tokio::time::timeout(REQUEST_READ_TIMEOUT, async {
+    let mut chunk = [0u8; 1024];
+    while !buffer.windows(4).any(|w| w == b"\r\n\r\n") && buffer.len() < 16 * 1024 {
+      let n = stream.read(&mut chunk).await.ok()?;
+      if n == 0 {
+        break;
+      }
+      buffer.extend_from_slice(&chunk[..n]);
+    }
+    Some(())
+  })
+  .await;
+  if !matches!(read, Ok(Some(()))) {
+    return None;
+  }
+  let request = String::from_utf8_lossy(&buffer).to_string();
+  let target = request.split_whitespace().nth(1).unwrap_or("");
+  let url = url::Url::parse(&format!("http://127.0.0.1{target}")).ok()?;
+  let query: std::collections::HashMap<String, String> = url.query_pairs().into_owned().collect();
+  let (status, page) = if url.path() != "/callback" {
+    ("404 Not Found", "")
+  } else if query.contains_key("code") {
+    (
+      "200 OK",
+      "Signed in. You can close this tab and return to the terminal.",
+    )
+  } else {
+    (
+      "200 OK",
+      "Sign-in did not complete. Return to the terminal for details.",
+    )
+  };
+  let response = format!(
+    "HTTP/1.1 {status}\r\ncontent-type: text/plain; charset=utf-8\r\ncontent-length: {}\r\nconnection: close\r\n\r\n{page}",
+    page.len()
+  );
+  let _ = stream.write_all(response.as_bytes()).await;
+  (url.path() == "/callback").then_some(query)
+}
+
 /// Waits for the browser to come back to the loopback listener with the
-/// authorization code, answering it with a short page.
+/// authorization code. Every connection is read on its own, so an idle one
+/// holds nothing up, and callbacks carrying another login's state are ignored.
 async fn wait_for_code(
   listener: tokio::net::TcpListener,
   state: &str,
 ) -> Result<String, LoginError> {
+  let (sender, mut callbacks) = tokio::sync::mpsc::channel(8);
   loop {
-    let (mut stream, _) = listener.accept().await?;
-    let mut buffer = vec![0u8; 8192];
-    let read = stream.read(&mut buffer).await?;
-    let request = String::from_utf8_lossy(&buffer[..read]).to_string();
-    let target = request.split_whitespace().nth(1).unwrap_or("");
-    let Ok(url) = url::Url::parse(&format!("http://127.0.0.1{target}")) else {
-      continue;
-    };
-    if url.path() != "/callback" {
-      let _ = stream
-        .write_all(b"HTTP/1.1 404 Not Found\r\ncontent-length: 0\r\nconnection: close\r\n\r\n")
-        .await;
-      continue;
+    tokio::select! {
+      accepted = listener.accept() => {
+        let (stream, _) = accepted?;
+        let sender = sender.clone();
+        tokio::spawn(async move {
+          if let Some(query) = read_callback(stream).await {
+            let _ = sender.send(query).await;
+          }
+        });
+      }
+      Some(query) = callbacks.recv() => {
+        if query.get("state").map(String::as_str) != Some(state) {
+          continue;
+        }
+        if let Some(code) = query.get("code") {
+          return Ok(code.clone());
+        }
+        let reason = query
+          .get("error_description")
+          .or(query.get("error"))
+          .map(|text| text.chars().filter(|c| !c.is_control()).collect::<String>())
+          .unwrap_or_else(|| "no authorization code".into());
+        return Err(LoginError::Accounts(format!("sign-in failed: {reason}")));
+      }
     }
-    let query: std::collections::HashMap<String, String> = url.query_pairs().into_owned().collect();
-    let (ok, page) = match (query.get("code"), query.get("state"), query.get("error")) {
-      (Some(_), Some(returned), _) if returned == state => (
-        true,
-        "Signed in. You can close this tab and return to the terminal.",
-      ),
-      (_, _, Some(_)) => (
-        false,
-        "Sign-in was refused. Return to the terminal for details.",
-      ),
-      _ => (
-        false,
-        "The sign-in response did not match this login. Return to the terminal.",
-      ),
-    };
-    let response = format!(
-      "HTTP/1.1 200 OK\r\ncontent-type: text/plain; charset=utf-8\r\ncontent-length: {}\r\nconnection: close\r\n\r\n{page}",
-      page.len()
-    );
-    let _ = stream.write_all(response.as_bytes()).await;
-    if ok {
-      return Ok(query["code"].clone());
-    }
-    let reason = query
-      .get("error_description")
-      .or(query.get("error"))
-      .cloned()
-      .unwrap_or_else(|| "state mismatch".into());
-    return Err(LoginError::Accounts(format!("sign-in failed: {reason}")));
   }
 }
 
@@ -377,8 +422,17 @@ async fn platform_call<T: serde::de::DeserializeOwned>(
 }
 
 /// Signs in (silently when a cached sign-in still works), assumes the role and
-/// writes the session to the profile.
+/// writes the session to the profile. A profile holding a long-term key is
+/// refused, since the session would replace a secret shown only once.
 pub async fn login(options: &LoginOptions, ui: &dyn Ui) -> Result<SessionProfile, LoginError> {
+  if let Some(existing) = access_key_id(&options.credentials_file, &options.profile)? {
+    if !existing.starts_with("VGST") {
+      return Err(LoginError::LongTermKeys {
+        profile: options.profile.clone(),
+        access_key_id: existing,
+      });
+    }
+  }
   let http = reqwest::Client::builder()
     .timeout(Duration::from_secs(30))
     .build()

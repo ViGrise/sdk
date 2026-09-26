@@ -192,3 +192,22 @@ pub fn describe_session(session: &SessionProfile, now: chrono::DateTime<chrono::
     session.access_key_id, session.role_vrn, session.expiration
   )
 }
+
+/// The access key id a profile holds, whatever kind of key it is.
+pub fn access_key_id(path: &Path, profile: &str) -> std::io::Result<Option<String>> {
+  let contents = read(path)?;
+  let mut in_profile = false;
+  let mut found = None;
+  for line in contents.lines() {
+    if let Some(name) = section_name(line) {
+      in_profile = name == profile;
+      continue;
+    }
+    if in_profile && key_of(line) == Some(SESSION_KEYS[0]) {
+      found = line
+        .split_once('=')
+        .map(|(_, value)| value.trim().to_string());
+    }
+  }
+  Ok(found)
+}
