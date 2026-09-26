@@ -33,11 +33,8 @@ enum Command {
     /// Sign in by entering a code on another device instead of a local browser.
     #[arg(long)]
     device: bool,
-    #[arg(
-      long,
-      env = "VIGRISE_ACCOUNTS_URL",
-      default_value = "https://accounts.vigrise.com/o"
-    )]
+    /// Accounts issuer URL.
+    #[arg(long, env = "VIGRISE_ACCOUNTS_URL", default_value = DEFAULT_ACCOUNTS_URL)]
     accounts_url: String,
     #[arg(
       long,
