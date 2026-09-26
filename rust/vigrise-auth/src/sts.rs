@@ -102,6 +102,7 @@ fn sts_error(status: reqwest::StatusCode, body: &str) -> AuthError {
     "AccessDenied" => AuthError::AccessDenied(error.message),
     "InvalidClientTokenId" => AuthError::InvalidClientTokenId(error.message),
     "RequestExpired" => AuthError::RequestExpired(error.message),
+    "ExpiredToken" => AuthError::ExpiredToken(error.message),
     "SignatureDoesNotMatch" => AuthError::SignatureDoesNotMatch {
       message: error.message,
       string_to_sign: None,

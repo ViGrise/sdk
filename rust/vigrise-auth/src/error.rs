@@ -17,6 +17,9 @@ pub enum AuthError {
   },
   #[error("{0}")]
   RequestExpired(String),
+  /// The role session the request was signed with has expired.
+  #[error("{0}")]
+  ExpiredToken(String),
   #[error("{0}")]
   AccessDenied(String),
   #[error("{0}")]
@@ -58,6 +61,7 @@ impl AuthError {
       AuthError::InvalidClientTokenId(_) => "InvalidClientTokenId",
       AuthError::SignatureDoesNotMatch { .. } => "SignatureDoesNotMatch",
       AuthError::RequestExpired(_) => "RequestExpired",
+      AuthError::ExpiredToken(_) => "ExpiredToken",
       AuthError::AccessDenied(_) => "AccessDenied",
       AuthError::ServiceNotAvailableForPlan(_) => "ServiceNotAvailableForPlan",
       AuthError::ServiceQuotaExceeded { .. } => "ServiceQuotaExceeded",
@@ -75,7 +79,8 @@ impl AuthError {
       | AuthError::IncompleteSignature(_)
       | AuthError::InvalidClientTokenId(_)
       | AuthError::SignatureDoesNotMatch { .. }
-      | AuthError::RequestExpired(_) => StatusCode::UNAUTHORIZED,
+      | AuthError::RequestExpired(_)
+      | AuthError::ExpiredToken(_) => StatusCode::UNAUTHORIZED,
       AuthError::AccessDenied(_) | AuthError::ServiceNotAvailableForPlan(_) => {
         StatusCode::FORBIDDEN
       }
@@ -120,6 +125,7 @@ impl AuthError {
         string_to_sign: None,
       },
       "RequestExpired" => AuthError::RequestExpired(message),
+      "ExpiredToken" => AuthError::ExpiredToken(message),
       "ServiceNotAvailableForPlan" => AuthError::ServiceNotAvailableForPlan(message),
       "ServiceQuotaExceeded" => AuthError::ServiceQuotaExceeded {
         message,
@@ -169,6 +175,13 @@ mod tests {
       let err = AuthError::from_code(code, "m".into());
       assert_eq!(err.status(), StatusCode::TOO_MANY_REQUESTS, "{code}");
     }
+  }
+
+  #[test]
+  fn an_expired_session_is_401_expired_token() {
+    let err = AuthError::from_code("ExpiredToken", "The security token has expired".into());
+    assert_eq!(err.code(), "ExpiredToken");
+    assert_eq!(err.status(), StatusCode::UNAUTHORIZED);
   }
 
   #[test]
