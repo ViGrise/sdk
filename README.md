@@ -9,6 +9,7 @@ services that accept VGR4 requests.
 | `rust/vigrise-auth` | Rust signer (`reqwest` feature), role sessions (`sts` feature: `AssumeRoleProvider`) and service verifier (`verify` feature) |
 | `typescript` | `@vigrise/auth`: `signRequest`, `signedFetch`, `resolveCredentials`, `assumeRole` (Node 18+); `@vigrise/auth/browser`: Web Crypto `signRequest` and `signedFetch` for browsers |
 | `python` | `vigrise-auth`: `sign_request`, `assume_role`, `ViGriseAuth` for requests, `ViGriseHttpxAuth` for httpx (Python 3.9+) |
+| `rust/vigrise-cli` | `vigrise` command line: `login`, `logout`, `whoami` |
 
 ## VGR4 in one paragraph
 
@@ -104,6 +105,25 @@ ViGrise services use `vigrise_auth::sts::service_credentials`, which assumes
 `VIGRISE_ROLE_VRN` through `VIGRISE_STS_URL` when it is set. TypeScript and
 Python callers call `assumeRole` again before `expiration`; `signedFetch` and the
 auth classes also accept a function returning the current credentials.
+
+## Signing in with your ViGrise account
+
+`vigrise login` signs you in at Accounts and writes a role session to a
+profile of `~/.vigrise/credentials`, which every SDK reads:
+
+```bash
+cargo install --path rust/vigrise-cli
+vigrise login --role vrn:vigrise:iam:<project_id>:role/<name> --profile dev
+VIGRISE_PROFILE=dev python examples/tts.py https://tts.vigrise.com
+```
+
+It opens a browser (`--device` shows a code to enter on another device
+instead). Without `--role` it lists the roles you may assume. The sign-in is
+cached in `~/.vigrise/sso/<profile>.json`, so the next `vigrise login` needs
+no browser until it expires. `vigrise whoami` shows the session's role and
+expiry; `vigrise logout` removes both. A role lets you in when its trust
+policy names you as a project member, for example
+`"Principal": {"VGR": "vrn:vigrise:iam:<project_id>:member/*"}`.
 
 ## Services behind a proxy
 
