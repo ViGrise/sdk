@@ -8,12 +8,14 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::credentials::Credentials;
+use crate::credentials::{Credentials, CredentialsError};
 use crate::error::AuthError;
 use crate::provider::{CredentialsFuture, CredentialsProvider};
 use crate::reqwest_signer::sign_reqwest;
 
 const SIGNING_SERVICE: &str = "sts";
+pub const ENV_ROLE_VRN: &str = "VIGRISE_ROLE_VRN";
+pub const ENV_STS_URL: &str = "VIGRISE_STS_URL";
 /// Sessions at least this long are refreshed `REFRESH_BEFORE_EXPIRY` before
 /// they expire; shorter ones after 80 percent of their lifetime.
 const LONG_SESSION: chrono::Duration = chrono::Duration::minutes(25);
@@ -244,6 +246,37 @@ impl CredentialsProvider for AssumeRoleProvider {
       Ok(credentials)
     })
   }
+}
+
+/// The credentials a ViGrise service signs with: a session of `VIGRISE_ROLE_VRN`
+/// obtained through `VIGRISE_STS_URL` with `bootstrap`, or `bootstrap` itself
+/// when no role is configured.
+pub fn service_credentials(
+  bootstrap: Credentials,
+  session_name: &str,
+) -> Result<Arc<dyn CredentialsProvider>, CredentialsError> {
+  service_credentials_with(bootstrap, session_name, |name| std::env::var(name).ok())
+}
+
+pub fn service_credentials_with(
+  bootstrap: Credentials,
+  session_name: &str,
+  lookup: impl Fn(&str) -> Option<String>,
+) -> Result<Arc<dyn CredentialsProvider>, CredentialsError> {
+  let present = |name| lookup(name).filter(|value| !value.is_empty());
+  let Some(role_vrn) = present(ENV_ROLE_VRN) else {
+    return Ok(Arc::new(bootstrap));
+  };
+  let endpoint = present(ENV_STS_URL).ok_or_else(|| {
+    CredentialsError::Incomplete(format!(
+      "{ENV_ROLE_VRN} is set; {ENV_STS_URL} is required too"
+    ))
+  })?;
+  Ok(Arc::new(AssumeRoleProvider::new(
+    StsClient::new(endpoint, bootstrap),
+    role_vrn,
+    session_name,
+  )))
 }
 
 #[cfg(test)]

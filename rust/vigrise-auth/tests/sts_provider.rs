@@ -191,3 +191,48 @@ async fn the_authorize_client_signs_with_the_provider_session() {
     )]
   );
 }
+
+#[tokio::test]
+async fn service_credentials_use_the_role_session_when_a_role_is_configured() {
+  use vigrise_auth::sts::service_credentials_with;
+  let (base, sts) = serve(Duration::from_secs(3600), Duration::ZERO, StatusCode::OK).await;
+  let bootstrap = Credentials::new("VGAKBOOTSTRAP", "bootstrap-secret");
+  let env = |role: Option<&'static str>, url: Option<String>| {
+    move |name: &str| match name {
+      "VIGRISE_ROLE_VRN" => role.map(str::to_string),
+      "VIGRISE_STS_URL" => url.clone(),
+      _ => None,
+    }
+  };
+
+  let long_term =
+    service_credentials_with(bootstrap.clone(), "tts-gateway", env(None, None)).unwrap();
+  assert_eq!(long_term.credentials().await.unwrap(), bootstrap);
+
+  let missing_url = service_credentials_with(
+    bootstrap.clone(),
+    "tts-gateway",
+    env(Some("vrn:vigrise:iam:p:role/tts-service"), None),
+  );
+  assert!(missing_url
+    .unwrap_err()
+    .to_string()
+    .contains("VIGRISE_STS_URL"));
+
+  let session = service_credentials_with(
+    bootstrap,
+    "tts-gateway",
+    env(
+      Some("vrn:vigrise:iam:p:role/tts-service"),
+      Some(format!("{base}/api/v1/sts/assume-role")),
+    ),
+  )
+  .unwrap();
+  assert!(session
+    .credentials()
+    .await
+    .unwrap()
+    .access_key_id
+    .starts_with("VGST"));
+  assert_eq!(sts.calls.load(Ordering::SeqCst), 1);
+}

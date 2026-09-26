@@ -36,6 +36,8 @@ pub enum CredentialsError {
     path: String,
     source: std::io::Error,
   },
+  #[error("{0}")]
+  Incomplete(String),
 }
 
 impl Credentials {
