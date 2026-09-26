@@ -16,10 +16,14 @@ export interface SignedHeaders {
   authorization: string;
   "x-vgr-date": string;
   "x-vgr-content-sha256": string;
+  "x-vgr-security-token"?: string;
 }
 
 /** Signs `host`, `content-type` when present, and every `x-vgr-*` header. */
 export function signRequest(input: SignInput): SignedHeaders {
+  if (input.credentials.accessKeyId.startsWith("VGST") && !input.credentials.sessionToken) {
+    throw new Error("Temporary credentials require a session token");
+  }
   const url = new URL(input.url);
   const headers: HeaderList = Array.isArray(input.headers) ? [...input.headers] : Object.entries(input.headers ?? {});
   const body = typeof input.body === "string" ? new TextEncoder().encode(input.body) : (input.body ?? new Uint8Array());
@@ -33,6 +37,7 @@ export function signRequest(input: SignInput): SignedHeaders {
     all.push(["host", url.host]);
   }
   all.push(["x-vgr-date", timestamp], ["x-vgr-content-sha256", payloadHash]);
+  if (input.credentials.sessionToken) all.push(["x-vgr-security-token", input.credentials.sessionToken]);
   const signed = [
     ...new Set(
       all.map(([n]) => n.toLowerCase()).filter((n) => n === "host" || n === "content-type" || n.startsWith("x-vgr-")),
@@ -43,9 +48,11 @@ export function signRequest(input: SignInput): SignedHeaders {
   const credentialScope = scope(date, input.service);
   const sts = stringToSign(timestamp, credentialScope, creq);
   const sig = signature(deriveSigningKey(input.credentials.secretAccessKey, date, input.service), sts);
-  return {
+  const result: SignedHeaders = {
     authorization: `${ALGORITHM} Credential=${input.credentials.accessKeyId}/${credentialScope}, SignedHeaders=${signed.join(";")}, Signature=${sig}`,
     "x-vgr-date": timestamp,
     "x-vgr-content-sha256": payloadHash,
   };
+  if (input.credentials.sessionToken) result["x-vgr-security-token"] = input.credentials.sessionToken;
+  return result;
 }

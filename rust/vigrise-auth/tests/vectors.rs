@@ -31,6 +31,8 @@ struct Request {
 struct VectorCredentials {
   access_key_id: String,
   secret_access_key: String,
+  #[serde(default)]
+  session_token: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -84,6 +86,9 @@ fn primitives_match_every_vector() {
     let mut pairs = v.request.headers.clone();
     pairs.push(("x-vgr-date".into(), v.time.clone()));
     pairs.push(("x-vgr-content-sha256".into(), payload_hash.clone()));
+    if let Some(token) = &v.credentials.session_token {
+      pairs.push(("x-vgr-security-token".into(), token.clone()));
+    }
     let signed: Vec<String> = v
       .expected
       .signed_headers
@@ -143,10 +148,11 @@ fn sign_request_matches_every_vector() {
       &uri,
       &header_map(&v.request.headers),
       v.request.body.as_bytes(),
-      &Credentials::new(
-        &v.credentials.access_key_id,
-        &v.credentials.secret_access_key,
-      ),
+      &Credentials {
+        access_key_id: v.credentials.access_key_id.clone(),
+        secret_access_key: v.credentials.secret_access_key.clone(),
+        session_token: v.credentials.session_token.clone(),
+      },
       &v.service,
       time,
     )

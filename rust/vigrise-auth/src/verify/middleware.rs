@@ -203,6 +203,7 @@ async fn authorize(
 
   let request = AuthorizeRequest {
     access_key_id: auth.access_key_id,
+    security_token: header_str(parts, "x-vgr-security-token").map(str::to_string),
     string_to_sign: sts.clone(),
     signature: auth.signature,
     action: resolved.action,

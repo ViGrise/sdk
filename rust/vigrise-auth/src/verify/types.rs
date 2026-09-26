@@ -10,6 +10,8 @@ pub use crate::QuotaStatus;
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct AuthorizeRequest {
   pub access_key_id: String,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub security_token: Option<String>,
   pub string_to_sign: String,
   pub signature: String,
   pub action: String,

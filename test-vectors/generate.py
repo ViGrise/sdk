@@ -56,6 +56,9 @@ def build(case):
     date = time[:8]
     service = case["service"]
     headers = list(req["headers"]) + [["x-vgr-date", time], ["x-vgr-content-sha256", payload_hash]]
+    session_token = case["credentials"].get("session_token")
+    if session_token:
+        headers.append(["x-vgr-security-token", session_token])
     # Signers sign host, content-type and every x-vgr-* header; others are sent unsigned.
     signed = sorted({n.lower() for n, _ in headers if n.lower() in ("host", "content-type") or n.lower().startswith("x-vgr-")})
     creq = "\n".join([

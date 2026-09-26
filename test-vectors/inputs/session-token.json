@@ -1,0 +1,17 @@
+{
+  "name": "temporary credentials include the security token",
+  "request": {
+    "method": "POST",
+    "path": "/v1/audio/speech",
+    "query": "",
+    "headers": [["host", "tts.vigrise.test"], ["content-type", "application/json"]],
+    "body": "{\"input\":\"hello\"}"
+  },
+  "credentials": {
+    "access_key_id": "VGSTABCDEFGHIJKLMNOP",
+    "secret_access_key": "temporary-secret",
+    "session_token": "v1.7.bm9uY2U.Y2lwaGVydGV4dA"
+  },
+  "service": "tts",
+  "time": "20260926T100000Z"
+}

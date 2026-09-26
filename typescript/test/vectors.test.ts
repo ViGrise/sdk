@@ -8,7 +8,7 @@ import { signRequest } from "../src/signer.js";
 
 interface Vector {
   request: { method: string; path: string; query: string; headers: [string, string][]; body: string };
-  credentials: { access_key_id: string; secret_access_key: string };
+  credentials: { access_key_id: string; secret_access_key: string; session_token?: string };
   service: string;
   time: string;
   expected: {
@@ -39,6 +39,7 @@ describe("VGR4 vectors", () => {
       const payloadHash = sha256Hex(new TextEncoder().encode(v.request.body));
       expect(payloadHash).toBe(v.expected.payload_hash);
       const headers: [string, string][] = [...v.request.headers, ["x-vgr-date", v.time], ["x-vgr-content-sha256", payloadHash]];
+      if (v.credentials.session_token) headers.push(["x-vgr-security-token", v.credentials.session_token]);
       const signed = v.expected.signed_headers.split(";");
       const creq = canonicalRequest(v.request.method, v.request.path, v.request.query, headers, signed, payloadHash);
       expect(creq).toBe(v.expected.canonical_request);
@@ -56,7 +57,11 @@ describe("VGR4 vectors", () => {
         url: `https://${host}${v.request.path}${query}`,
         headers: v.request.headers,
         body: v.request.body,
-        credentials: { accessKeyId: v.credentials.access_key_id, secretAccessKey: v.credentials.secret_access_key },
+        credentials: {
+          accessKeyId: v.credentials.access_key_id,
+          secretAccessKey: v.credentials.secret_access_key,
+          sessionToken: v.credentials.session_token,
+        },
         service: v.service,
         now: parseTime(v.time),
       });

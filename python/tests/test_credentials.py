@@ -26,3 +26,17 @@ def test_resolution_order(tmp_path):
 
 def test_secret_is_not_in_repr():
     assert "topsecret" not in repr(Credentials("id", "topsecret"))
+
+
+def test_resolves_session_token_from_environment_and_profile():
+    creds = resolve_credentials(env={
+        "VIGRISE_ACCESS_KEY_ID": "VGSTENV",
+        "VIGRISE_SECRET_ACCESS_KEY": "s",
+        "VIGRISE_SESSION_TOKEN": "token-from-env",
+    })
+    assert creds.session_token == "token-from-env"
+    creds = parse_profile(
+        "[default]\nvigrise_access_key_id=VGSTFILE\nvigrise_secret_access_key=s\nvigrise_session_token=token-from-file\n",
+        "default",
+    )
+    assert creds.session_token == "token-from-file"

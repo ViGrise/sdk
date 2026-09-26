@@ -9,6 +9,7 @@ use crate::signing::{derive_signing_key, scope, signature, string_to_sign, TIMES
 
 pub const X_VGR_DATE: &str = "x-vgr-date";
 pub const X_VGR_CONTENT_SHA256: &str = "x-vgr-content-sha256";
+pub const X_VGR_SECURITY_TOKEN: &str = "x-vgr-security-token";
 
 /// Headers a client adds to a request to sign it.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -16,6 +17,7 @@ pub struct SignedRequestHeaders {
   pub authorization: String,
   pub x_vgr_date: String,
   pub x_vgr_content_sha256: String,
+  pub x_vgr_security_token: Option<String>,
 }
 
 impl SignedRequestHeaders {
@@ -27,6 +29,9 @@ impl SignedRequestHeaders {
     headers.insert(header::AUTHORIZATION, value(&self.authorization)?);
     headers.insert(X_VGR_DATE, value(&self.x_vgr_date)?);
     headers.insert(X_VGR_CONTENT_SHA256, value(&self.x_vgr_content_sha256)?);
+    if let Some(token) = &self.x_vgr_security_token {
+      headers.insert(X_VGR_SECURITY_TOKEN, value(token)?);
+    }
     Ok(())
   }
 }
@@ -57,6 +62,11 @@ pub fn sign_request(
   service: &str,
   time: DateTime<Utc>,
 ) -> Result<SignedRequestHeaders, AuthError> {
+  if credentials.access_key_id.starts_with("VGST") && credentials.session_token.is_none() {
+    return Err(AuthError::IncompleteSignature(
+      "Temporary credentials require a session token".into(),
+    ));
+  }
   let timestamp = time.format(TIMESTAMP_FORMAT).to_string();
   let date = timestamp[..8].to_string();
   let payload_hash = hex_sha256(body);
@@ -71,6 +81,13 @@ pub fn sign_request(
     X_VGR_DATE,
     HeaderValue::from_str(&timestamp).expect("timestamp is ASCII"),
   );
+  if let Some(token) = &credentials.session_token {
+    signing_headers.insert(
+      X_VGR_SECURITY_TOKEN,
+      HeaderValue::from_str(token)
+        .map_err(|_| AuthError::IncompleteSignature("Invalid session token header".into()))?,
+    );
+  }
   signing_headers.insert(
     X_VGR_CONTENT_SHA256,
     HeaderValue::from_str(&payload_hash).expect("hex is ASCII"),
@@ -107,6 +124,7 @@ pub fn sign_request(
     authorization: authorization.to_string(),
     x_vgr_date: timestamp,
     x_vgr_content_sha256: payload_hash,
+    x_vgr_security_token: credentials.session_token.clone(),
   })
 }
 
@@ -124,5 +142,40 @@ mod tests {
       host_for(&"http://a.com:8080/x".parse().unwrap()).unwrap(),
       "a.com:8080"
     );
+  }
+
+  #[test]
+  fn signs_and_returns_the_session_token_header() {
+    let credentials = Credentials {
+      access_key_id: "VGSTABCDEFGHIJKLMNOP".into(),
+      secret_access_key: "secret".into(),
+      session_token: Some("sealed-token".into()),
+    };
+    let signed = sign_request(
+      &Method::GET,
+      &"https://example.test/".parse().unwrap(),
+      &HeaderMap::new(),
+      b"",
+      &credentials,
+      "tts",
+      Utc::now(),
+    )
+    .unwrap();
+    assert_eq!(signed.x_vgr_security_token.as_deref(), Some("sealed-token"));
+    assert!(signed.authorization.contains("x-vgr-security-token"));
+  }
+
+  #[test]
+  fn temporary_access_key_requires_a_session_token() {
+    let result = sign_request(
+      &Method::GET,
+      &"https://example.test/".parse().unwrap(),
+      &HeaderMap::new(),
+      b"",
+      &Credentials::new("VGSTABCDEFGHIJKLMNOP", "secret"),
+      "tts",
+      Utc::now(),
+    );
+    assert!(matches!(result, Err(AuthError::IncompleteSignature(_))));
   }
 }

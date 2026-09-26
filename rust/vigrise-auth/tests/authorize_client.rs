@@ -63,6 +63,7 @@ async fn serve(statuses: Vec<StatusCode>) -> (String, Arc<AtomicUsize>) {
 
 fn request() -> AuthorizeRequest {
   AuthorizeRequest {
+    security_token: None,
     access_key_id: "VGAKUSER".into(),
     string_to_sign: "sts".into(),
     signature: "sig".into(),

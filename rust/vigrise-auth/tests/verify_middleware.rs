@@ -1,6 +1,6 @@
 #![cfg(feature = "verify")]
 
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use axum::body::Body;
 use axum::extract::Request;
@@ -29,6 +29,29 @@ const KEY_ID: &str = "VGAKTESTKEY";
 struct FakePlatform {
   available: bool,
   omit_principal: bool,
+}
+
+struct RecordingPlatform {
+  asked: Arc<Mutex<Vec<AuthorizeRequest>>>,
+}
+
+impl Authorizer for RecordingPlatform {
+  fn authorize<'a>(
+    &'a self,
+    request: &'a AuthorizeRequest,
+  ) -> vigrise_auth::verify::AuthorizeFuture<'a> {
+    self.asked.lock().unwrap().push(request.clone());
+    Box::pin(async {
+      Ok(AuthorizeResponse {
+        decision: Decision::Deny,
+        error: None,
+        principal: None,
+        project_plan: None,
+        quotas: vec![],
+        leases: vec![],
+      })
+    })
+  }
 }
 
 impl Authorizer for FakePlatform {
@@ -204,6 +227,30 @@ async fn allowed_request_reaches_handler_with_principal_and_body() {
   let (status, _, text) = send(app(true, false), signed("/v1/audio/speech", BODY, SECRET)).await;
   assert_eq!(status, StatusCode::OK);
   assert_eq!(text, format!("ci-bot:{BODY}"));
+}
+
+#[tokio::test]
+async fn forwards_the_security_token_to_authorize() {
+  let asked = Arc::new(Mutex::new(Vec::new()));
+  let verifier = Arc::new(Verifier {
+    service: "tts".into(),
+    authorizer: Arc::new(RecordingPlatform { asked: asked.clone() }),
+    resolver: Arc::new(RouteResolver),
+    max_body_bytes: 1024,
+    trust_forwarded_headers: false,
+  });
+  let app = Router::new()
+    .route("/v1/audio/speech", post(|| async { "ok" }))
+    .layer(axum::middleware::from_fn_with_state(verifier, verify));
+  let mut request = signed("/v1/audio/speech", BODY, SECRET);
+  request
+    .headers_mut()
+    .insert("x-vgr-security-token", "sealed-token".parse().unwrap());
+  let _ = send(app, request).await;
+  assert_eq!(
+    asked.lock().unwrap()[0].security_token.as_deref(),
+    Some("sealed-token")
+  );
 }
 
 #[tokio::test]

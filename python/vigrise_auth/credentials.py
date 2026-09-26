@@ -8,6 +8,7 @@ from typing import Mapping, Optional
 class Credentials:
     access_key_id: str
     secret_access_key: str = field(repr=False)
+    session_token: Optional[str] = field(default=None, repr=False)
 
 
 def parse_profile(contents: str, profile: str) -> Optional[Credentials]:
@@ -28,7 +29,8 @@ def parse_profile(contents: str, profile: str) -> Optional[Credentials]:
             values[key.strip()] = value.strip()
     access_key_id = values.get("vigrise_access_key_id")
     secret = values.get("vigrise_secret_access_key")
-    return Credentials(access_key_id, secret) if access_key_id and secret else None
+    session_token = values.get("vigrise_session_token")
+    return Credentials(access_key_id, secret, session_token) if access_key_id and secret else None
 
 
 def resolve_credentials(explicit: Optional[Credentials] = None, env: Optional[Mapping[str, str]] = None) -> Credentials:
@@ -40,7 +42,11 @@ def resolve_credentials(explicit: Optional[Credentials] = None, env: Optional[Ma
         return explicit
     env = os.environ if env is None else env
     if env.get("VIGRISE_ACCESS_KEY_ID") and env.get("VIGRISE_SECRET_ACCESS_KEY"):
-        return Credentials(env["VIGRISE_ACCESS_KEY_ID"], env["VIGRISE_SECRET_ACCESS_KEY"])
+        return Credentials(
+            env["VIGRISE_ACCESS_KEY_ID"],
+            env["VIGRISE_SECRET_ACCESS_KEY"],
+            env.get("VIGRISE_SESSION_TOKEN"),
+        )
     home = env.get("HOME") or env.get("USERPROFILE")
     path = env.get("VIGRISE_SHARED_CREDENTIALS_FILE") or (str(Path(home) / ".vigrise" / "credentials") if home else None)
     profile = env.get("VIGRISE_PROFILE", "default")

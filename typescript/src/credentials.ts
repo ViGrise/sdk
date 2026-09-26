@@ -4,6 +4,7 @@ import { join } from "node:path";
 export interface Credentials {
   accessKeyId: string;
   secretAccessKey: string;
+  sessionToken?: string;
 }
 
 /** Reads one profile of the INI-style shared credentials file. */
@@ -13,6 +14,7 @@ export function parseProfile(contents: string, profile: string): Credentials | u
   let inProfile = false;
   let accessKeyId: string | undefined;
   let secretAccessKey: string | undefined;
+  let sessionToken: string | undefined;
   for (const rawLine of text.split(/\r?\n/)) {
     const line = rawLine.trim();
     if (line === "" || line.startsWith("#") || line.startsWith(";")) continue;
@@ -27,8 +29,9 @@ export function parseProfile(contents: string, profile: string): Credentials | u
     const value = line.slice(at + 1).trim();
     if (key === "vigrise_access_key_id") accessKeyId = value;
     if (key === "vigrise_secret_access_key") secretAccessKey = value;
+    if (key === "vigrise_session_token") sessionToken = value;
   }
-  return accessKeyId && secretAccessKey ? { accessKeyId, secretAccessKey } : undefined;
+  return accessKeyId && secretAccessKey ? { accessKeyId, secretAccessKey, sessionToken } : undefined;
 }
 
 export interface ResolveOptions {
@@ -46,7 +49,11 @@ export function resolveCredentials(options: ResolveOptions = {}): Credentials {
   if (options.explicit) return options.explicit;
   const env = options.env ?? process.env;
   if (env.VIGRISE_ACCESS_KEY_ID && env.VIGRISE_SECRET_ACCESS_KEY) {
-    return { accessKeyId: env.VIGRISE_ACCESS_KEY_ID, secretAccessKey: env.VIGRISE_SECRET_ACCESS_KEY };
+    return {
+      accessKeyId: env.VIGRISE_ACCESS_KEY_ID,
+      secretAccessKey: env.VIGRISE_SECRET_ACCESS_KEY,
+      sessionToken: env.VIGRISE_SESSION_TOKEN,
+    };
   }
   const home = env.HOME ?? env.USERPROFILE;
   const path = env.VIGRISE_SHARED_CREDENTIALS_FILE ?? (home ? join(home, ".vigrise", "credentials") : undefined);

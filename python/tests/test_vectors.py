@@ -21,6 +21,8 @@ def test_primitives_match(path):
     payload_hash = sha256_hex(v["request"]["body"].encode())
     assert payload_hash == v["expected"]["payload_hash"]
     headers = [tuple(h) for h in v["request"]["headers"]] + [("x-vgr-date", v["time"]), ("x-vgr-content-sha256", payload_hash)]
+    if v["credentials"].get("session_token"):
+        headers.append(("x-vgr-security-token", v["credentials"]["session_token"]))
     signed = v["expected"]["signed_headers"].split(";")
     creq = canonical_request(v["request"]["method"], v["request"]["path"], v["request"]["query"], headers, signed, payload_hash)
     assert creq == v["expected"]["canonical_request"]
@@ -40,7 +42,11 @@ def test_sign_request_matches(path):
         f"https://{host}{v['request']['path']}{query}",
         [tuple(h) for h in v["request"]["headers"]],
         v["request"]["body"],
-        Credentials(v["credentials"]["access_key_id"], v["credentials"]["secret_access_key"]),
+        Credentials(
+            v["credentials"]["access_key_id"],
+            v["credentials"]["secret_access_key"],
+            v["credentials"].get("session_token"),
+        ),
         v["service"],
         datetime.strptime(v["time"], "%Y%m%dT%H%M%SZ").replace(tzinfo=timezone.utc),
     )

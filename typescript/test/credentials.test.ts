@@ -25,4 +25,16 @@ describe("credentials", () => {
     expect(resolveCredentials({ env: { USERPROFILE: home, VIGRISE_PROFILE: "ci" } }).accessKeyId).toBe("VGAKCI");
     expect(() => resolveCredentials({ env: { HOME: join(home, "none") } })).toThrow(/No ViGrise credentials/);
   });
+
+  it("resolves session tokens from the environment and shared file", () => {
+    expect(resolveCredentials({ env: {
+      VIGRISE_ACCESS_KEY_ID: "VGSTENV",
+      VIGRISE_SECRET_ACCESS_KEY: "s",
+      VIGRISE_SESSION_TOKEN: "token-from-env",
+    } }).sessionToken).toBe("token-from-env");
+    expect(parseProfile(
+      "[default]\nvigrise_access_key_id=VGSTFILE\nvigrise_secret_access_key=s\nvigrise_session_token=token-from-file\n",
+      "default",
+    )?.sessionToken).toBe("token-from-file");
+  });
 });

@@ -3,6 +3,7 @@ use std::path::{Path, PathBuf};
 
 pub const ENV_ACCESS_KEY_ID: &str = "VIGRISE_ACCESS_KEY_ID";
 pub const ENV_SECRET_ACCESS_KEY: &str = "VIGRISE_SECRET_ACCESS_KEY";
+pub const ENV_SESSION_TOKEN: &str = "VIGRISE_SESSION_TOKEN";
 pub const ENV_PROFILE: &str = "VIGRISE_PROFILE";
 pub const ENV_CREDENTIALS_FILE: &str = "VIGRISE_SHARED_CREDENTIALS_FILE";
 
@@ -10,6 +11,7 @@ pub const ENV_CREDENTIALS_FILE: &str = "VIGRISE_SHARED_CREDENTIALS_FILE";
 pub struct Credentials {
   pub access_key_id: String,
   pub secret_access_key: String,
+  pub session_token: Option<String>,
 }
 
 impl fmt::Debug for Credentials {
@@ -17,6 +19,10 @@ impl fmt::Debug for Credentials {
     f.debug_struct("Credentials")
       .field("access_key_id", &self.access_key_id)
       .field("secret_access_key", &"<redacted>")
+      .field(
+        "session_token",
+        &self.session_token.as_ref().map(|_| "<redacted>"),
+      )
       .finish()
   }
 }
@@ -37,7 +43,13 @@ impl Credentials {
     Self {
       access_key_id: access_key_id.into(),
       secret_access_key: secret_access_key.into(),
+      session_token: None,
     }
+  }
+
+  pub fn with_session_token(mut self, session_token: impl Into<String>) -> Self {
+    self.session_token = Some(session_token.into());
+    self
   }
 
   /// Resolves credentials from the process environment, then the shared
@@ -52,7 +64,11 @@ impl Credentials {
   /// `HOME`, or `USERPROFILE` on Windows).
   pub fn resolve_with(lookup: impl Fn(&str) -> Option<String>) -> Result<Self, CredentialsError> {
     if let (Some(id), Some(secret)) = (lookup(ENV_ACCESS_KEY_ID), lookup(ENV_SECRET_ACCESS_KEY)) {
-      return Ok(Self::new(id, secret));
+      return Ok(Self {
+        access_key_id: id,
+        secret_access_key: secret,
+        session_token: lookup(ENV_SESSION_TOKEN),
+      });
     }
     let path = lookup(ENV_CREDENTIALS_FILE).map(PathBuf::from).or_else(|| {
       lookup("HOME")
@@ -80,7 +96,7 @@ impl Credentials {
 /// Parses the INI-style shared credentials file and returns one profile.
 pub fn parse_profile(contents: &str, profile: &str) -> Option<Credentials> {
   let mut in_profile = false;
-  let (mut id, mut secret) = (None, None);
+  let (mut id, mut secret, mut session_token) = (None, None, None);
   // Editors on Windows commonly prefix UTF-8 files with a byte order mark.
   let contents = contents.strip_prefix('\u{feff}').unwrap_or(contents);
   for line in contents.lines() {
@@ -99,11 +115,16 @@ pub fn parse_profile(contents: &str, profile: &str) -> Option<Credentials> {
       match key.trim() {
         "vigrise_access_key_id" => id = Some(value.trim().to_string()),
         "vigrise_secret_access_key" => secret = Some(value.trim().to_string()),
+        "vigrise_session_token" => session_token = Some(value.trim().to_string()),
         _ => {}
       }
     }
   }
-  Some(Credentials::new(id?, secret?))
+  Some(Credentials {
+    access_key_id: id?,
+    secret_access_key: secret?,
+    session_token,
+  })
 }
 
 #[cfg(test)]
@@ -156,6 +177,22 @@ mod tests {
       [(ENV_ACCESS_KEY_ID, "VGAKENV"), (ENV_SECRET_ACCESS_KEY, "s")].into();
     let creds = Credentials::resolve_with(|k| env.get(k).map(|v| v.to_string())).unwrap();
     assert_eq!(creds.access_key_id, "VGAKENV");
+  }
+
+  #[test]
+  fn resolves_session_token_from_environment_and_profile() {
+    let env: HashMap<&str, &str> = [
+      (ENV_ACCESS_KEY_ID, "VGSTENV"),
+      (ENV_SECRET_ACCESS_KEY, "s"),
+      (ENV_SESSION_TOKEN, "token-from-env"),
+    ]
+    .into();
+    let creds = Credentials::resolve_with(|k| env.get(k).map(|v| v.to_string())).unwrap();
+    assert_eq!(creds.session_token.as_deref(), Some("token-from-env"));
+
+    let file = "[default]\nvigrise_access_key_id=VGSTFILE\nvigrise_secret_access_key=s\nvigrise_session_token=token-from-file\n";
+    let creds = parse_profile(file, "default").unwrap();
+    assert_eq!(creds.session_token.as_deref(), Some("token-from-file"));
   }
 
   #[test]

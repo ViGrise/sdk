@@ -32,6 +32,8 @@ def sign_request(
 ) -> Dict[str, str]:
     """Returns the authorization, x-vgr-date and x-vgr-content-sha256 headers.
     Signs host, content-type when present, and every x-vgr-* header."""
+    if credentials.access_key_id.startswith("VGST") and not credentials.session_token:
+        raise ValueError("Temporary credentials require a session token")
     parts = urlsplit(url)
     pairs: List[Tuple[str, str]] = list(headers.items()) if isinstance(headers, Mapping) else list(headers or [])
     payload = body.encode() if isinstance(body, str) else (body or b"")
@@ -43,15 +45,20 @@ def sign_request(
     if not any(n.lower() == "host" for n, _ in signing):
         signing.append(("host", _host(parts)))
     signing += [("x-vgr-date", timestamp), ("x-vgr-content-sha256", payload_hash)]
+    if credentials.session_token:
+        signing.append(("x-vgr-security-token", credentials.session_token))
     signed = sorted({n.lower() for n, _ in signing if n.lower() in ("host", "content-type") or n.lower().startswith("x-vgr-")})
 
     creq = canonical_request(method, parts.path, parts.query, signing, signed, payload_hash)
     credential_scope = scope(date, service)
     sts = string_to_sign(timestamp, credential_scope, creq)
     sig = signature(derive_signing_key(credentials.secret_access_key, date, service), sts)
-    return {
+    result = {
         "authorization": f"{ALGORITHM} Credential={credentials.access_key_id}/{credential_scope}, "
         f"SignedHeaders={';'.join(signed)}, Signature={sig}",
         "x-vgr-date": timestamp,
         "x-vgr-content-sha256": payload_hash,
     }
+    if credentials.session_token:
+        result["x-vgr-security-token"] = credentials.session_token
+    return result
