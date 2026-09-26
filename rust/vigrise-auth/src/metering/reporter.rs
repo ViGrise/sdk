@@ -211,13 +211,8 @@ async fn attempt_send(
     .json(batch)
     .build()
     .map_err(|e| Failure::Permanent(e.to_string()))?;
-  sign_reqwest(
-    &mut request,
-    &credentials,
-    SIGNING_SERVICE,
-    Utc::now(),
-  )
-  .map_err(|e| Failure::Permanent(e.to_string()))?;
+  sign_reqwest(&mut request, &credentials, SIGNING_SERVICE, Utc::now())
+    .map_err(|e| Failure::Permanent(e.to_string()))?;
   let response = http
     .execute(request)
     .await
@@ -225,6 +220,13 @@ async fn attempt_send(
   let status = response.status();
   if status.is_server_error() {
     return Err(Failure::Transient(format!("platform returned {status}")));
+  }
+  let refused =
+    status == reqwest::StatusCode::UNAUTHORIZED || status == reqwest::StatusCode::FORBIDDEN;
+  if refused && config.credentials.invalidate() {
+    return Err(Failure::Transient(format!(
+      "platform refused the service's credentials with {status}"
+    )));
   }
   if !status.is_success() {
     let body = response.text().await.unwrap_or_default();

@@ -13,6 +13,12 @@ pub type CredentialsFuture<'a> =
 /// provider of themselves; role sessions come from `sts::AssumeRoleProvider`.
 pub trait CredentialsProvider: Send + Sync + fmt::Debug {
   fn credentials(&self) -> CredentialsFuture<'_>;
+
+  /// Called when the platform refuses the current credentials, for example a
+  /// revoked session. Returns whether the next call can obtain new ones.
+  fn invalidate(&self) -> bool {
+    false
+  }
 }
 
 impl CredentialsProvider for Credentials {
@@ -25,6 +31,10 @@ impl CredentialsProvider for Credentials {
 impl<T: CredentialsProvider + ?Sized> CredentialsProvider for Arc<T> {
   fn credentials(&self) -> CredentialsFuture<'_> {
     (**self).credentials()
+  }
+
+  fn invalidate(&self) -> bool {
+    (**self).invalidate()
   }
 }
 

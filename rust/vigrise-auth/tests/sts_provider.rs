@@ -1,6 +1,6 @@
 #![cfg(feature = "sts")]
 
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicU16, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
@@ -19,8 +19,16 @@ struct Sts {
   /// Lifetime of the sessions the server issues.
   lifetime: Duration,
   delay: Duration,
-  status: StatusCode,
+  status: Arc<AtomicU16>,
   seen: Arc<Mutex<Vec<(String, Option<String>)>>>,
+  /// Sessions the fake platform refuses, as after a revocation.
+  rejected: Arc<Mutex<Vec<String>>>,
+}
+
+impl Sts {
+  fn fail_with(&self, status: StatusCode) {
+    self.status.store(status.as_u16(), Ordering::SeqCst);
+  }
 }
 
 async fn assume_role(
@@ -35,9 +43,10 @@ async fn assume_role(
   assert_eq!(body["role_vrn"], "vrn:vigrise:iam:p:role/tts-service");
   assert_eq!(body["role_session_name"], "tts-gateway");
   tokio::time::sleep(sts.delay).await;
-  if sts.status != StatusCode::OK {
+  let status = StatusCode::from_u16(sts.status.load(Ordering::SeqCst)).unwrap();
+  if status != StatusCode::OK {
     return (
-      sts.status,
+      status,
       Json(json!({ "error": { "code": "AccessDenied", "message": "not trusted" } })),
     );
   }
@@ -64,7 +73,16 @@ async fn record_signer(State(sts): State<Sts>, headers: HeaderMap) -> (StatusCod
   let token = headers
     .get("x-vgr-security-token")
     .map(|v| v.to_str().unwrap().to_string());
+  let refused = sts.rejected.lock().unwrap().contains(&auth.access_key_id);
   sts.seen.lock().unwrap().push((auth.access_key_id, token));
+  if refused {
+    return (
+      StatusCode::FORBIDDEN,
+      Json(
+        json!({ "error": { "code": "AccessDenied", "message": "The role session has been revoked" } }),
+      ),
+    );
+  }
   (
     StatusCode::OK,
     Json(json!({
@@ -85,8 +103,9 @@ async fn serve(lifetime: Duration, delay: Duration, status: StatusCode) -> (Stri
     calls: Arc::new(AtomicUsize::new(0)),
     lifetime,
     delay,
-    status,
+    status: Arc::new(AtomicU16::new(status.as_u16())),
     seen: Arc::default(),
+    rejected: Arc::default(),
   };
   let app = Router::new()
     .route("/api/v1/sts/assume-role", post(assume_role))
@@ -235,4 +254,70 @@ async fn service_credentials_use_the_role_session_when_a_role_is_configured() {
     .access_key_id
     .starts_with("VGST"));
   assert_eq!(sts.calls.load(Ordering::SeqCst), 1);
+}
+
+#[tokio::test]
+async fn a_valid_session_outlives_a_failed_refresh_and_failures_back_off() {
+  let (base, sts) = serve(Duration::from_secs(1), Duration::ZERO, StatusCode::OK).await;
+  let provider = provider(&base);
+  let first = provider.credentials().await.unwrap();
+  sts.fail_with(StatusCode::SERVICE_UNAVAILABLE);
+  tokio::time::sleep(Duration::from_millis(850)).await;
+  assert_eq!(provider.credentials().await.unwrap(), first);
+  assert_eq!(provider.credentials().await.unwrap(), first);
+  assert_eq!(sts.calls.load(Ordering::SeqCst), 2);
+  tokio::time::sleep(Duration::from_millis(300)).await;
+  assert!(provider.credentials().await.is_err());
+}
+
+#[tokio::test]
+async fn an_invalidated_session_is_replaced() {
+  let (base, sts) = serve(Duration::from_secs(3600), Duration::ZERO, StatusCode::OK).await;
+  let provider = provider(&base);
+  let first = provider.credentials().await.unwrap();
+  assert!(provider.invalidate());
+  let second = provider.credentials().await.unwrap();
+  assert_ne!(first.access_key_id, second.access_key_id);
+  assert_eq!(sts.calls.load(Ordering::SeqCst), 2);
+}
+
+#[cfg(feature = "verify")]
+#[tokio::test]
+async fn the_authorize_client_replaces_a_rejected_session_and_retries() {
+  use vigrise_auth::verify::{AuthorizeClient, AuthorizeRequest, Authorizer};
+  let (base, sts) = serve(Duration::from_secs(3600), Duration::ZERO, StatusCode::OK).await;
+  sts
+    .rejected
+    .lock()
+    .unwrap()
+    .push("VGSTSESSION000000000".into());
+  let client = AuthorizeClient::new(
+    format!("{base}/api/internal/v1/authorize"),
+    Arc::new(provider(&base)),
+  );
+  let request = AuthorizeRequest {
+    security_token: None,
+    access_key_id: "VGAKUSER".into(),
+    string_to_sign: "sts".into(),
+    signature: "sig".into(),
+    action: "tts:SynthesizeSpeech".into(),
+    resources: vec![],
+    context: Default::default(),
+    usage: Default::default(),
+  };
+  client.authorize(&request).await.unwrap();
+  let signers: Vec<String> = sts
+    .seen
+    .lock()
+    .unwrap()
+    .iter()
+    .map(|(key, _)| key.clone())
+    .collect();
+  assert_eq!(
+    signers,
+    vec![
+      "VGSTSESSION000000000".to_string(),
+      "VGSTSESSION000000001".to_string()
+    ]
+  );
 }

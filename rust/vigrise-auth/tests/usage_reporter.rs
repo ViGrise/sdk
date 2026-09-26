@@ -199,3 +199,39 @@ async fn shutdown_gives_up_at_its_deadline() {
     .await
     .expect("shutdown returns once its deadline passes");
 }
+
+/// Hands out `VGAKKEY<n>` and moves to the next key when invalidated, as a
+/// role session provider does after a revocation.
+#[derive(Debug, Default)]
+struct Rotating {
+  generation: std::sync::atomic::AtomicUsize,
+}
+
+impl vigrise_auth::CredentialsProvider for Rotating {
+  fn credentials(&self) -> vigrise_auth::CredentialsFuture<'_> {
+    let n = self.generation.load(std::sync::atomic::Ordering::SeqCst);
+    Box::pin(async move { Ok(Credentials::new(format!("VGAKKEY{n}"), "secret")) })
+  }
+
+  fn invalidate(&self) -> bool {
+    self
+      .generation
+      .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+    true
+  }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn refused_credentials_are_replaced_and_the_batch_is_retried() {
+  let (url, received) = serve(vec![StatusCode::FORBIDDEN]).await;
+  let mut config = config(url.clone());
+  config.credentials = Arc::new(Rotating::default());
+  config.max_batch = 1;
+  let reporter = UsageReporter::spawn(config);
+  reporter.record(&authorized(), "SynthesizeSpeech", "characters", 5);
+  wait_for_batches(&received, 2).await;
+  let authorizations = received.authorizations.lock().unwrap().clone();
+  assert!(authorizations[0].contains("Credential=VGAKKEY0/"));
+  assert!(authorizations[1].contains("Credential=VGAKKEY1/"));
+  reporter.shutdown().await;
+}

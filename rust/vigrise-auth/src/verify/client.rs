@@ -6,8 +6,8 @@ use std::time::Duration;
 use chrono::Utc;
 use reqwest::StatusCode;
 
-use crate::provider::CredentialsProvider;
 use crate::error::AuthError;
+use crate::provider::CredentialsProvider;
 use crate::reqwest_signer::sign_reqwest;
 use crate::verify::types::{AuthorizeRequest, AuthorizeResponse};
 
@@ -82,6 +82,11 @@ impl AuthorizeClient {
     if status.is_server_error() {
       return Err(Attempt::Retryable(format!("platform returned {status}")));
     }
+    if status == StatusCode::UNAUTHORIZED || status == StatusCode::FORBIDDEN {
+      return Err(Attempt::Refused(format!(
+        "platform refused the service's credentials with {status}"
+      )));
+    }
     if status != StatusCode::OK {
       return Err(Attempt::Fatal(format!(
         "platform rejected the service with {status}"
@@ -96,6 +101,9 @@ impl AuthorizeClient {
 
 enum Attempt {
   Retryable(String),
+  /// The service's own credentials were refused, as for a revoked or expired
+  /// session; a retry uses new ones.
+  Refused(String),
   Fatal(String),
 }
 
@@ -105,7 +113,8 @@ impl Authorizer for AuthorizeClient {
       let first = match self.attempt(request).await {
         Ok(response) => return Ok(response),
         Err(Attempt::Retryable(reason)) => reason,
-        Err(Attempt::Fatal(reason)) => {
+        Err(Attempt::Refused(reason)) if self.credentials.invalidate() => reason,
+        Err(Attempt::Refused(reason) | Attempt::Fatal(reason)) => {
           tracing::error!(%reason, "authorize call failed");
           return Err(AuthError::ServiceUnavailable(
             "Authorization is unavailable".into(),
@@ -115,7 +124,8 @@ impl Authorizer for AuthorizeClient {
       tracing::warn!(reason = %first, "authorize call failed, retrying once");
       tokio::time::sleep(self.retry_backoff).await;
       self.attempt(request).await.map_err(|attempt| {
-        let (Attempt::Retryable(reason) | Attempt::Fatal(reason)) = attempt;
+        let (Attempt::Retryable(reason) | Attempt::Refused(reason) | Attempt::Fatal(reason)) =
+          attempt;
         tracing::error!(%reason, "authorize retry failed");
         AuthError::ServiceUnavailable("Authorization is unavailable".into())
       })
@@ -155,6 +165,12 @@ impl Authorizer for AuthorizeClient {
         if response.status().is_success() {
           Ok(())
         } else {
+          if matches!(
+            response.status(),
+            StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN
+          ) {
+            let _ = provider.invalidate();
+          }
           Err(format!("platform returned {}", response.status()))
         }
       }

@@ -1,6 +1,7 @@
 //! Role sessions from the ViGrise Security Token Service.
 
 use std::fmt;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -20,6 +21,8 @@ pub const ENV_STS_URL: &str = "VIGRISE_STS_URL";
 /// they expire; shorter ones after 80 percent of their lifetime.
 const LONG_SESSION: chrono::Duration = chrono::Duration::minutes(25);
 const REFRESH_BEFORE_EXPIRY: chrono::Duration = chrono::Duration::minutes(5);
+/// Pause before calling STS again after a failed refresh.
+const RETRY_AFTER_FAILURE: chrono::Duration = chrono::Duration::seconds(5);
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct AssumeRoleRequest {
@@ -181,6 +184,14 @@ impl StsClient {
 struct Cached {
   credentials: Credentials,
   refresh_at: DateTime<Utc>,
+  expiration: DateTime<Utc>,
+}
+
+#[derive(Default)]
+struct State {
+  cached: Option<Cached>,
+  /// After a failed refresh, STS is not called again until this time.
+  retry_at: Option<(DateTime<Utc>, AuthError)>,
 }
 
 fn refresh_at(obtained_at: DateTime<Utc>, expiration: DateTime<Utc>) -> DateTime<Utc> {
@@ -193,11 +204,13 @@ fn refresh_at(obtained_at: DateTime<Utc>, expiration: DateTime<Utc>) -> DateTime
 }
 
 /// Holds one role session and replaces it before it expires. Concurrent
-/// callers wait for a single refresh.
+/// callers wait for a single refresh. When a refresh fails, the current
+/// session keeps being used until it expires and STS is retried after a pause.
 pub struct AssumeRoleProvider {
   client: StsClient,
   request: AssumeRoleRequest,
-  cached: tokio::sync::Mutex<Option<Cached>>,
+  state: tokio::sync::Mutex<State>,
+  invalidated: AtomicBool,
 }
 
 impl fmt::Debug for AssumeRoleProvider {
@@ -223,7 +236,8 @@ impl AssumeRoleProvider {
     Self {
       client,
       request,
-      cached: tokio::sync::Mutex::new(None),
+      state: tokio::sync::Mutex::new(State::default()),
+      invalidated: AtomicBool::new(false),
     }
   }
 }
@@ -231,21 +245,49 @@ impl AssumeRoleProvider {
 impl CredentialsProvider for AssumeRoleProvider {
   fn credentials(&self) -> CredentialsFuture<'_> {
     Box::pin(async move {
-      let mut cached = self.cached.lock().await;
-      if let Some(current) = cached.as_ref() {
-        if Utc::now() < current.refresh_at {
+      let mut state = self.state.lock().await;
+      let now = Utc::now();
+      if self.invalidated.swap(false, Ordering::SeqCst) {
+        state.cached = None;
+        state.retry_at = None;
+      }
+      let usable = state
+        .cached
+        .as_ref()
+        .filter(|current| now < current.expiration)
+        .map(|current| current.credentials.clone());
+      if let Some(current) = state.cached.as_ref() {
+        if now < current.refresh_at {
           return Ok(current.credentials.clone());
         }
       }
-      let obtained_at = Utc::now();
-      let assumed = self.client.assume_role(&self.request).await?;
-      let credentials = assumed.credentials.to_credentials();
-      *cached = Some(Cached {
-        credentials: credentials.clone(),
-        refresh_at: refresh_at(obtained_at, assumed.credentials.expiration),
-      });
-      Ok(credentials)
+      if let Some((retry_at, error)) = &state.retry_at {
+        if now < *retry_at {
+          return usable.ok_or_else(|| error.clone());
+        }
+      }
+      match self.client.assume_role(&self.request).await {
+        Ok(assumed) => {
+          let credentials = assumed.credentials.to_credentials();
+          state.cached = Some(Cached {
+            credentials: credentials.clone(),
+            refresh_at: refresh_at(now, assumed.credentials.expiration),
+            expiration: assumed.credentials.expiration,
+          });
+          state.retry_at = None;
+          Ok(credentials)
+        }
+        Err(error) => {
+          state.retry_at = Some((Utc::now() + RETRY_AFTER_FAILURE, error.clone()));
+          usable.ok_or(error)
+        }
+      }
     })
+  }
+
+  fn invalidate(&self) -> bool {
+    self.invalidated.store(true, Ordering::SeqCst);
+    true
   }
 }
 
