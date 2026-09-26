@@ -34,6 +34,20 @@ jobs:
       - run: cargo clippy --all-targets --features verify -- -D warnings
       - run: cargo test --features verify
 
+  cli:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: rust/vigrise-cli
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - run: cargo fmt --check
+      - run: cargo clippy --all-targets -- -D warnings
+      - run: cargo test
+
   typescript:
     runs-on: ubuntu-latest
     defaults:
