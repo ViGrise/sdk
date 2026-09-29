@@ -11,11 +11,12 @@ use http::request::Parts;
 use http::{header, HeaderMap, HeaderValue, Uri};
 use http_body_util::{BodyExt, LengthLimitError, Limited};
 use serde_json::{json, Value};
+use sha2::{Digest, Sha256};
 
 use crate::authorization::AuthorizationHeader;
 use crate::canonical::{canonical_request, hex_sha256};
 use crate::error::AuthError;
-use crate::signer::{X_VGR_CONTENT_SHA256, X_VGR_DATE};
+use crate::signer::{UNSIGNED_PAYLOAD, X_VGR_CONTENT_SHA256, X_VGR_DATE};
 use crate::signing::string_to_sign;
 use crate::verify::client::Authorizer;
 use crate::verify::resolver::ActionResolver;
@@ -57,7 +58,7 @@ pub async fn verify(
   request: Request,
   next: Next,
 ) -> Response {
-  let (mut parts, body) = request.into_parts();
+  let (parts, body) = request.into_parts();
   let body = match Limited::new(body, verifier.max_body_bytes).collect().await {
     Ok(collected) => collected.to_bytes(),
     Err(e) if e.downcast_ref::<LengthLimitError>().is_some() => {
@@ -77,27 +78,127 @@ pub async fn verify(
     }
   };
 
-  match authorize(&verifier, &parts, &body).await {
-    Ok(authorized) => {
-      // Held from the moment the slots exist, so a cancelled request or a
-      // panicking handler returns them as well as a finished response.
-      let guard = (!authorized.leases.is_empty()).then(|| ReleaseGuard {
-        authorizer: Arc::clone(&verifier.authorizer),
-        leases: authorized.leases.clone(),
-      });
-      parts.extensions.insert(authorized);
-      let response = next.run(Request::from_parts(parts, Body::from(body))).await;
-      match guard {
-        Some(guard) => response.map(|body| {
-          Body::new(ReleasingBody {
-            inner: body,
-            guard: Some(guard),
-          })
-        }),
-        None => response,
+  match authorize(&verifier, &parts, Payload::Buffered(&body)).await {
+    Ok(authorized) => run(&verifier, parts, authorized, Body::from(body), next).await,
+    Err(error) => error.into_response(),
+  }
+}
+
+/// axum middleware for routes whose request bodies stream, such as uploads:
+/// the body is never buffered. `x-vgr-content-sha256` is either
+/// `UNSIGNED-PAYLOAD` or the body's hex SHA-256; a signed hash is checked as
+/// the body streams, and a body that does not match it fails at its end, so a
+/// handler that reads the body to the end never accepts it. The resolver sees
+/// an empty body.
+pub async fn verify_streaming(
+  State(verifier): State<Arc<Verifier>>,
+  request: Request,
+  next: Next,
+) -> Response {
+  let (parts, body) = request.into_parts();
+  let payload_hash = match header_str(&parts, X_VGR_CONTENT_SHA256) {
+    Some(UNSIGNED_PAYLOAD) => None,
+    Some(hash)
+      if hash.len() == 64 && hash.bytes().all(|b| matches!(b, b'0'..=b'9' | b'a'..=b'f')) =>
+    {
+      Some(hash.to_string())
+    }
+    _ => {
+      return AuthError::SignatureDoesNotMatch {
+        message: "x-vgr-content-sha256 must be UNSIGNED-PAYLOAD or a hex SHA-256".into(),
+        string_to_sign: None,
       }
+      .into_response()
+    }
+  };
+  let signed_hash = payload_hash.as_deref().unwrap_or(UNSIGNED_PAYLOAD);
+  match authorize(&verifier, &parts, Payload::Streamed(signed_hash)).await {
+    Ok(authorized) => {
+      let body = match payload_hash {
+        Some(expected) => Body::new(HashCheckedBody {
+          inner: body,
+          hasher: Some(Sha256::new()),
+          expected,
+        }),
+        None => body,
+      };
+      run(&verifier, parts, authorized, body, next).await
     }
     Err(error) => error.into_response(),
+  }
+}
+
+/// Passes the authorized request on, holding its concurrency slots until the
+/// response body ends.
+async fn run(
+  verifier: &Verifier,
+  mut parts: Parts,
+  authorized: Authorized,
+  body: Body,
+  next: Next,
+) -> Response {
+  // Held from the moment the slots exist, so a cancelled request or a
+  // panicking handler returns them as well as a finished response.
+  let guard = (!authorized.leases.is_empty()).then(|| ReleaseGuard {
+    authorizer: Arc::clone(&verifier.authorizer),
+    leases: authorized.leases.clone(),
+  });
+  parts.extensions.insert(authorized);
+  let response = next.run(Request::from_parts(parts, body)).await;
+  match guard {
+    Some(guard) => response.map(|body| {
+      Body::new(ReleasingBody {
+        inner: body,
+        guard: Some(guard),
+      })
+    }),
+    None => response,
+  }
+}
+
+/// A request body that hashes what passes through it and fails with an error
+/// at its end when the hash differs from the signed one.
+struct HashCheckedBody {
+  inner: Body,
+  hasher: Option<Sha256>,
+  expected: String,
+}
+
+impl http_body::Body for HashCheckedBody {
+  type Data = Bytes;
+  type Error = axum::Error;
+
+  fn poll_frame(
+    mut self: std::pin::Pin<&mut Self>,
+    cx: &mut std::task::Context<'_>,
+  ) -> std::task::Poll<Option<Result<http_body::Frame<Bytes>, Self::Error>>> {
+    let polled = std::pin::Pin::new(&mut self.inner).poll_frame(cx);
+    match &polled {
+      std::task::Poll::Ready(Some(Ok(frame))) => {
+        if let (Some(data), Some(hasher)) = (frame.data_ref(), self.hasher.as_mut()) {
+          hasher.update(data);
+        }
+      }
+      std::task::Poll::Ready(None) => {
+        if let Some(hasher) = self.hasher.take() {
+          if hex::encode(hasher.finalize()) != self.expected {
+            return std::task::Poll::Ready(Some(Err(axum::Error::new(
+              "x-vgr-content-sha256 does not match the request body",
+            ))));
+          }
+        }
+      }
+      _ => {}
+    }
+    polled
+  }
+
+  fn is_end_stream(&self) -> bool {
+    self.hasher.is_none() && self.inner.is_end_stream()
+  }
+
+  fn size_hint(&self) -> http_body::SizeHint {
+    self.inner.size_hint()
   }
 }
 
@@ -148,10 +249,17 @@ fn header_str<'a>(parts: &'a Parts, name: &str) -> Option<&'a str> {
   parts.headers.get(name).and_then(|v| v.to_str().ok())
 }
 
+/// The body a request was signed over: read in full, or streaming with the
+/// payload hash its signature names.
+enum Payload<'a> {
+  Buffered(&'a Bytes),
+  Streamed(&'a str),
+}
+
 async fn authorize(
   verifier: &Verifier,
   parts: &Parts,
-  body: &Bytes,
+  payload: Payload<'_>,
 ) -> Result<Authorized, AuthError> {
   let authorization = header_str(parts, header::AUTHORIZATION.as_str())
     .ok_or(AuthError::MissingAuthenticationToken)?;
@@ -170,13 +278,21 @@ async fn authorize(
       "Credential scope date must match x-vgr-date".into(),
     ));
   }
-  let payload_hash = hex_sha256(body);
-  if header_str(parts, X_VGR_CONTENT_SHA256) != Some(payload_hash.as_str()) {
-    return Err(AuthError::SignatureDoesNotMatch {
-      message: "x-vgr-content-sha256 does not match the request body".into(),
-      string_to_sign: None,
-    });
-  }
+
+  let empty = Bytes::new();
+  let (payload_hash, body) = match payload {
+    Payload::Buffered(body) => {
+      let payload_hash = hex_sha256(body);
+      if header_str(parts, X_VGR_CONTENT_SHA256) != Some(payload_hash.as_str()) {
+        return Err(AuthError::SignatureDoesNotMatch {
+          message: "x-vgr-content-sha256 does not match the request body".into(),
+          string_to_sign: None,
+        });
+      }
+      (payload_hash, body)
+    }
+    Payload::Streamed(payload_hash) => (payload_hash.to_string(), &empty),
+  };
 
   // Nested axum routers strip their prefix from `parts.uri`; the client signed the full path.
   let uri = parts

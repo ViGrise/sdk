@@ -10,6 +10,9 @@ use crate::signing::{derive_signing_key, scope, signature, string_to_sign, TIMES
 pub const X_VGR_DATE: &str = "x-vgr-date";
 pub const X_VGR_CONTENT_SHA256: &str = "x-vgr-content-sha256";
 pub const X_VGR_SECURITY_TOKEN: &str = "x-vgr-security-token";
+/// Payload hash of a request whose body streams unsigned; only routes that
+/// verify with `verify_streaming` accept it.
+pub const UNSIGNED_PAYLOAD: &str = "UNSIGNED-PAYLOAD";
 
 /// Headers a client adds to a request to sign it.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -62,6 +65,28 @@ pub fn sign_request(
   service: &str,
   time: DateTime<Utc>,
 ) -> Result<SignedRequestHeaders, AuthError> {
+  sign_request_with_payload_hash(
+    method,
+    uri,
+    headers,
+    &hex_sha256(body),
+    credentials,
+    service,
+    time,
+  )
+}
+
+/// Signs a request whose body is described by `payload_hash`: the body's hex
+/// SHA-256, or `UNSIGNED_PAYLOAD` for a body that streams unsigned.
+pub fn sign_request_with_payload_hash(
+  method: &Method,
+  uri: &Uri,
+  headers: &HeaderMap,
+  payload_hash: &str,
+  credentials: &Credentials,
+  service: &str,
+  time: DateTime<Utc>,
+) -> Result<SignedRequestHeaders, AuthError> {
   if credentials.access_key_id.starts_with("VGST") && credentials.session_token.is_none() {
     return Err(AuthError::IncompleteSignature(
       "Temporary credentials require a session token".into(),
@@ -69,7 +94,7 @@ pub fn sign_request(
   }
   let timestamp = time.format(TIMESTAMP_FORMAT).to_string();
   let date = timestamp[..8].to_string();
-  let payload_hash = hex_sha256(body);
+  let payload_hash = payload_hash.to_string();
 
   let mut signing_headers = headers.clone();
   if !signing_headers.contains_key(header::HOST) {
@@ -90,7 +115,8 @@ pub fn sign_request(
   }
   signing_headers.insert(
     X_VGR_CONTENT_SHA256,
-    HeaderValue::from_str(&payload_hash).expect("hex is ASCII"),
+    HeaderValue::from_str(&payload_hash)
+      .map_err(|_| AuthError::IncompleteSignature("Invalid payload hash".into()))?,
   );
 
   let mut signed_headers: Vec<String> = signing_headers
