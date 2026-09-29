@@ -8,6 +8,7 @@ pub use crate::QuotaStatus;
 
 /// Body of `POST /internal/v1/authorize`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub struct AuthorizeRequest {
   pub access_key_id: String,
   #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -23,18 +24,21 @@ pub struct AuthorizeRequest {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub enum Decision {
   Allow,
   Deny,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub struct ErrorBody {
   pub code: String,
   pub message: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub struct Principal {
   pub vrn: String,
   pub id: Uuid,
@@ -46,6 +50,7 @@ pub struct Principal {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub struct AuthorizeResponse {
   pub decision: Decision,
   #[serde(default, skip_serializing_if = "Option::is_none")]

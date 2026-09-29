@@ -234,7 +234,9 @@ async fn forwards_the_security_token_to_authorize() {
   let asked = Arc::new(Mutex::new(Vec::new()));
   let verifier = Arc::new(Verifier {
     service: "tts".into(),
-    authorizer: Arc::new(RecordingPlatform { asked: asked.clone() }),
+    authorizer: Arc::new(RecordingPlatform {
+      asked: asked.clone(),
+    }),
     resolver: Arc::new(RouteResolver),
     max_body_bytes: 1024,
     trust_forwarded_headers: false,
@@ -577,7 +579,11 @@ fn leasing_app(released: Arc<std::sync::Mutex<Vec<Vec<String>>>>) -> Router {
 #[tokio::test]
 async fn leases_are_released_once_when_the_body_ends() {
   let released = Arc::default();
-  let (status, _, text) = send(leasing_app(Arc::clone(&released)), signed("/v1/audio/speech", BODY, SECRET)).await;
+  let (status, _, text) = send(
+    leasing_app(Arc::clone(&released)),
+    signed("/v1/audio/speech", BODY, SECRET),
+  )
+  .await;
   assert_eq!(status, StatusCode::OK);
   assert_eq!(text, "lease-1");
   assert_eq!(*released.lock().unwrap(), vec![vec!["lease-1".to_string()]]);

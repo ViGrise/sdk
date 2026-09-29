@@ -20,7 +20,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
       .json(&serde_json::json!({ "input": "Xin chào", "voice": voice, "response_format": "wav" }))
       .build()?,
   };
-  sign_reqwest(&mut request, &Credentials::resolve()?, "tts", chrono::Utc::now())?;
+  sign_reqwest(
+    &mut request,
+    &Credentials::resolve()?,
+    "tts",
+    chrono::Utc::now(),
+  )?;
   let response = client.execute(request).await?;
   let status = response.status();
   let body = response.bytes().await?;

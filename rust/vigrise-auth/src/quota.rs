@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 
 /// A quota the platform checked while authorizing a request.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub struct QuotaStatus {
   pub service: String,
   pub code: String,

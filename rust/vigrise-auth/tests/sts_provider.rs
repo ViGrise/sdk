@@ -13,6 +13,8 @@ use serde_json::{json, Value};
 use vigrise_auth::sts::{AssumeRoleProvider, StsClient};
 use vigrise_auth::{AuthError, AuthorizationHeader, Credentials, CredentialsProvider};
 
+type SeenSessions = Arc<Mutex<Vec<(String, Option<String>)>>>;
+
 #[derive(Clone)]
 struct Sts {
   calls: Arc<AtomicUsize>,
@@ -20,7 +22,7 @@ struct Sts {
   lifetime: Duration,
   delay: Duration,
   status: Arc<AtomicU16>,
-  seen: Arc<Mutex<Vec<(String, Option<String>)>>>,
+  seen: SeenSessions,
   /// Sessions the fake platform refuses, as after a revocation.
   rejected: Arc<Mutex<Vec<String>>>,
 }

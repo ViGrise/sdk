@@ -140,5 +140,8 @@ async fn release_posts_the_leases_signed_under_the_iam_scope() {
   let received = received.lock().unwrap();
   assert_eq!(received.len(), 1);
   assert_eq!(received[0].0, "iam");
-  assert_eq!(received[0].1, json!({ "leases": ["p:tts:concurrent-syntheses:1"] }));
+  assert_eq!(
+    received[0].1,
+    json!({ "leases": ["p:tts:concurrent-syntheses:1"] })
+  );
 }

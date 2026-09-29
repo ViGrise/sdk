@@ -4,12 +4,14 @@ use uuid::Uuid;
 
 /// Body of `POST /internal/v1/usage`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub struct UsageBatch {
   pub service: String,
   pub records: Vec<UsageRecord>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub struct UsageRecord {
   /// Idempotency key: the platform counts each id once per service.
   pub record_id: Uuid,
@@ -23,6 +25,7 @@ pub struct UsageRecord {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub struct UsageReport {
   pub accepted: u64,
   pub duplicates: u64,
@@ -30,6 +33,7 @@ pub struct UsageReport {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub struct RejectedRecord {
   pub record_id: Uuid,
   pub error: String,

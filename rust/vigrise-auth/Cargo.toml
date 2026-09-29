@@ -12,6 +12,7 @@ reqwest = ["dep:reqwest"]
 sts = ["reqwest", "dep:tokio", "tokio/sync", "chrono/serde"]
 verify = ["sts", "dep:axum", "dep:bytes", "dep:http-body", "dep:http-body-util", "dep:tokio", "tokio/rt", "dep:uuid", "dep:tracing"]
 metering = ["verify", "tokio/sync", "tokio/rt", "tokio/macros", "uuid/v4", "chrono/serde"]
+openapi = ["dep:utoipa"]
 
 [dependencies]
 chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
@@ -32,6 +33,7 @@ http-body-util = { version = "0.1", optional = true }
 tokio = { version = "1", optional = true, features = ["time"] }
 uuid = { version = "1", optional = true, features = ["serde"] }
 tracing = { version = "0.1", optional = true }
+utoipa = { version = "5.4", optional = true, features = ["chrono", "uuid"] }
 
 [dev-dependencies]
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "net"] }
