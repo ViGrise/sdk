@@ -1,0 +1,19 @@
+[package]
+name = "vigrise-storage"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.85"
+license = "Apache-2.0"
+description = "Client for ViGrise Storage: buckets, objects, multipart uploads, presigned URLs and lifecycle rules"
+
+[dependencies]
+vigrise-auth = { path = "../vigrise-auth", features = ["reqwest"] }
+bytes = "1"
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
+futures-util = "0.3"
+http = "1"
+percent-encoding = "2"
+reqwest = { version = "0.13", default-features = false, features = ["json", "rustls", "stream"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"

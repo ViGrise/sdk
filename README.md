@@ -10,6 +10,7 @@ services that accept VGR4 requests.
 | `typescript` | `@vigrise/auth`: `signRequest`, `signedFetch`, `resolveCredentials`, `assumeRole` (Node 18+); `@vigrise/auth/browser`: Web Crypto `signRequest` and `signedFetch` for browsers |
 | `python` | `vigrise-auth`: `sign_request`, `assume_role`, `ViGriseAuth` for requests, `ViGriseHttpxAuth` for httpx (Python 3.9+) |
 | `rust/vigrise-cli` | `vigrise` command line: `login`, `logout`, `whoami` |
+| `rust/vigrise-storage` | Client for ViGrise Storage: buckets, objects (signed or streamed with `UNSIGNED-PAYLOAD`), multipart uploads with a streaming helper, tags, presigned URLs and lifecycle rules |
 
 ## VGR4 in one paragraph
 
