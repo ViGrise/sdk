@@ -2,11 +2,16 @@ import { canonicalRequest, type HeaderList } from "./canonical-core.js";
 import type { Credentials } from "./types.js";
 import { ALGORITHM, formatTimestamp, scope } from "./signing-core.js";
 
+/** Payload hash of a request whose body streams unsigned. */
+export const UNSIGNED_PAYLOAD = "UNSIGNED-PAYLOAD";
+
 export interface SignInput {
   method: string;
   url: string | URL;
   headers?: HeaderList | Record<string, string>;
   body?: string | Uint8Array;
+  /** Signed in place of the body's SHA-256; `UNSIGNED_PAYLOAD` for a streamed body. */
+  payloadHash?: string;
   credentials: Credentials;
   service: string;
   now?: Date;

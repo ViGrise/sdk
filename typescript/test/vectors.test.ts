@@ -7,7 +7,7 @@ import { deriveSigningKey, scope, signature, stringToSign } from "../src/signing
 import { signRequest } from "../src/signer.js";
 
 interface Vector {
-  request: { method: string; path: string; query: string; headers: [string, string][]; body: string };
+  request: { method: string; path: string; query: string; headers: [string, string][]; body: string; payload_hash?: string };
   credentials: { access_key_id: string; secret_access_key: string; session_token?: string };
   service: string;
   time: string;
@@ -36,7 +36,7 @@ describe("VGR4 vectors", () => {
 
   for (const [name, v] of vectors) {
     it(`primitives match ${name}`, () => {
-      const payloadHash = sha256Hex(new TextEncoder().encode(v.request.body));
+      const payloadHash = v.request.payload_hash ?? sha256Hex(new TextEncoder().encode(v.request.body));
       expect(payloadHash).toBe(v.expected.payload_hash);
       const headers: [string, string][] = [...v.request.headers, ["x-vgr-date", v.time], ["x-vgr-content-sha256", payloadHash]];
       if (v.credentials.session_token) headers.push(["x-vgr-security-token", v.credentials.session_token]);
@@ -57,6 +57,7 @@ describe("VGR4 vectors", () => {
         url: `https://${host}${v.request.path}${query}`,
         headers: v.request.headers,
         body: v.request.body,
+        payloadHash: v.request.payload_hash,
         credentials: {
           accessKeyId: v.credentials.access_key_id,
           secretAccessKey: v.credentials.secret_access_key,

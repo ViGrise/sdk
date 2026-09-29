@@ -5,7 +5,7 @@ import type { Credentials, CredentialsProvider } from "./types.js";
 import { signRequest } from "./webcrypto.js";
 
 export { canonicalRequest, canonicalQuery, canonicalUri } from "./canonical-core.js";
-export type { SignInput, SignedHeaders } from "./request.js";
+export { UNSIGNED_PAYLOAD, type SignInput, type SignedHeaders } from "./request.js";
 export { ALGORITHM, TERMINATOR, formatTimestamp, scope } from "./signing-core.js";
 export type { Credentials, CredentialsProvider } from "./types.js";
 export { signRequest } from "./webcrypto.js";

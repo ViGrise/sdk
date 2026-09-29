@@ -25,6 +25,8 @@ struct Request {
   query: String,
   headers: Vec<(String, String)>,
   body: String,
+  #[serde(default)]
+  payload_hash: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -77,7 +79,11 @@ fn header_map(pairs: &[(String, String)]) -> HeaderMap {
 #[test]
 fn primitives_match_every_vector() {
   for (name, v) in vectors() {
-    let payload_hash = hex_sha256(v.request.body.as_bytes());
+    let payload_hash = v
+      .request
+      .payload_hash
+      .clone()
+      .unwrap_or_else(|| hex_sha256(v.request.body.as_bytes()));
     assert_eq!(
       payload_hash, v.expected.payload_hash,
       "{name}: payload hash"
@@ -143,19 +149,33 @@ fn sign_request_matches_every_vector() {
     let time: DateTime<Utc> = NaiveDateTime::parse_from_str(&v.time, TIMESTAMP_FORMAT)
       .unwrap()
       .and_utc();
-    let signed = sign_request(
-      &Method::from_bytes(v.request.method.as_bytes()).unwrap(),
-      &uri,
-      &header_map(&v.request.headers),
-      v.request.body.as_bytes(),
-      &Credentials {
-        access_key_id: v.credentials.access_key_id.clone(),
-        secret_access_key: v.credentials.secret_access_key.clone(),
-        session_token: v.credentials.session_token.clone(),
-      },
-      &v.service,
-      time,
-    )
+    let credentials = Credentials {
+      access_key_id: v.credentials.access_key_id.clone(),
+      secret_access_key: v.credentials.secret_access_key.clone(),
+      session_token: v.credentials.session_token.clone(),
+    };
+    let method = Method::from_bytes(v.request.method.as_bytes()).unwrap();
+    let headers = header_map(&v.request.headers);
+    let signed = match &v.request.payload_hash {
+      Some(hash) => vigrise_auth::sign_request_with_payload_hash(
+        &method,
+        &uri,
+        &headers,
+        hash,
+        &credentials,
+        &v.service,
+        time,
+      ),
+      None => sign_request(
+        &method,
+        &uri,
+        &headers,
+        v.request.body.as_bytes(),
+        &credentials,
+        &v.service,
+        time,
+      ),
+    }
     .unwrap();
     assert_eq!(
       signed.authorization, v.expected.authorization,

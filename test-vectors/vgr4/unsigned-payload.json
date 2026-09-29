@@ -1,0 +1,34 @@
+{
+  "credentials": {
+    "access_key_id": "VGAKEXAMPLE7TESTKEY",
+    "secret_access_key": "wJalrXUtnFEMI0K7MDENGbPxRfiCYEXAMPLEKEY01"
+  },
+  "service": "storage",
+  "time": "20261001T120000Z",
+  "description": "PUT of a streamed object body signed as UNSIGNED-PAYLOAD",
+  "request": {
+    "method": "PUT",
+    "path": "/v1/buckets/media/objects/clips/intro.wav",
+    "query": "",
+    "headers": [
+      [
+        "Host",
+        "storage.vigrise.com"
+      ],
+      [
+        "Content-Type",
+        "audio/wav"
+      ]
+    ],
+    "body": "RIFF....WAVEfmt ",
+    "payload_hash": "UNSIGNED-PAYLOAD"
+  },
+  "expected": {
+    "payload_hash": "UNSIGNED-PAYLOAD",
+    "signed_headers": "content-type;host;x-vgr-content-sha256;x-vgr-date",
+    "canonical_request": "PUT\n/v1/buckets/media/objects/clips/intro.wav\n\ncontent-type:audio/wav\nhost:storage.vigrise.com\nx-vgr-content-sha256:UNSIGNED-PAYLOAD\nx-vgr-date:20261001T120000Z\n\ncontent-type;host;x-vgr-content-sha256;x-vgr-date\nUNSIGNED-PAYLOAD",
+    "string_to_sign": "VGR4-HMAC-SHA256\n20261001T120000Z\n20261001/storage/vgr4_request\nb493846e0ab1f27653f371a3c39f60d82dac0e8ddbd670a55ec01a8679972a5b",
+    "signature": "4ddf9bb719cfb6f31a709c3e55f189cebb6769cc762fe2e8143ed1f5961ba0c0",
+    "authorization": "VGR4-HMAC-SHA256 Credential=VGAKEXAMPLE7TESTKEY/20261001/storage/vgr4_request, SignedHeaders=content-type;host;x-vgr-content-sha256;x-vgr-date, Signature=4ddf9bb719cfb6f31a709c3e55f189cebb6769cc762fe2e8143ed1f5961ba0c0"
+  }
+}

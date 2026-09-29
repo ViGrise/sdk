@@ -11,6 +11,9 @@ Headers = Union[Mapping[str, str], Sequence[Tuple[str, str]]]
 _DEFAULT_PORTS = {"http": 80, "https": 443}
 
 
+# Payload hash of a request whose body streams unsigned.
+UNSIGNED_PAYLOAD = "UNSIGNED-PAYLOAD"
+
 def _host(url) -> str:
     """Host as HTTP clients send it: without a default port."""
     host = url.hostname or ""
@@ -29,9 +32,12 @@ def sign_request(
     credentials: Credentials,
     service: str,
     now: Optional[datetime] = None,
+    payload_hash: Optional[str] = None,
 ) -> Dict[str, str]:
     """Returns the authorization, x-vgr-date and x-vgr-content-sha256 headers.
-    Signs host, content-type when present, and every x-vgr-* header."""
+    Signs host, content-type when present, and every x-vgr-* header.
+    `payload_hash` replaces the body's SHA-256, for example UNSIGNED_PAYLOAD
+    for a body that streams unsigned."""
     if credentials.access_key_id.startswith("VGST") and not credentials.session_token:
         raise ValueError("Temporary credentials require a session token")
     parts = urlsplit(url)
@@ -39,7 +45,7 @@ def sign_request(
     payload = body.encode() if isinstance(body, str) else (body or b"")
     timestamp = (now or datetime.now(timezone.utc)).astimezone(timezone.utc).strftime(TIMESTAMP_FORMAT)
     date = timestamp[:8]
-    payload_hash = sha256_hex(payload)
+    payload_hash = payload_hash or sha256_hex(payload)
 
     signing = [(n, v) for n, v in pairs if n.lower() not in ("x-vgr-date", "x-vgr-content-sha256")]
     if not any(n.lower() == "host" for n, _ in signing):

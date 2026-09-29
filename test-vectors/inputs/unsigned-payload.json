@@ -1,0 +1,26 @@
+{
+  "credentials": {
+    "access_key_id": "VGAKEXAMPLE7TESTKEY",
+    "secret_access_key": "wJalrXUtnFEMI0K7MDENGbPxRfiCYEXAMPLEKEY01"
+  },
+  "service": "storage",
+  "time": "20261001T120000Z",
+  "description": "PUT of a streamed object body signed as UNSIGNED-PAYLOAD",
+  "request": {
+    "method": "PUT",
+    "path": "/v1/buckets/media/objects/clips/intro.wav",
+    "query": "",
+    "headers": [
+      [
+        "Host",
+        "storage.vigrise.com"
+      ],
+      [
+        "Content-Type",
+        "audio/wav"
+      ]
+    ],
+    "body": "RIFF....WAVEfmt ",
+    "payload_hash": "UNSIGNED-PAYLOAD"
+  }
+}

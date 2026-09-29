@@ -51,7 +51,8 @@ def hmac_sha256(key: bytes, msg: str) -> bytes:
 def build(case):
     req = case["request"]
     body = req["body"].encode()
-    payload_hash = sha256_hex(body)
+    # A streamed body is signed as UNSIGNED-PAYLOAD instead of its hash.
+    payload_hash = req.get("payload_hash") or sha256_hex(body)
     time = case["time"]
     date = time[:8]
     service = case["service"]

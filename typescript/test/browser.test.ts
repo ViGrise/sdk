@@ -7,7 +7,7 @@ import { describe, expect, it } from "vitest";
 import { signRequest, signedFetch } from "../src/browser.js";
 
 interface Vector {
-  request: { method: string; path: string; query: string; headers: [string, string][]; body: string };
+  request: { method: string; path: string; query: string; headers: [string, string][]; body: string; payload_hash?: string };
   credentials: { access_key_id: string; secret_access_key: string; session_token?: string };
   service: string;
   time: string;
@@ -54,6 +54,7 @@ describe("browser entry", () => {
         url: `https://${host}${v.request.path}${query}`,
         headers: v.request.headers,
         body: v.request.body,
+        payloadHash: v.request.payload_hash,
         credentials: {
           accessKeyId: v.credentials.access_key_id,
           secretAccessKey: v.credentials.secret_access_key,

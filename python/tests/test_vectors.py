@@ -18,7 +18,7 @@ def test_vectors_exist():
 @pytest.mark.parametrize("path", VECTORS, ids=lambda p: p.name)
 def test_primitives_match(path):
     v = json.loads(path.read_text())
-    payload_hash = sha256_hex(v["request"]["body"].encode())
+    payload_hash = v["request"].get("payload_hash") or sha256_hex(v["request"]["body"].encode())
     assert payload_hash == v["expected"]["payload_hash"]
     headers = [tuple(h) for h in v["request"]["headers"]] + [("x-vgr-date", v["time"]), ("x-vgr-content-sha256", payload_hash)]
     if v["credentials"].get("session_token"):
@@ -49,5 +49,6 @@ def test_sign_request_matches(path):
         ),
         v["service"],
         datetime.strptime(v["time"], "%Y%m%dT%H%M%SZ").replace(tzinfo=timezone.utc),
+        payload_hash=v["request"].get("payload_hash"),
     )
     assert signed["authorization"] == v["expected"]["authorization"]
