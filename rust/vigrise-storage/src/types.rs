@@ -41,6 +41,43 @@ pub struct ListOptions {
     pub delimiter: Option<String>,
     pub max_keys: Option<u32>,
     pub continuation_token: Option<String>,
+    /// A key after which the listing starts; ignored with a continuation token.
+    pub start_after: Option<String>,
+}
+
+/// What a copy gives the new object.
+#[derive(Debug, Clone, Default)]
+pub enum CopyDescription {
+    /// The new object keeps the source's content type, metadata, headers and tags.
+    #[default]
+    Copy,
+    /// The new object takes its content type, metadata and tags from these options.
+    Replace(PutOptions),
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct ListUploadsOptions {
+    pub prefix: Option<String>,
+    pub delimiter: Option<String>,
+    pub max_uploads: Option<u32>,
+    pub key_marker: Option<String>,
+    pub upload_id_marker: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+pub struct UploadSummary {
+    pub upload_id: String,
+    pub key: String,
+    pub initiated: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+pub struct UploadsPage {
+    pub uploads: Vec<UploadSummary>,
+    pub common_prefixes: Vec<String>,
+    pub is_truncated: bool,
+    pub next_key_marker: Option<String>,
+    pub next_upload_id_marker: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
@@ -83,7 +120,7 @@ pub struct Presigned {
     pub expires_at: String,
 }
 
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct LifecycleRule {
     pub id: String,
     #[serde(default)]
@@ -94,4 +131,24 @@ pub struct LifecycleRule {
     pub expire_after_days: Option<u32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub abort_incomplete_uploads_after_days: Option<u32>,
+    /// A disabled rule is stored and read back but never applied.
+    #[serde(default = "enabled")]
+    pub enabled: bool,
+}
+
+fn enabled() -> bool {
+    true
+}
+
+impl Default for LifecycleRule {
+    fn default() -> Self {
+        Self {
+            id: String::new(),
+            prefix: String::new(),
+            tags: BTreeMap::new(),
+            expire_after_days: None,
+            abort_incomplete_uploads_after_days: None,
+            enabled: true,
+        }
+    }
 }

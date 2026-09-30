@@ -364,10 +364,83 @@ impl StorageClient {
         if let Some(token) = &options.continuation_token {
             query.push(format!("continuation_token={}", encode(token)));
         }
+        if let Some(start_after) = &options.start_after {
+            query.push(format!("start_after={}", encode(start_after)));
+        }
         let path = if query.is_empty() {
             format!("/v1/buckets/{bucket}/objects")
         } else {
             format!("/v1/buckets/{bucket}/objects?{}", query.join("&"))
+        };
+        self.json(Method::GET, &path, None).await
+    }
+
+    /// Copies an object, in this or another bucket, without moving its bytes.
+    pub async fn copy_object(
+        &self,
+        source_bucket: &str,
+        source_key: &str,
+        bucket: &str,
+        key: &str,
+        description: &CopyDescription,
+    ) -> Result<PutResult, StorageError> {
+        let mut headers = match description {
+            CopyDescription::Copy => HeaderMap::new(),
+            CopyDescription::Replace(options) => {
+                let mut headers = Self::object_headers(options)?;
+                headers.insert(
+                    "x-vgr-metadata-directive",
+                    HeaderValue::from_static("REPLACE"),
+                );
+                headers
+            }
+        };
+        let source = format!("{source_bucket}/{}", key_path(source_key));
+        headers.insert(
+            "x-vgr-copy-source",
+            HeaderValue::from_str(&source)
+                .map_err(|_| StorageError::Signing(format!("{source} is not a header value")))?,
+        );
+        let response = self
+            .send(
+                Method::PUT,
+                &format!("/v1/buckets/{bucket}/objects/{}", key_path(key)),
+                headers,
+                Payload::Buffered(Bytes::new()),
+            )
+            .await?;
+        response
+            .json()
+            .await
+            .map_err(|e| StorageError::Transport(e.to_string()))
+    }
+
+    /// Lists the multipart uploads in progress.
+    pub async fn list_uploads(
+        &self,
+        bucket: &str,
+        options: &ListUploadsOptions,
+    ) -> Result<UploadsPage, StorageError> {
+        let mut query = Vec::new();
+        if let Some(prefix) = &options.prefix {
+            query.push(format!("prefix={}", encode(prefix)));
+        }
+        if let Some(delimiter) = &options.delimiter {
+            query.push(format!("delimiter={}", encode(delimiter)));
+        }
+        if let Some(max_uploads) = options.max_uploads {
+            query.push(format!("max_uploads={max_uploads}"));
+        }
+        if let Some(marker) = &options.key_marker {
+            query.push(format!("key_marker={}", encode(marker)));
+        }
+        if let Some(marker) = &options.upload_id_marker {
+            query.push(format!("upload_id_marker={}", encode(marker)));
+        }
+        let path = if query.is_empty() {
+            format!("/v1/buckets/{bucket}/uploads")
+        } else {
+            format!("/v1/buckets/{bucket}/uploads?{}", query.join("&"))
         };
         self.json(Method::GET, &path, None).await
     }
