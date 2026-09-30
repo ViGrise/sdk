@@ -70,7 +70,7 @@ pub struct AuthorizeResponse {
   #[serde(default, skip_serializing_if = "Option::is_none")]
   pub principal: Option<Principal>,
   #[serde(default, skip_serializing_if = "Option::is_none")]
-  pub project_plan: Option<String>,
+  pub tier: Option<String>,
   #[serde(default, skip_serializing_if = "Vec::is_empty")]
   pub quotas: Vec<QuotaStatus>,
   /// Concurrency slots held for this request; released when it ends.
@@ -88,7 +88,7 @@ impl fmt::Debug for AuthorizeResponse {
       .field("decision", &self.decision)
       .field("error", &self.error)
       .field("principal", &self.principal)
-      .field("project_plan", &self.project_plan)
+      .field("tier", &self.tier)
       .field("quotas", &self.quotas)
       .field("leases", &self.leases)
       .field(
@@ -103,7 +103,7 @@ impl fmt::Debug for AuthorizeResponse {
 #[derive(Clone, PartialEq, Eq)]
 pub struct Authorized {
   pub principal: Principal,
-  pub project_plan: Option<String>,
+  pub tier: Option<String>,
   /// Quotas checked for this request, for services to expose limits to callers.
   pub quotas: Vec<QuotaStatus>,
   /// The usage estimate the request was authorized for, per usage dimension.
@@ -120,7 +120,7 @@ impl fmt::Debug for Authorized {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     f.debug_struct("Authorized")
       .field("principal", &self.principal)
-      .field("project_plan", &self.project_plan)
+      .field("tier", &self.tier)
       .field("quotas", &self.quotas)
       .field("usage", &self.usage)
       .field("leases", &self.leases)
@@ -142,7 +142,7 @@ mod tests {
       decision: Decision::Allow,
       error: None,
       principal: None,
-      project_plan: None,
+      tier: None,
       quotas: vec![],
       leases: vec![],
       signing_key: Some("00ff00ff".into()),

@@ -23,9 +23,15 @@ pub enum AuthError {
   #[error("{0}")]
   AccessDenied(String),
   #[error("{0}")]
-  ServiceNotAvailableForPlan(String),
+  ServiceNotAvailableForTier(String),
   #[error("{message}")]
   ServiceQuotaExceeded {
+    message: String,
+    quota: Option<crate::QuotaStatus>,
+  },
+  /// A spending cap of the organization or the project is reached.
+  #[error("{message}")]
+  SpendingCapReached {
     message: String,
     quota: Option<crate::QuotaStatus>,
   },
@@ -63,8 +69,9 @@ impl AuthError {
       AuthError::RequestExpired(_) => "RequestExpired",
       AuthError::ExpiredToken(_) => "ExpiredToken",
       AuthError::AccessDenied(_) => "AccessDenied",
-      AuthError::ServiceNotAvailableForPlan(_) => "ServiceNotAvailableForPlan",
+      AuthError::ServiceNotAvailableForTier(_) => "ServiceNotAvailableForTier",
       AuthError::ServiceQuotaExceeded { .. } => "ServiceQuotaExceeded",
+      AuthError::SpendingCapReached { .. } => "SpendingCapReached",
       AuthError::Throttling { .. } => "ThrottlingException",
       AuthError::LimitExceeded { .. } => "LimitExceeded",
       AuthError::RequestEntityTooLarge(_) => "RequestEntityTooLarge",
@@ -81,10 +88,11 @@ impl AuthError {
       | AuthError::SignatureDoesNotMatch { .. }
       | AuthError::RequestExpired(_)
       | AuthError::ExpiredToken(_) => StatusCode::UNAUTHORIZED,
-      AuthError::AccessDenied(_) | AuthError::ServiceNotAvailableForPlan(_) => {
+      AuthError::AccessDenied(_) | AuthError::ServiceNotAvailableForTier(_) => {
         StatusCode::FORBIDDEN
       }
       AuthError::ServiceQuotaExceeded { .. }
+      | AuthError::SpendingCapReached { .. }
       | AuthError::Throttling { .. }
       | AuthError::LimitExceeded { .. } => StatusCode::TOO_MANY_REQUESTS,
       AuthError::RequestEntityTooLarge(_) => StatusCode::PAYLOAD_TOO_LARGE,
@@ -97,6 +105,7 @@ impl AuthError {
   pub fn quota(&self) -> Option<&crate::QuotaStatus> {
     match self {
       AuthError::ServiceQuotaExceeded { quota, .. }
+      | AuthError::SpendingCapReached { quota, .. }
       | AuthError::Throttling { quota, .. }
       | AuthError::LimitExceeded { quota, .. } => quota.as_ref(),
       _ => None,
@@ -107,6 +116,7 @@ impl AuthError {
   pub fn quota_mut(&mut self) -> Option<&mut Option<crate::QuotaStatus>> {
     match self {
       AuthError::ServiceQuotaExceeded { quota, .. }
+      | AuthError::SpendingCapReached { quota, .. }
       | AuthError::Throttling { quota, .. }
       | AuthError::LimitExceeded { quota, .. } => Some(quota),
       _ => None,
@@ -126,8 +136,12 @@ impl AuthError {
       },
       "RequestExpired" => AuthError::RequestExpired(message),
       "ExpiredToken" => AuthError::ExpiredToken(message),
-      "ServiceNotAvailableForPlan" => AuthError::ServiceNotAvailableForPlan(message),
+      "ServiceNotAvailableForTier" => AuthError::ServiceNotAvailableForTier(message),
       "ServiceQuotaExceeded" => AuthError::ServiceQuotaExceeded {
+        message,
+        quota: None,
+      },
+      "SpendingCapReached" => AuthError::SpendingCapReached {
         message,
         quota: None,
       },
@@ -156,8 +170,9 @@ mod tests {
       "SignatureDoesNotMatch",
       "RequestExpired",
       "AccessDenied",
-      "ServiceNotAvailableForPlan",
+      "ServiceNotAvailableForTier",
       "ServiceQuotaExceeded",
+      "SpendingCapReached",
       "ThrottlingException",
       "LimitExceeded",
     ] {
@@ -166,9 +181,10 @@ mod tests {
   }
 
   #[test]
-  fn quota_rate_and_concurrency_denials_are_429() {
+  fn quota_cap_rate_and_concurrency_denials_are_429() {
     for code in [
       "ServiceQuotaExceeded",
+      "SpendingCapReached",
       "ThrottlingException",
       "LimitExceeded",
     ] {

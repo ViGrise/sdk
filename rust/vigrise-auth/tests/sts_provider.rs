@@ -95,7 +95,7 @@ async fn record_signer(State(sts): State<Sts>, headers: HeaderMap) -> (StatusCod
         "project_id": "00000000-0000-0000-0000-000000000000",
         "organization_id": "00000000-0000-0000-0000-000000000000"
       },
-      "project_plan": "Pro"
+      "tier": "Pro"
     })),
   )
 }

@@ -79,7 +79,7 @@ fn authorized() -> Authorized {
       project_id: Uuid::from_u128(1),
       organization_id: Uuid::from_u128(3),
     },
-    project_plan: Some("Free".into()),
+    tier: Some("Free".into()),
     quotas: vec![],
     usage: Default::default(),
     leases: vec![],

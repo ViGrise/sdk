@@ -370,7 +370,7 @@ async fn authorize(
   }
   Ok(Authorized {
     principal: allowed.principal,
-    project_plan: allowed.project_plan,
+    tier: allowed.tier,
     quotas: allowed.quotas,
     usage,
     leases: allowed.leases,
@@ -381,7 +381,7 @@ async fn authorize(
 /// An allowed decision, reduced to what the middleware keeps.
 struct Allowed {
   principal: Principal,
-  project_plan: Option<String>,
+  tier: Option<String>,
   quotas: Vec<QuotaStatus>,
   leases: Vec<String>,
   signing_key: Option<String>,
@@ -397,7 +397,7 @@ async fn decide(
     decision,
     error,
     principal,
-    project_plan,
+    tier,
     quotas,
     leases,
     signing_key,
@@ -406,7 +406,7 @@ async fn decide(
   match (decision, principal) {
     (Decision::Allow, Some(principal)) => Ok(Allowed {
       principal,
-      project_plan,
+      tier,
       quotas,
       leases,
       signing_key,

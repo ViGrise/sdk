@@ -41,7 +41,7 @@ async fn handler(
         "project_id": "00000000-0000-0000-0000-000000000000",
         "organization_id": "00000000-0000-0000-0000-000000000000"
       },
-      "project_plan": "Pro"
+      "tier": "Pro"
     })),
   )
 }
@@ -85,7 +85,7 @@ async fn signs_with_iam_scope_and_parses_allow() {
   let (endpoint, calls) = serve(vec![]).await;
   let response = client(endpoint).authorize(&request()).await.unwrap();
   assert_eq!(response.decision, Decision::Allow);
-  assert_eq!(response.project_plan.as_deref(), Some("Pro"));
+  assert_eq!(response.tier.as_deref(), Some("Pro"));
   assert_eq!(calls.load(Ordering::SeqCst), 1);
 }
 
