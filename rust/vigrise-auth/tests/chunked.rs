@@ -296,3 +296,48 @@ async fn a_chunk_not_followed_by_crlf_is_malformed() {
   .await;
   assert!(matches!(decoded.unwrap_err(), ChunkedError::Malformed(_)));
 }
+
+#[tokio::test]
+async fn data_after_the_final_chunk_is_refused() {
+  let mut wire = unsigned_wire(&[b"data"], "");
+  wire.extend(b"trailing bytes");
+  for frame_size in [1, wire.len()] {
+    let (decoded, _) = decode(
+      &wire,
+      frame_size,
+      options(ChunkedMode::UnsignedTrailer, None),
+    )
+    .await;
+    assert!(
+      matches!(decoded.unwrap_err(), ChunkedError::Malformed(_)),
+      "frame size {frame_size}"
+    );
+  }
+  let mut signed = signed_wire(&[b"data"], None);
+  signed.extend(b"x");
+  let (decoded, _) = decode(&signed, 7, options(ChunkedMode::Signed(signing()), None)).await;
+  assert!(matches!(decoded.unwrap_err(), ChunkedError::Malformed(_)));
+}
+
+#[tokio::test]
+async fn an_endless_trailer_is_refused() {
+  let mut wire = b"0\r\n".to_vec();
+  for i in 0..2000 {
+    wire.extend(format!("x-filler-{i}:value\r\n").into_bytes());
+  }
+  wire.extend(b"\r\n");
+  let (decoded, _) = decode(&wire, 64, options(ChunkedMode::UnsignedTrailer, None)).await;
+  assert!(matches!(decoded.unwrap_err(), ChunkedError::Malformed(_)));
+}
+
+#[tokio::test]
+async fn chunk_sizes_are_plain_hex_digits() {
+  for size in ["+4", "-4", "0x4", " 4"] {
+    let wire = format!("{size}\r\ndata\r\n0\r\n\r\n").into_bytes();
+    let (decoded, _) = decode(&wire, 64, options(ChunkedMode::UnsignedTrailer, None)).await;
+    assert!(
+      matches!(decoded.unwrap_err(), ChunkedError::Malformed(_)),
+      "accepted {size:?}"
+    );
+  }
+}

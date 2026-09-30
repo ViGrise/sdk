@@ -23,6 +23,8 @@ use crate::sigv4::{chunk_string_to_sign, trailer_string_to_sign, Scope};
 const MAX_SIGNED_CHUNK_BYTES: u64 = 16 * 1024 * 1024;
 /// Longest chunk header or trailer line.
 const MAX_LINE_BYTES: usize = 8 * 1024;
+/// Longest trailer, all its lines together.
+const MAX_TRAILER_BYTES: usize = 16 * 1024;
 
 /// What a signed body's chunk signatures chain from.
 #[derive(Clone)]
@@ -184,6 +186,9 @@ impl<B> AwsChunkedBody<B> {
       Some((size, extension)) => (size, Some(extension)),
       None => (line, None),
     };
+    if size.is_empty() || !size.bytes().all(|b| b.is_ascii_hexdigit()) {
+      return Err(malformed());
+    }
     let size = u64::from_str_radix(size, 16).map_err(|_| malformed())?;
     let signature = match (&self.signing, extension) {
       (Some(_), Some(extension)) => {
@@ -371,14 +376,17 @@ impl<B> AwsChunkedBody<B> {
     loop {
       let rest = &self.buffer[consumed..];
       let Some(end) = rest.windows(2).position(|pair| pair == b"\r\n") else {
-        if rest.len() > MAX_LINE_BYTES {
-          return Err(ChunkedError::Malformed("A trailer line is too long".into()));
+        if rest.len() > MAX_LINE_BYTES || consumed + rest.len() > MAX_TRAILER_BYTES {
+          return Err(ChunkedError::Malformed("The trailer is too long".into()));
         }
         return Ok(None);
       };
       let line = String::from_utf8(rest[..end].to_vec())
         .map_err(|_| ChunkedError::Malformed("A trailer line is not valid text".into()))?;
       consumed += end + 2;
+      if consumed > MAX_TRAILER_BYTES {
+        return Err(ChunkedError::Malformed("The trailer is too long".into()));
+      }
       if line.is_empty() {
         self.buffer.advance(consumed);
         return Ok(Some(lines));
@@ -424,6 +432,10 @@ impl<B> AwsChunkedBody<B> {
   }
 }
 
+fn after_the_end() -> ChunkedError {
+  ChunkedError::Malformed("The body carries data after its last chunk".into())
+}
+
 impl<B> Body for AwsChunkedBody<B>
 where
   B: Body<Data = Bytes> + Unpin,
@@ -451,7 +463,34 @@ where
           return Poll::Ready(Some(Err(error)));
         }
         Ok(Step::Data(bytes)) => return Poll::Ready(Some(Ok(Frame::data(bytes)))),
-        Ok(Step::Finished) => return Poll::Ready(None),
+        Ok(Step::Finished) => {
+          if !this.buffer.is_empty() {
+            this.failed = true;
+            return Poll::Ready(Some(Err(after_the_end())));
+          }
+          if this.inner_ended {
+            return Poll::Ready(None);
+          }
+          return match Pin::new(&mut this.inner).poll_frame(cx) {
+            Poll::Pending => Poll::Pending,
+            Poll::Ready(None) => {
+              this.inner_ended = true;
+              Poll::Ready(None)
+            }
+            Poll::Ready(Some(Ok(frame))) if frame.data_ref().is_none_or(|data| data.is_empty()) => {
+              cx.waker().wake_by_ref();
+              Poll::Pending
+            }
+            Poll::Ready(Some(Ok(_))) => {
+              this.failed = true;
+              Poll::Ready(Some(Err(after_the_end())))
+            }
+            Poll::Ready(Some(Err(error))) => {
+              this.failed = true;
+              Poll::Ready(Some(Err(ChunkedError::Read(error.into().to_string()))))
+            }
+          };
+        }
         Ok(Step::NeedMore) => {}
       }
       match Pin::new(&mut this.inner).poll_frame(cx) {
