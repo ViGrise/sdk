@@ -147,14 +147,32 @@ async fn run(
   parts.extensions.insert(authorized);
   let response = next.run(Request::from_parts(parts, body)).await;
   match guard {
-    Some(guard) => response.map(|body| {
-      Body::new(ReleasingBody {
-        inner: body,
-        guard: Some(guard),
-      })
-    }),
+    Some(guard) => release_with(response, guard),
     None => response,
   }
+}
+
+/// Wraps `response` so the concurrency slots `leases` are returned once its
+/// body has been sent or is dropped. Services that authorize requests
+/// themselves use this for the leases their decisions hold.
+pub fn hold_leases(
+  response: Response,
+  authorizer: Arc<dyn Authorizer>,
+  leases: Vec<String>,
+) -> Response {
+  if leases.is_empty() {
+    return response;
+  }
+  release_with(response, ReleaseGuard { authorizer, leases })
+}
+
+fn release_with(response: Response, guard: ReleaseGuard) -> Response {
+  response.map(|body| {
+    Body::new(ReleasingBody {
+      inner: body,
+      guard: Some(guard),
+    })
+  })
 }
 
 /// A request body that hashes what passes through it and fails with an error
@@ -416,7 +434,7 @@ async fn decide(
 
 /// HTTP/2 carries the host in the `:authority` pseudo-header, which servers
 /// expose as the URI authority without a `Host` header.
-fn headers_with_host<'a>(
+pub fn headers_with_host<'a>(
   headers: &'a HeaderMap,
   uri: &Uri,
 ) -> Result<Cow<'a, HeaderMap>, AuthError> {
@@ -434,9 +452,15 @@ fn headers_with_host<'a>(
 }
 
 fn global_context(verifier: &Verifier, parts: &Parts) -> Vec<(&'static str, Value)> {
+  request_context(parts, verifier.trust_forwarded_headers)
+}
+
+/// The condition keys every request carries: source IP, transport security
+/// and user agent. `trust_forwarded_headers` takes them from
+/// `x-forwarded-*`, as `Verifier::trust_forwarded_headers` describes.
+pub fn request_context(parts: &Parts, trust_forwarded_headers: bool) -> Vec<(&'static str, Value)> {
   let mut context = Vec::new();
-  let forwarded_ip = verifier
-    .trust_forwarded_headers
+  let forwarded_ip = trust_forwarded_headers
     .then(|| header_str(parts, "x-forwarded-for"))
     .flatten()
     .and_then(|v| v.rsplit(',').next())
@@ -450,8 +474,7 @@ fn global_context(verifier: &Verifier, parts: &Parts) -> Vec<(&'static str, Valu
   if let Some(ip) = source_ip {
     context.push(("vgr:SourceIp", Value::String(ip)));
   }
-  let secure =
-    verifier.trust_forwarded_headers && header_str(parts, "x-forwarded-proto") == Some("https");
+  let secure = trust_forwarded_headers && header_str(parts, "x-forwarded-proto") == Some("https");
   context.push(("vgr:SecureTransport", Value::Bool(secure)));
   if let Some(agent) = header_str(parts, header::USER_AGENT.as_str()) {
     context.push(("vgr:UserAgent", Value::String(agent.to_string())));

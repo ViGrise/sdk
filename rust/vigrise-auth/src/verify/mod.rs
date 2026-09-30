@@ -7,7 +7,9 @@ mod resolver;
 mod types;
 
 pub use client::{AuthorizeClient, AuthorizeFuture, Authorizer};
-pub use middleware::{verify, verify_streaming, Verifier};
+pub use middleware::{
+  headers_with_host, hold_leases, request_context, verify, verify_streaming, Verifier,
+};
 pub use resolver::{ActionResolver, ResolvedAction};
 pub use types::{
   AuthorizeRequest, AuthorizeResponse, Authorized, Decision, ErrorBody, Principal, QuotaStatus,
