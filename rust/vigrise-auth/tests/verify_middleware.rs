@@ -636,3 +636,137 @@ async fn leases_are_released_when_the_request_is_cancelled_before_the_response()
   assert!(cancelled.is_err());
   assert_eq!(*released.lock().unwrap(), vec![vec!["lease-1".to_string()]]);
 }
+
+/// Allows every action but `tts:ListVoices`, holds a lease per allowed action
+/// and records the actions asked and the leases released.
+#[derive(Default)]
+struct SelectivePlatform {
+  asked: std::sync::Mutex<Vec<(String, Vec<String>)>>,
+  released: std::sync::Mutex<Vec<Vec<String>>>,
+}
+
+struct SharedPlatform(Arc<SelectivePlatform>);
+
+impl Authorizer for SharedPlatform {
+  fn authorize<'a>(
+    &'a self,
+    request: &'a AuthorizeRequest,
+  ) -> vigrise_auth::verify::AuthorizeFuture<'a> {
+    self
+      .0
+      .asked
+      .lock()
+      .unwrap()
+      .push((request.action.clone(), request.resources.clone()));
+    Box::pin(async move {
+      if request.action == "tts:ListVoices" {
+        return Ok(AuthorizeResponse {
+          decision: Decision::Deny,
+          error: Some(ErrorBody {
+            code: "AccessDenied".into(),
+            message: "no".into(),
+          }),
+          principal: None,
+          project_plan: None,
+          quotas: vec![],
+          leases: vec![],
+          signing_key: None,
+        });
+      }
+      Ok(AuthorizeResponse {
+        decision: Decision::Allow,
+        error: None,
+        principal: Some(Principal {
+          vrn: "vrn:vigrise:iam:p:user/ci-bot".into(),
+          id: Uuid::nil(),
+          principal_type: "User".into(),
+          name: "ci-bot".into(),
+          project_id: Uuid::nil(),
+          organization_id: Uuid::nil(),
+        }),
+        project_plan: None,
+        quotas: vec![],
+        leases: vec![format!("lease-{}", request.action)],
+        signing_key: None,
+      })
+    })
+  }
+
+  fn release(&self, leases: Vec<String>) {
+    self.0.released.lock().unwrap().push(leases);
+  }
+}
+
+/// A speech request that also needs the right to list voices or to use another voice.
+struct TwoActionResolver {
+  second: &'static str,
+}
+
+impl ActionResolver for TwoActionResolver {
+  fn resolve(&self, _parts: &Parts, _body: &Bytes) -> Result<ResolvedAction, AuthError> {
+    Ok(ResolvedAction {
+      action: "tts:SynthesizeSpeech".into(),
+      resources: vec!["vrn:vigrise:tts:${ProjectId}:voice/a".into()],
+      ..Default::default()
+    })
+  }
+
+  fn additional(&self, _parts: &Parts, _body: &Bytes) -> Result<Vec<ResolvedAction>, AuthError> {
+    Ok(vec![ResolvedAction {
+      action: self.second.into(),
+      resources: vec!["vrn:vigrise:tts:${ProjectId}:voice/b".into()],
+      ..Default::default()
+    }])
+  }
+}
+
+fn two_action_app(platform: Arc<SelectivePlatform>, second: &'static str) -> Router {
+  let verifier = Arc::new(Verifier {
+    service: "tts".into(),
+    authorizer: Arc::new(SharedPlatform(platform)),
+    resolver: Arc::new(TwoActionResolver { second }),
+    max_body_bytes: 1024,
+    trust_forwarded_headers: false,
+  });
+  let handler = |Extension(auth): Extension<Authorized>| async move { auth.leases.join(",") };
+  Router::new()
+    .route("/v1/audio/speech", post(handler))
+    .layer(axum::middleware::from_fn_with_state(verifier, verify))
+}
+
+#[tokio::test]
+async fn every_additional_action_is_authorized_with_the_requests_signature() {
+  let platform = Arc::new(SelectivePlatform::default());
+  let (status, _, text) = send(
+    two_action_app(Arc::clone(&platform), "tts:ListModels"),
+    signed("/v1/audio/speech", BODY, SECRET),
+  )
+  .await;
+  assert_eq!(status, StatusCode::OK);
+  assert_eq!(text, "lease-tts:SynthesizeSpeech,lease-tts:ListModels");
+  let asked = platform.asked.lock().unwrap().clone();
+  assert_eq!(
+    asked
+      .iter()
+      .map(|(action, _)| action.as_str())
+      .collect::<Vec<_>>(),
+    vec!["tts:SynthesizeSpeech", "tts:ListModels"]
+  );
+  assert_eq!(asked[1].1, vec!["vrn:vigrise:tts:${ProjectId}:voice/b"]);
+}
+
+#[tokio::test]
+async fn a_denied_additional_action_rejects_the_request_and_returns_held_leases() {
+  let platform = Arc::new(SelectivePlatform::default());
+  let (status, json, _) = send(
+    two_action_app(Arc::clone(&platform), "tts:ListVoices"),
+    signed("/v1/audio/speech", BODY, SECRET),
+  )
+  .await;
+  assert_eq!(status, StatusCode::FORBIDDEN);
+  assert_eq!(json["error"]["code"], "AccessDenied");
+  assert_eq!(
+    *platform.released.lock().unwrap(),
+    vec![vec!["lease-tts:SynthesizeSpeech".to_string()]]
+  );
+}

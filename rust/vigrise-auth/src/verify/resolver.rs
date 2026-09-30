@@ -23,4 +23,12 @@ pub struct ResolvedAction {
 /// the request before the platform is called; unknown routes must be rejected.
 pub trait ActionResolver: Send + Sync + 'static {
   fn resolve(&self, parts: &Parts, body: &Bytes) -> Result<ResolvedAction, AuthError>;
+
+  /// Further actions the caller must be allowed to perform for the same
+  /// request, such as reading the source of a copy. Each is authorized with
+  /// the request's own signature; a denial rejects the request.
+  fn additional(&self, parts: &Parts, body: &Bytes) -> Result<Vec<ResolvedAction>, AuthError> {
+    let _ = (parts, body);
+    Ok(Vec::new())
+  }
 }

@@ -19,8 +19,9 @@ use crate::error::AuthError;
 use crate::signer::{UNSIGNED_PAYLOAD, X_VGR_CONTENT_SHA256, X_VGR_DATE};
 use crate::signing::string_to_sign;
 use crate::verify::client::Authorizer;
-use crate::verify::resolver::ActionResolver;
-use crate::verify::types::{AuthorizeRequest, AuthorizeResponse, Authorized, Decision};
+use crate::verify::resolver::{ActionResolver, ResolvedAction};
+use crate::verify::types::{AuthorizeRequest, AuthorizeResponse, Authorized, Decision, Principal};
+use crate::QuotaStatus;
 
 pub struct Verifier {
   /// Catalog namespace this service owns, for example `tts`.
@@ -312,24 +313,66 @@ async fn authorize(
   let sts = string_to_sign(timestamp, &auth.scope(), &canonical);
 
   let resolved = verifier.resolver.resolve(parts, body)?;
-  let mut context = resolved.context;
-  for (key, value) in global_context(verifier, parts) {
-    context.insert(key.to_string(), value);
-  }
-
-  let request = AuthorizeRequest {
-    access_key_id: auth.access_key_id,
-    security_token: header_str(parts, "x-vgr-security-token").map(str::to_string),
-    string_to_sign: sts.clone(),
-    signature: auth.signature,
-    action: resolved.action,
-    resources: resolved.resources,
-    context,
-    usage: resolved.usage,
-    streaming_signing_key: false,
-    presigned_expires: None,
+  let additional = verifier.resolver.additional(parts, body)?;
+  let global = global_context(verifier, parts);
+  let build = |resolved: ResolvedAction| {
+    let mut context = resolved.context;
+    for (key, value) in &global {
+      context.insert(key.to_string(), value.clone());
+    }
+    AuthorizeRequest {
+      access_key_id: auth.access_key_id.clone(),
+      security_token: header_str(parts, "x-vgr-security-token").map(str::to_string),
+      string_to_sign: sts.clone(),
+      signature: auth.signature.clone(),
+      action: resolved.action,
+      resources: resolved.resources,
+      context,
+      usage: resolved.usage,
+      streaming_signing_key: false,
+      presigned_expires: None,
+    }
   };
+  let request = build(resolved);
   let usage = request.usage.clone();
+  let mut allowed = decide(verifier, &request, &sts).await?;
+  for extra in additional {
+    match decide(verifier, &build(extra), &sts).await {
+      Ok(extra_allowed) => {
+        allowed.leases.extend(extra_allowed.leases);
+        allowed.quotas.extend(extra_allowed.quotas);
+      }
+      Err(error) => {
+        verifier.authorizer.release(allowed.leases);
+        return Err(error);
+      }
+    }
+  }
+  Ok(Authorized {
+    principal: allowed.principal,
+    project_plan: allowed.project_plan,
+    quotas: allowed.quotas,
+    usage,
+    leases: allowed.leases,
+    signing_key: allowed.signing_key,
+  })
+}
+
+/// An allowed decision, reduced to what the middleware keeps.
+struct Allowed {
+  principal: Principal,
+  project_plan: Option<String>,
+  quotas: Vec<QuotaStatus>,
+  leases: Vec<String>,
+  signing_key: Option<String>,
+}
+
+/// Asks the platform about one action of a request.
+async fn decide(
+  verifier: &Verifier,
+  request: &AuthorizeRequest,
+  sts: &str,
+) -> Result<Allowed, AuthError> {
   let AuthorizeResponse {
     decision,
     error,
@@ -338,14 +381,13 @@ async fn authorize(
     quotas,
     leases,
     signing_key,
-  } = verifier.authorizer.authorize(&request).await?;
+  } = verifier.authorizer.authorize(request).await?;
 
   match (decision, principal) {
-    (Decision::Allow, Some(principal)) => Ok(Authorized {
+    (Decision::Allow, Some(principal)) => Ok(Allowed {
       principal,
       project_plan,
       quotas,
-      usage,
       leases,
       signing_key,
     }),
@@ -359,7 +401,7 @@ async fn authorize(
       Err(match AuthError::from_code(&code, message) {
         AuthError::SignatureDoesNotMatch { message, .. } => AuthError::SignatureDoesNotMatch {
           message,
-          string_to_sign: Some(sts),
+          string_to_sign: Some(sts.to_string()),
         },
         mut other => {
           if let Some(quota) = other.quota_mut() {
