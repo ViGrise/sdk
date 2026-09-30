@@ -92,6 +92,7 @@ impl ChecksumAlgorithm {
   }
 }
 
+#[derive(Clone)]
 enum State {
   Crc(crc_fast::Digest, ChecksumAlgorithm),
   Sha1(Sha1),
@@ -99,6 +100,7 @@ enum State {
 }
 
 /// A checksum computed over the data passed to `update`.
+#[derive(Clone)]
 pub struct Checksum {
   state: State,
 }
