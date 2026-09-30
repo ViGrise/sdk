@@ -27,7 +27,7 @@ sha2 = "0.10"
 thiserror = "2"
 
 reqwest = { version = "0.13", optional = true, default-features = false, features = ["json", "rustls"] }
-axum = { version = "0.8", optional = true, default-features = false }
+axum = { version = "0.8", optional = true, default-features = false, features = ["json", "original-uri", "tokio"] }
 base64 = { version = "0.22", optional = true }
 bytes = { version = "1", optional = true }
 crc-fast = { version = "1", optional = true, default-features = false, features = ["std"] }
