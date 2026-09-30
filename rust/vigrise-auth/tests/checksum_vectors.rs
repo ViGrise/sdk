@@ -1,4 +1,4 @@
-#![cfg(feature = "verify")]
+#![cfg(feature = "sigv4")]
 
 use std::collections::BTreeMap;
 use std::path::PathBuf;

@@ -6,9 +6,9 @@
 
 pub mod authorization;
 pub mod canonical;
-#[cfg(feature = "verify")]
+#[cfg(feature = "sigv4")]
 pub mod checksum;
-#[cfg(feature = "verify")]
+#[cfg(feature = "sigv4")]
 pub mod chunked;
 pub mod credentials;
 pub mod error;
