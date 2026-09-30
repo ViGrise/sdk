@@ -57,6 +57,23 @@ pub enum SigningAlgorithm {
   Aws4,
 }
 
+impl SigningAlgorithm {
+  /// The header a request of this scheme signs its payload hash in.
+  pub fn payload_hash_header(self) -> &'static str {
+    match self {
+      Self::Vgr4 => "x-vgr-content-sha256",
+      Self::Aws4 => "x-amz-content-sha256",
+    }
+  }
+}
+
+/// A streamed body that did not hash to the payload hash its request signed.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error)]
+#[error("{} does not match the request body", .algorithm.payload_hash_header())]
+pub struct PayloadHashMismatch {
+  pub algorithm: SigningAlgorithm,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ParsedStringToSign {
   pub algorithm: SigningAlgorithm,

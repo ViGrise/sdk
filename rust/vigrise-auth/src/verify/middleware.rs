@@ -202,7 +202,9 @@ impl http_body::Body for HashCheckedBody {
         if let Some(hasher) = self.hasher.take() {
           if hex::encode(hasher.finalize()) != self.expected {
             return std::task::Poll::Ready(Some(Err(axum::Error::new(
-              "x-vgr-content-sha256 does not match the request body",
+              crate::signing::PayloadHashMismatch {
+                algorithm: crate::signing::SigningAlgorithm::Vgr4,
+              },
             ))));
           }
         }
