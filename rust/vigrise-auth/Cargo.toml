@@ -10,7 +10,7 @@ description = "VGR4 request signing and verification for ViGrise services"
 default = []
 reqwest = ["dep:reqwest"]
 sts = ["reqwest", "dep:tokio", "tokio/sync", "chrono/serde"]
-verify = ["sts", "dep:axum", "dep:bytes", "dep:http-body", "dep:http-body-util", "dep:tokio", "tokio/rt", "dep:uuid", "dep:tracing"]
+verify = ["sts", "dep:axum", "dep:base64", "dep:bytes", "dep:crc-fast", "dep:http-body", "dep:http-body-util", "dep:sha1", "dep:tokio", "tokio/rt", "dep:uuid", "dep:tracing"]
 metering = ["verify", "tokio/sync", "tokio/rt", "tokio/macros", "uuid/v4", "chrono/serde"]
 openapi = ["dep:utoipa"]
 
@@ -27,9 +27,12 @@ thiserror = "2"
 
 reqwest = { version = "0.13", optional = true, default-features = false, features = ["json", "rustls"] }
 axum = { version = "0.8", optional = true, default-features = false }
+base64 = { version = "0.22", optional = true }
 bytes = { version = "1", optional = true }
+crc-fast = { version = "1", optional = true, default-features = false, features = ["std"] }
 http-body = { version = "1", optional = true }
 http-body-util = { version = "0.1", optional = true }
+sha1 = { version = "0.10", optional = true }
 tokio = { version = "1", optional = true, features = ["time"] }
 uuid = { version = "1", optional = true, features = ["serde"] }
 tracing = { version = "0.1", optional = true }

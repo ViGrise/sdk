@@ -47,6 +47,7 @@ impl Authorizer for SigningPlatform {
           project_plan: None,
           quotas: vec![],
           leases: vec![],
+          signing_key: None,
         });
       }
       Ok(AuthorizeResponse {
@@ -63,6 +64,7 @@ impl Authorizer for SigningPlatform {
         project_plan: Some("Pro".into()),
         quotas: vec![],
         leases: vec![],
+        signing_key: None,
       })
     })
   }

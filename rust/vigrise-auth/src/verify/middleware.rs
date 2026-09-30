@@ -326,6 +326,8 @@ async fn authorize(
     resources: resolved.resources,
     context,
     usage: resolved.usage,
+    streaming_signing_key: false,
+    presigned_expires: None,
   };
   let usage = request.usage.clone();
   let AuthorizeResponse {
@@ -335,6 +337,7 @@ async fn authorize(
     project_plan,
     quotas,
     leases,
+    signing_key,
   } = verifier.authorizer.authorize(&request).await?;
 
   match (decision, principal) {
@@ -344,6 +347,7 @@ async fn authorize(
       quotas,
       usage,
       leases,
+      signing_key,
     }),
     (Decision::Allow, None) => Err(AuthError::ServiceUnavailable(
       "Authorization response is missing the principal".into(),

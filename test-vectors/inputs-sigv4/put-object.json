@@ -1,0 +1,13 @@
+{
+  "description": "PUT Object with a reserved character in the key",
+  "source": "Amazon S3 documentation, Signature Calculations for the Authorization Header: Transferring Payload in a Single Chunk (PUT Object)",
+  "credentials": {"access_key_id":"AKIAIOSFODNN7EXAMPLE","secret_access_key":"wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"},
+  "region": "us-east-1", "service": "s3", "time": "20130524T000000Z",
+  "request": {"method": "PUT", "path": "/test$file.text", "query": "",
+    "headers": [["Host", "examplebucket.s3.amazonaws.com"], ["Date", "Fri, 24 May 2013 00:00:00 GMT"],
+      ["x-amz-date", "20130524T000000Z"], ["x-amz-storage-class", "REDUCED_REDUNDANCY"],
+      ["x-amz-content-sha256", "44ce7dd67c959e0d3524ffac1771dfbba87d2b6b4b4e99e42034a8b803f8b072"]],
+    "payload_hash": "44ce7dd67c959e0d3524ffac1771dfbba87d2b6b4b4e99e42034a8b803f8b072"},
+  "signed_headers": ["date", "host", "x-amz-content-sha256", "x-amz-date", "x-amz-storage-class"],
+  "published": {"signature": "98ad721746da40c64f1a55b78f14c238d841ea1380cd77a1b5971af0ece108bd"}
+}

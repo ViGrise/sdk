@@ -1,0 +1,189 @@
+{
+  "checksums": [
+    {
+      "input": "empty",
+      "length": 0,
+      "data_utf8": "",
+      "repeat": null,
+      "values": {
+        "CRC32": "AAAAAA==",
+        "CRC32C": "AAAAAA==",
+        "CRC64NVME": "AAAAAAAAAAA=",
+        "SHA1": "2jmj7l5rSw0yVb/vlWAYkK/YBwk=",
+        "SHA256": "47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU="
+      }
+    },
+    {
+      "input": "check-string",
+      "length": 9,
+      "data_utf8": "123456789",
+      "repeat": null,
+      "values": {
+        "CRC32": "y/Q5Jg==",
+        "CRC32C": "4waSgw==",
+        "CRC64NVME": "rosUhgp5mIg=",
+        "SHA1": "98O8HYCOBHMq32eZZczDTKeuNEE=",
+        "SHA256": "FeKw08M4keuw8e9gnsQZQgwg4yDOlMZfvIwzEkSOsiU="
+      }
+    },
+    {
+      "input": "hello",
+      "length": 23,
+      "data_utf8": "Hello, ViGrise Storage!",
+      "repeat": null,
+      "values": {
+        "CRC32": "hBfr+g==",
+        "CRC32C": "qHJTcA==",
+        "CRC64NVME": "f03T0Ylrp0c=",
+        "SHA1": "6AsJg/550duEeq6GVjBOOU078Lk=",
+        "SHA256": "dydA6kxLQk3ciEwZbrjl1KyQ4HTkBmGdN/BM1FZDtA8="
+      }
+    },
+    {
+      "input": "repeated-a",
+      "length": 66560,
+      "data_utf8": null,
+      "repeat": {
+        "byte": "a",
+        "length": 66560
+      },
+      "values": {
+        "CRC32": "sK4Y7A==",
+        "CRC32C": "sOO8/Q==",
+        "CRC64NVME": "pRf+emrnL+A=",
+        "SHA1": "qOlv5ixdz2jRNhlSLmgH6iaTKRI=",
+        "SHA256": "zWnTiHxq+SZLEA17dgIzEzXZqn4718MM3G1vS/uzyIg="
+      }
+    }
+  ],
+  "composite": [
+    {
+      "algorithm": "CRC32",
+      "parts": [
+        {
+          "byte": "a",
+          "length": 5
+        },
+        {
+          "byte": "b",
+          "length": 7
+        },
+        {
+          "byte": "c",
+          "length": 3
+        }
+      ],
+      "value": "pG24ew==-3"
+    },
+    {
+      "algorithm": "CRC32C",
+      "parts": [
+        {
+          "byte": "a",
+          "length": 5
+        },
+        {
+          "byte": "b",
+          "length": 7
+        },
+        {
+          "byte": "c",
+          "length": 3
+        }
+      ],
+      "value": "gxYceg==-3"
+    },
+    {
+      "algorithm": "SHA1",
+      "parts": [
+        {
+          "byte": "a",
+          "length": 5
+        },
+        {
+          "byte": "b",
+          "length": 7
+        },
+        {
+          "byte": "c",
+          "length": 3
+        }
+      ],
+      "value": "1BBmqRCdE47kWPJO4FDZL8HDtks=-3"
+    },
+    {
+      "algorithm": "SHA256",
+      "parts": [
+        {
+          "byte": "a",
+          "length": 5
+        },
+        {
+          "byte": "b",
+          "length": 7
+        },
+        {
+          "byte": "c",
+          "length": 3
+        }
+      ],
+      "value": "zQh3VZ1SkwmfibT+3Wq94CXn25GEKBXKJ3JGeTcyGDw=-3"
+    }
+  ],
+  "full_object": [
+    {
+      "algorithm": "CRC32",
+      "parts": [
+        {
+          "byte": "a",
+          "length": 5
+        },
+        {
+          "byte": "b",
+          "length": 7
+        },
+        {
+          "byte": "c",
+          "length": 3
+        }
+      ],
+      "value": "AnfWmQ=="
+    },
+    {
+      "algorithm": "CRC32C",
+      "parts": [
+        {
+          "byte": "a",
+          "length": 5
+        },
+        {
+          "byte": "b",
+          "length": 7
+        },
+        {
+          "byte": "c",
+          "length": 3
+        }
+      ],
+      "value": "ZAcysA=="
+    },
+    {
+      "algorithm": "CRC64NVME",
+      "parts": [
+        {
+          "byte": "a",
+          "length": 5
+        },
+        {
+          "byte": "b",
+          "length": 7
+        },
+        {
+          "byte": "c",
+          "length": 3
+        }
+      ],
+      "value": "ha2dqR4kvHs="
+    }
+  ]
+}

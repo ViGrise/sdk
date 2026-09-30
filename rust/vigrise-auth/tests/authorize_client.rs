@@ -71,6 +71,8 @@ fn request() -> AuthorizeRequest {
     resources: vec![],
     context: Map::new(),
     usage: Default::default(),
+    streaming_signing_key: false,
+    presigned_expires: None,
   }
 }
 

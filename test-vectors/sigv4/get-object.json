@@ -1,0 +1,51 @@
+{
+  "description": "GET Object with a Range header",
+  "source": "Amazon S3 documentation, Signature Calculations for the Authorization Header: Transferring Payload in a Single Chunk (GET Object)",
+  "credentials": {
+    "access_key_id": "AKIAIOSFODNN7EXAMPLE",
+    "secret_access_key": "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
+  },
+  "region": "us-east-1",
+  "service": "s3",
+  "time": "20130524T000000Z",
+  "request": {
+    "method": "GET",
+    "path": "/test.txt",
+    "query": "",
+    "headers": [
+      [
+        "Host",
+        "examplebucket.s3.amazonaws.com"
+      ],
+      [
+        "Range",
+        "bytes=0-9"
+      ],
+      [
+        "x-amz-content-sha256",
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      ],
+      [
+        "x-amz-date",
+        "20130524T000000Z"
+      ]
+    ],
+    "payload_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "signed_headers": [
+    "host",
+    "range",
+    "x-amz-content-sha256",
+    "x-amz-date"
+  ],
+  "published": {
+    "signature": "f0e8bdb87c964420e857bd35b5d6ed310bd44f0170aba48dd91039c6036bdb41"
+  },
+  "expected": {
+    "canonical_request": "GET\n/test.txt\n\nhost:examplebucket.s3.amazonaws.com\nrange:bytes=0-9\nx-amz-content-sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\nx-amz-date:20130524T000000Z\n\nhost;range;x-amz-content-sha256;x-amz-date\ne3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "string_to_sign": "AWS4-HMAC-SHA256\n20130524T000000Z\n20130524/us-east-1/s3/aws4_request\n7344ae5b7ee6c3e7e6b0fe0640412a37625d1fbfff95c48bbb2dc43964946972",
+    "signing_key": "dbb893acc010964918f1fd433add87c70e8b0db6be30c1fbeafefa5ec6ba8378",
+    "signature": "f0e8bdb87c964420e857bd35b5d6ed310bd44f0170aba48dd91039c6036bdb41",
+    "authorization": "AWS4-HMAC-SHA256 Credential=AKIAIOSFODNN7EXAMPLE/20130524/us-east-1/s3/aws4_request, SignedHeaders=host;range;x-amz-content-sha256;x-amz-date, Signature=f0e8bdb87c964420e857bd35b5d6ed310bd44f0170aba48dd91039c6036bdb41"
+  }
+}

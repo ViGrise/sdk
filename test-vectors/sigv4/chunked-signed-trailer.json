@@ -1,0 +1,90 @@
+{
+  "description": "PUT Object in signed aws-chunked chunks with a signed CRC32C trailer",
+  "source": "Payload and CRC32C trailer value as in the Amazon S3 documentation example for STREAMING-AWS4-HMAC-SHA256-PAYLOAD-TRAILER; signatures generated with the reference implementation from the documented signing rules",
+  "credentials": {
+    "access_key_id": "AKIAIOSFODNN7EXAMPLE",
+    "secret_access_key": "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
+  },
+  "region": "us-east-1",
+  "service": "s3",
+  "time": "20130524T000000Z",
+  "request": {
+    "method": "PUT",
+    "path": "/examplebucket/chunkObject.txt",
+    "query": "",
+    "headers": [
+      [
+        "Host",
+        "s3.amazonaws.com"
+      ],
+      [
+        "x-amz-date",
+        "20130524T000000Z"
+      ],
+      [
+        "x-amz-storage-class",
+        "REDUCED_REDUNDANCY"
+      ],
+      [
+        "x-amz-content-sha256",
+        "STREAMING-AWS4-HMAC-SHA256-PAYLOAD-TRAILER"
+      ],
+      [
+        "Content-Encoding",
+        "aws-chunked"
+      ],
+      [
+        "x-amz-decoded-content-length",
+        "66560"
+      ],
+      [
+        "x-amz-trailer",
+        "x-amz-checksum-crc32c"
+      ],
+      [
+        "Content-Length",
+        "66946"
+      ]
+    ],
+    "payload_hash": "STREAMING-AWS4-HMAC-SHA256-PAYLOAD-TRAILER"
+  },
+  "signed_headers": [
+    "content-encoding",
+    "content-length",
+    "host",
+    "x-amz-content-sha256",
+    "x-amz-date",
+    "x-amz-decoded-content-length",
+    "x-amz-storage-class",
+    "x-amz-trailer"
+  ],
+  "chunks": [
+    {
+      "byte": "a",
+      "length": 65536
+    },
+    {
+      "byte": "a",
+      "length": 1024
+    }
+  ],
+  "trailer": [
+    [
+      "x-amz-checksum-crc32c",
+      "sOO8/Q=="
+    ]
+  ],
+  "expected": {
+    "canonical_request": "PUT\n/examplebucket/chunkObject.txt\n\ncontent-encoding:aws-chunked\ncontent-length:66946\nhost:s3.amazonaws.com\nx-amz-content-sha256:STREAMING-AWS4-HMAC-SHA256-PAYLOAD-TRAILER\nx-amz-date:20130524T000000Z\nx-amz-decoded-content-length:66560\nx-amz-storage-class:REDUCED_REDUNDANCY\nx-amz-trailer:x-amz-checksum-crc32c\n\ncontent-encoding;content-length;host;x-amz-content-sha256;x-amz-date;x-amz-decoded-content-length;x-amz-storage-class;x-amz-trailer\nSTREAMING-AWS4-HMAC-SHA256-PAYLOAD-TRAILER",
+    "string_to_sign": "AWS4-HMAC-SHA256\n20130524T000000Z\n20130524/us-east-1/s3/aws4_request\n6fa65b935fbbd62340e484346ba24b7edc327e55b1fc24cee388c2ca94b0ce47",
+    "signing_key": "dbb893acc010964918f1fd433add87c70e8b0db6be30c1fbeafefa5ec6ba8378",
+    "signature": "4ee8080240a7fe90e91706fcff6113242cb3aba3fd9a80c564b139bb29f39db3",
+    "authorization": "AWS4-HMAC-SHA256 Credential=AKIAIOSFODNN7EXAMPLE/20130524/us-east-1/s3/aws4_request, SignedHeaders=content-encoding;content-length;host;x-amz-content-sha256;x-amz-date;x-amz-decoded-content-length;x-amz-storage-class;x-amz-trailer, Signature=4ee8080240a7fe90e91706fcff6113242cb3aba3fd9a80c564b139bb29f39db3",
+    "chunk_signatures": [
+      "2220eb187526a800d346e0cb021c0cc8087ed2c74b2b4984ec761ee8cc578b8e",
+      "0542a83b9bf5556f7bd3d75a3fd6d81ed86979929cf2895ae8b5af2b33d4d839",
+      "9079449209b899d0a1dd4a7996f3ce3488c9c201dfd64e7f6b82408bc8eba701"
+    ],
+    "trailer_signature": "77973366fe6cc7c388054d9d5b261e31c5090f681f43dda0e2abec98e9c02f72"
+  }
+}

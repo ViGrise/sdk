@@ -83,6 +83,7 @@ fn authorized() -> Authorized {
     quotas: vec![],
     usage: Default::default(),
     leases: vec![],
+    signing_key: None,
   }
 }
 

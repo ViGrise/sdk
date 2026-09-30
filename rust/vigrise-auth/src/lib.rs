@@ -1,16 +1,22 @@
 //! VGR4 request signing and verification for ViGrise services.
 //!
 //! VGR4 follows AWS Signature Version 4 without the region component: the
-//! credential scope is `<yyyymmdd>/<service>/vgr4_request`.
+//! credential scope is `<yyyymmdd>/<service>/vgr4_request`. The `sigv4` module
+//! implements AWS Signature Version 4 for S3-compatible services.
 
 pub mod authorization;
 pub mod canonical;
+#[cfg(feature = "verify")]
+pub mod checksum;
+#[cfg(feature = "verify")]
+pub mod chunked;
 pub mod credentials;
 pub mod error;
 pub mod provider;
 mod quota;
 pub mod signer;
 pub mod signing;
+pub mod sigv4;
 
 #[cfg(feature = "metering")]
 pub mod metering;

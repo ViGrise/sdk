@@ -49,6 +49,7 @@ impl Authorizer for RecordingPlatform {
         project_plan: None,
         quotas: vec![],
         leases: vec![],
+        signing_key: None,
       })
     })
   }
@@ -75,6 +76,7 @@ impl Authorizer for FakePlatform {
         project_plan: None,
         quotas: vec![],
         leases: vec![],
+        signing_key: None,
       };
       let parsed = parse_string_to_sign(&request.string_to_sign).unwrap();
       let key = derive_signing_key(SECRET, &parsed.date, &parsed.service);
@@ -95,6 +97,7 @@ impl Authorizer for FakePlatform {
           project_plan: None,
           quotas: vec![],
           leases: vec![],
+          signing_key: None,
         });
       }
       Ok(AuthorizeResponse {
@@ -111,6 +114,7 @@ impl Authorizer for FakePlatform {
         project_plan: Some("Pro".into()),
         quotas: vec![],
         leases: vec![],
+        signing_key: None,
       })
     })
   }
@@ -380,6 +384,7 @@ impl Authorizer for CaptureContext {
         project_plan: None,
         quotas: vec![],
         leases: vec![],
+        signing_key: None,
       })
     })
   }
@@ -441,6 +446,7 @@ impl Authorizer for QuotaPlatform {
           project_plan: None,
           quotas: vec![status],
           leases: vec![],
+          signing_key: None,
         });
       }
       Ok(AuthorizeResponse {
@@ -457,6 +463,7 @@ impl Authorizer for QuotaPlatform {
         project_plan: Some("Free".into()),
         quotas: vec![status],
         leases: vec![],
+        signing_key: None,
       })
     })
   }
@@ -553,6 +560,7 @@ impl Authorizer for LeasingPlatform {
         project_plan: Some("Free".into()),
         quotas: vec![],
         leases: vec!["lease-1".into()],
+        signing_key: None,
       })
     })
   }
