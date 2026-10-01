@@ -59,6 +59,10 @@ pub struct Principal {
   pub name: String,
   pub project_id: Uuid,
   pub organization_id: Uuid,
+  /// The source identity a role session was started with; absent for other
+  /// principals and for sessions that set none.
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub source_identity: Option<String>,
 }
 
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -150,6 +154,24 @@ mod tests {
     let text = format!("{response:?}");
     assert!(!text.contains("00ff00ff"), "{text}");
     assert!(text.contains("<redacted>"));
+  }
+
+  #[test]
+  fn a_principal_without_a_source_identity_reads_as_none() {
+    let principal: Principal = serde_json::from_value(serde_json::json!({
+      "vrn": "vrn:vigrise:iam:p:user/a", "id": Uuid::nil(), "type": "user", "name": "a",
+      "project_id": Uuid::nil(), "organization_id": Uuid::nil()
+    }))
+    .unwrap();
+    assert_eq!(principal.source_identity, None);
+    let json = serde_json::to_value(&principal).unwrap();
+    assert!(json.get("source_identity").is_none());
+    let with: Principal = serde_json::from_value(serde_json::json!({
+      "vrn": "v", "id": Uuid::nil(), "type": "role-session", "name": "a",
+      "project_id": Uuid::nil(), "organization_id": Uuid::nil(), "source_identity": "alice"
+    }))
+    .unwrap();
+    assert_eq!(with.source_identity.as_deref(), Some("alice"));
   }
 
   #[test]

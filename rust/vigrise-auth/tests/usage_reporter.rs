@@ -78,6 +78,7 @@ fn authorized() -> Authorized {
       name: "ci-bot".into(),
       project_id: Uuid::from_u128(1),
       organization_id: Uuid::from_u128(3),
+      source_identity: None,
     },
     tier: Some("Free".into()),
     quotas: vec![],
