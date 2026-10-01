@@ -436,6 +436,7 @@ impl Authorizer for QuotaPlatform {
         code: "characters-per-month".into(),
         value: Some(10_000),
         used: *request.usage.get("characters").unwrap_or(&-1),
+        blocking: false,
       };
       if self.exhausted {
         return Ok(AuthorizeResponse {

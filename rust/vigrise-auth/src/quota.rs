@@ -10,4 +10,12 @@ pub struct QuotaStatus {
   pub value: Option<i64>,
   /// Usage in the current period, or the current count for resource quotas.
   pub used: i64,
+  /// Whether the quota refuses requests once `used` reaches `value`; false
+  /// when use beyond `value` is billed.
+  #[serde(default, skip_serializing_if = "is_false")]
+  pub blocking: bool,
+}
+
+fn is_false(value: &bool) -> bool {
+  !value
 }
