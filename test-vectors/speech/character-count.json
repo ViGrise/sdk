@@ -1,0 +1,77 @@
+{
+  "description": "Characters metered for a text: the number of Unicode scalar values, with no trimming or normalization.",
+  "vectors": [
+    {
+      "name": "empty",
+      "text": "",
+      "characters": 0,
+      "description": "An empty text has no characters"
+    },
+    {
+      "name": "ascii",
+      "text": "hello",
+      "characters": 5,
+      "description": "ASCII letters count one each"
+    },
+    {
+      "name": "spaces-and-punctuation",
+      "text": "Hello, world! 123",
+      "characters": 17,
+      "description": "Spaces, punctuation and digits count"
+    },
+    {
+      "name": "surrounding-whitespace",
+      "text": "  hi  ",
+      "characters": 6,
+      "description": "Leading and trailing whitespace counts"
+    },
+    {
+      "name": "newlines",
+      "text": "a\nb\r\nc",
+      "characters": 6,
+      "description": "A CRLF pair counts as two"
+    },
+    {
+      "name": "vietnamese-precomposed",
+      "text": "xin chào Việt Nam",
+      "characters": 17,
+      "description": "Precomposed letters count one each"
+    },
+    {
+      "name": "vietnamese-decomposed",
+      "text": "chào Việt",
+      "characters": 12,
+      "description": "A base letter and each combining mark count separately"
+    },
+    {
+      "name": "cjk",
+      "text": "你好世界",
+      "characters": 4,
+      "description": "Each ideograph counts one"
+    },
+    {
+      "name": "emoji-single",
+      "text": "😀",
+      "characters": 1,
+      "description": "A character outside the basic plane counts one"
+    },
+    {
+      "name": "emoji-sequence",
+      "text": "👨‍👩‍👧",
+      "characters": 5,
+      "description": "A joined emoji counts every scalar value including the joiners"
+    },
+    {
+      "name": "flag",
+      "text": "🇻🇳",
+      "characters": 2,
+      "description": "A flag is two regional indicator scalar values"
+    },
+    {
+      "name": "tab",
+      "text": "a\tb",
+      "characters": 3,
+      "description": "A tab counts one"
+    }
+  ]
+}
