@@ -77,7 +77,7 @@ describe("browser entry", () => {
     const { port } = server.address() as AddressInfo;
     let calls = 0;
     const response = await signedFetch(`http://127.0.0.1:${port}/v1/voices`, {}, {
-      service: "tts",
+      service: "speech",
       credentials: async () => {
         calls += 1;
         return { accessKeyId: "VGSTABCDEFGHIJKLMNOP", secretAccessKey: "session", sessionToken: "sealed" };

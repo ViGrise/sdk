@@ -1,4 +1,4 @@
-"""`httpx` integration: `httpx.post(url, json=..., auth=ViGriseHttpxAuth("tts"))`."""
+"""`httpx` integration: `httpx.post(url, json=..., auth=ViGriseHttpxAuth("speech"))`."""
 
 from typing import Generator, Optional
 

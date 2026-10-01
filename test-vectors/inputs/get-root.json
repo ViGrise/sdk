@@ -3,7 +3,7 @@
     "access_key_id": "VGAKEXAMPLE7TESTKEY",
     "secret_access_key": "wJalrXUtnFEMI0K7MDENGbPxRfiCYEXAMPLEKEY01"
   },
-  "service": "tts",
+  "service": "speech",
   "time": "20261001T120000Z",
   "description": "GET with empty path and no query",
   "request": {
@@ -13,7 +13,7 @@
     "headers": [
       [
         "Host",
-        "tts.vigrise.com"
+        "speech.vigrise.com"
       ]
     ],
     "body": ""

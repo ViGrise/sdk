@@ -42,8 +42,8 @@ async fn assume_role(
   let auth = AuthorizationHeader::parse(headers["authorization"].to_str().unwrap()).unwrap();
   assert_eq!(auth.service, "sts");
   assert_eq!(auth.access_key_id, "VGAKBOOTSTRAP");
-  assert_eq!(body["role_vrn"], "vrn:vigrise:iam:p:role/tts-service");
-  assert_eq!(body["role_session_name"], "tts-gateway");
+  assert_eq!(body["role_vrn"], "vrn:vigrise:iam:p:role/speech-service");
+  assert_eq!(body["role_session_name"], "speech-gateway");
   tokio::time::sleep(sts.delay).await;
   let status = StatusCode::from_u16(sts.status.load(Ordering::SeqCst)).unwrap();
   if status != StatusCode::OK {
@@ -63,8 +63,8 @@ async fn assume_role(
         "expiration": expiration.to_rfc3339(),
       },
       "assumed_role": {
-        "role_vrn": "vrn:vigrise:iam:p:role/tts-service",
-        "session_vrn": "vrn:vigrise:sts:p:assumed-role/tts-service/tts-gateway"
+        "role_vrn": "vrn:vigrise:iam:p:role/speech-service",
+        "session_vrn": "vrn:vigrise:sts:p:assumed-role/speech-service/speech-gateway"
       }
     })),
   )
@@ -90,8 +90,8 @@ async fn record_signer(State(sts): State<Sts>, headers: HeaderMap) -> (StatusCod
     Json(json!({
       "decision": "Allow",
       "principal": {
-        "vrn": "vrn:vigrise:iam:p:role/tts-service", "id": "00000000-0000-0000-0000-000000000000",
-        "type": "role", "name": "tts-service",
+        "vrn": "vrn:vigrise:iam:p:role/speech-service", "id": "00000000-0000-0000-0000-000000000000",
+        "type": "role", "name": "speech-service",
         "project_id": "00000000-0000-0000-0000-000000000000",
         "organization_id": "00000000-0000-0000-0000-000000000000"
       },
@@ -124,7 +124,7 @@ fn provider(base: &str) -> AssumeRoleProvider {
     format!("{base}/api/v1/sts/assume-role"),
     Credentials::new("VGAKBOOTSTRAP", "bootstrap-secret"),
   );
-  AssumeRoleProvider::new(client, "vrn:vigrise:iam:p:role/tts-service", "tts-gateway")
+  AssumeRoleProvider::new(client, "vrn:vigrise:iam:p:role/speech-service", "speech-gateway")
 }
 
 #[tokio::test]
@@ -197,7 +197,7 @@ async fn the_authorize_client_signs_with_the_provider_session() {
     access_key_id: "VGAKUSER".into(),
     string_to_sign: "sts".into(),
     signature: "sig".into(),
-    action: "tts:SynthesizeSpeech".into(),
+    action: "speech:SynthesizeSpeech".into(),
     resources: vec![],
     context: Default::default(),
     usage: Default::default(),
@@ -229,13 +229,13 @@ async fn service_credentials_use_the_role_session_when_a_role_is_configured() {
   };
 
   let long_term =
-    service_credentials_with(bootstrap.clone(), "tts-gateway", env(None, None)).unwrap();
+    service_credentials_with(bootstrap.clone(), "speech-gateway", env(None, None)).unwrap();
   assert_eq!(long_term.credentials().await.unwrap(), bootstrap);
 
   let missing_url = service_credentials_with(
     bootstrap.clone(),
-    "tts-gateway",
-    env(Some("vrn:vigrise:iam:p:role/tts-service"), None),
+    "speech-gateway",
+    env(Some("vrn:vigrise:iam:p:role/speech-service"), None),
   );
   assert!(missing_url
     .unwrap_err()
@@ -244,9 +244,9 @@ async fn service_credentials_use_the_role_session_when_a_role_is_configured() {
 
   let session = service_credentials_with(
     bootstrap,
-    "tts-gateway",
+    "speech-gateway",
     env(
-      Some("vrn:vigrise:iam:p:role/tts-service"),
+      Some("vrn:vigrise:iam:p:role/speech-service"),
       Some(format!("{base}/api/v1/sts/assume-role")),
     ),
   )
@@ -304,7 +304,7 @@ async fn the_authorize_client_replaces_a_rejected_session_and_retries() {
     access_key_id: "VGAKUSER".into(),
     string_to_sign: "sts".into(),
     signature: "sig".into(),
-    action: "tts:SynthesizeSpeech".into(),
+    action: "speech:SynthesizeSpeech".into(),
     resources: vec![],
     context: Default::default(),
     usage: Default::default(),

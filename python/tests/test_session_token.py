@@ -12,7 +12,7 @@ def test_signs_and_returns_session_token_header():
         {},
         b"",
         Credentials("VGSTABCDEFGHIJKLMNOP", "secret", "sealed-token"),
-        "tts",
+        "speech",
         datetime(2026, 9, 26, 10, tzinfo=timezone.utc),
     )
     assert signed["x-vgr-security-token"] == "sealed-token"
@@ -27,5 +27,5 @@ def test_temporary_key_requires_session_token():
             {},
             b"",
             Credentials("VGSTABCDEFGHIJKLMNOP", "secret"),
-            "tts",
+            "speech",
         )

@@ -25,7 +25,7 @@ const SECRET: &str = "test-secret";
 const KEY_ID: &str = "VGAKTESTKEY";
 
 /// Stands in for the platform: verifies the signature with the known secret and
-/// allows only `tts:SynthesizeSpeech`.
+/// allows only `speech:SynthesizeSpeech`.
 struct FakePlatform {
   available: bool,
   omit_principal: bool,
@@ -86,7 +86,7 @@ impl Authorizer for FakePlatform {
       if !verify_signature(&key, &request.string_to_sign, &request.signature) {
         return Ok(deny("SignatureDoesNotMatch"));
       }
-      if request.action != "tts:SynthesizeSpeech" {
+      if request.action != "speech:SynthesizeSpeech" {
         return Ok(deny("AccessDenied"));
       }
       if self.omit_principal {
@@ -131,8 +131,8 @@ impl ActionResolver for RouteResolver {
       .map(|u| u.0.path().to_string())
       .unwrap_or_else(|| parts.uri.path().to_string());
     let action = match path.as_str() {
-      "/v1/audio/speech" | "/api/v1/audio/speech" => "tts:SynthesizeSpeech",
-      "/v1/voices" => "tts:ListVoices",
+      "/v1/audio/speech" | "/api/v1/audio/speech" => "speech:SynthesizeSpeech",
+      "/v1/voices" => "speech:ListVoices",
       _ => {
         return Err(AuthError::Rejected {
           status: StatusCode::NOT_FOUND,
@@ -146,10 +146,10 @@ impl ActionResolver for RouteResolver {
       .and_then(|v| v.get("voice").and_then(Value::as_str).map(str::to_string))
       .unwrap_or_default();
     let mut context = Map::new();
-    context.insert("tts:VoiceId".into(), json!(voice));
+    context.insert("speech:VoiceId".into(), json!(voice));
     Ok(ResolvedAction {
       action: action.into(),
-      resources: vec![format!("vrn:vigrise:tts:${{ProjectId}}:voice/{voice}")],
+      resources: vec![format!("vrn:vigrise:speech:${{ProjectId}}:voice/{voice}")],
       context,
       usage: Default::default(),
     })
@@ -168,7 +168,7 @@ fn app(available: bool, nested: bool) -> Router {
 
 fn app_with(platform: FakePlatform, nested: bool) -> Router {
   let verifier = Arc::new(Verifier {
-    service: "tts".into(),
+    service: "speech".into(),
     authorizer: Arc::new(platform),
     resolver: Arc::new(RouteResolver),
     max_body_bytes: 1024,
@@ -189,7 +189,7 @@ fn app_with(platform: FakePlatform, nested: bool) -> Router {
 }
 
 fn signed(path: &str, body: &str, secret: &str) -> Request {
-  let uri: Uri = format!("http://tts.test{path}").parse().unwrap();
+  let uri: Uri = format!("http://speech.test{path}").parse().unwrap();
   let mut headers = http::HeaderMap::new();
   headers.insert("content-type", "application/json".parse().unwrap());
   let sig = sign_request(
@@ -198,14 +198,14 @@ fn signed(path: &str, body: &str, secret: &str) -> Request {
     &headers,
     body.as_bytes(),
     &Credentials::new(KEY_ID, secret),
-    "tts",
+    "speech",
     Utc::now(),
   )
   .unwrap();
   let mut request = Request::builder()
     .method(Method::POST)
     .uri(path)
-    .header("host", "tts.test")
+    .header("host", "speech.test")
     .header("content-type", "application/json")
     .body(Body::from(body.to_string()))
     .unwrap();
@@ -238,7 +238,7 @@ async fn allowed_request_reaches_handler_with_principal_and_body() {
 async fn forwards_the_security_token_to_authorize() {
   let asked = Arc::new(Mutex::new(Vec::new()));
   let verifier = Arc::new(Verifier {
-    service: "tts".into(),
+    service: "speech".into(),
     authorizer: Arc::new(RecordingPlatform {
       asked: asked.clone(),
     }),
@@ -354,7 +354,7 @@ async fn allow_without_principal_fails_closed() {
 async fn http2_request_without_host_header_verifies_from_authority() {
   let mut request = signed("/v1/audio/speech", BODY, SECRET);
   request.headers_mut().remove("host");
-  *request.uri_mut() = "http://tts.test/v1/audio/speech".parse().unwrap();
+  *request.uri_mut() = "http://speech.test/v1/audio/speech".parse().unwrap();
   let (status, json, _) = send(app(true, false), request).await;
   assert_eq!(status, StatusCode::OK, "{json}");
 }
@@ -400,7 +400,7 @@ async fn forwarded_source_ip_is_the_entry_added_by_the_trusted_proxy() {
     seen: std::sync::Mutex::new(None),
   });
   let verifier = Arc::new(Verifier {
-    service: "tts".into(),
+    service: "speech".into(),
     authorizer: capture.clone(),
     resolver: Arc::new(RouteResolver),
     max_body_bytes: 1024,
@@ -432,7 +432,7 @@ impl Authorizer for QuotaPlatform {
   ) -> vigrise_auth::verify::AuthorizeFuture<'a> {
     Box::pin(async move {
       let status = vigrise_auth::QuotaStatus {
-        service: "tts".into(),
+        service: "speech".into(),
         code: "characters-per-month".into(),
         value: Some(10_000),
         used: *request.usage.get("characters").unwrap_or(&-1),
@@ -443,7 +443,7 @@ impl Authorizer for QuotaPlatform {
           decision: Decision::Deny,
           error: Some(ErrorBody {
             code: "ServiceQuotaExceeded".into(),
-            message: "Quota tts/characters-per-month is exhausted".into(),
+            message: "Quota speech/characters-per-month is exhausted".into(),
           }),
           principal: None,
           tier: None,
@@ -479,8 +479,8 @@ struct EstimatingResolver;
 impl ActionResolver for EstimatingResolver {
   fn resolve(&self, _parts: &Parts, _body: &Bytes) -> Result<ResolvedAction, AuthError> {
     Ok(ResolvedAction {
-      action: "tts:SynthesizeSpeech".into(),
-      resources: vec!["vrn:vigrise:tts:${ProjectId}:voice/haley-f1".into()],
+      action: "speech:SynthesizeSpeech".into(),
+      resources: vec!["vrn:vigrise:speech:${ProjectId}:voice/haley-f1".into()],
       context: Map::new(),
       usage: [("characters".to_string(), 8)].into_iter().collect(),
     })
@@ -489,7 +489,7 @@ impl ActionResolver for EstimatingResolver {
 
 fn quota_app(exhausted: bool) -> Router {
   let verifier = Arc::new(Verifier {
-    service: "tts".into(),
+    service: "speech".into(),
     authorizer: Arc::new(QuotaPlatform { exhausted }),
     resolver: Arc::new(EstimatingResolver),
     max_body_bytes: 1024,
@@ -522,7 +522,7 @@ async fn exhausted_quota_is_429_with_the_quota() {
 #[tokio::test]
 async fn handlers_see_the_usage_the_request_was_authorized_for() {
   let verifier = Arc::new(Verifier {
-    service: "tts".into(),
+    service: "speech".into(),
     authorizer: Arc::new(QuotaPlatform { exhausted: false }),
     resolver: Arc::new(EstimatingResolver),
     max_body_bytes: 1024,
@@ -577,7 +577,7 @@ impl Authorizer for LeasingPlatform {
 
 fn leasing_app(released: Arc<std::sync::Mutex<Vec<Vec<String>>>>) -> Router {
   let verifier = Arc::new(Verifier {
-    service: "tts".into(),
+    service: "speech".into(),
     authorizer: Arc::new(LeasingPlatform { released }),
     resolver: Arc::new(EstimatingResolver),
     max_body_bytes: 1024,
@@ -618,7 +618,7 @@ async fn leases_are_released_when_the_body_is_dropped_unread() {
 async fn leases_are_released_when_the_request_is_cancelled_before_the_response() {
   let released: Arc<std::sync::Mutex<Vec<Vec<String>>>> = Arc::default();
   let verifier = Arc::new(Verifier {
-    service: "tts".into(),
+    service: "speech".into(),
     authorizer: Arc::new(LeasingPlatform {
       released: Arc::clone(&released),
     }),
@@ -642,7 +642,7 @@ async fn leases_are_released_when_the_request_is_cancelled_before_the_response()
   assert_eq!(*released.lock().unwrap(), vec![vec!["lease-1".to_string()]]);
 }
 
-/// Allows every action but `tts:ListVoices`, holds a lease per allowed action
+/// Allows every action but `speech:ListVoices`, holds a lease per allowed action
 /// and records the actions asked and the leases released.
 #[derive(Default)]
 struct SelectivePlatform {
@@ -664,7 +664,7 @@ impl Authorizer for SharedPlatform {
       .unwrap()
       .push((request.action.clone(), request.resources.clone()));
     Box::pin(async move {
-      if request.action == "tts:ListVoices" {
+      if request.action == "speech:ListVoices" {
         return Ok(AuthorizeResponse {
           decision: Decision::Deny,
           error: Some(ErrorBody {
@@ -711,8 +711,8 @@ struct TwoActionResolver {
 impl ActionResolver for TwoActionResolver {
   fn resolve(&self, _parts: &Parts, _body: &Bytes) -> Result<ResolvedAction, AuthError> {
     Ok(ResolvedAction {
-      action: "tts:SynthesizeSpeech".into(),
-      resources: vec!["vrn:vigrise:tts:${ProjectId}:voice/a".into()],
+      action: "speech:SynthesizeSpeech".into(),
+      resources: vec!["vrn:vigrise:speech:${ProjectId}:voice/a".into()],
       ..Default::default()
     })
   }
@@ -720,7 +720,7 @@ impl ActionResolver for TwoActionResolver {
   fn additional(&self, _parts: &Parts, _body: &Bytes) -> Result<Vec<ResolvedAction>, AuthError> {
     Ok(vec![ResolvedAction {
       action: self.second.into(),
-      resources: vec!["vrn:vigrise:tts:${ProjectId}:voice/b".into()],
+      resources: vec!["vrn:vigrise:speech:${ProjectId}:voice/b".into()],
       ..Default::default()
     }])
   }
@@ -728,7 +728,7 @@ impl ActionResolver for TwoActionResolver {
 
 fn two_action_app(platform: Arc<SelectivePlatform>, second: &'static str) -> Router {
   let verifier = Arc::new(Verifier {
-    service: "tts".into(),
+    service: "speech".into(),
     authorizer: Arc::new(SharedPlatform(platform)),
     resolver: Arc::new(TwoActionResolver { second }),
     max_body_bytes: 1024,
@@ -744,28 +744,28 @@ fn two_action_app(platform: Arc<SelectivePlatform>, second: &'static str) -> Rou
 async fn every_additional_action_is_authorized_with_the_requests_signature() {
   let platform = Arc::new(SelectivePlatform::default());
   let (status, _, text) = send(
-    two_action_app(Arc::clone(&platform), "tts:ListModels"),
+    two_action_app(Arc::clone(&platform), "speech:ListModels"),
     signed("/v1/audio/speech", BODY, SECRET),
   )
   .await;
   assert_eq!(status, StatusCode::OK);
-  assert_eq!(text, "lease-tts:SynthesizeSpeech,lease-tts:ListModels");
+  assert_eq!(text, "lease-speech:SynthesizeSpeech,lease-speech:ListModels");
   let asked = platform.asked.lock().unwrap().clone();
   assert_eq!(
     asked
       .iter()
       .map(|(action, _)| action.as_str())
       .collect::<Vec<_>>(),
-    vec!["tts:SynthesizeSpeech", "tts:ListModels"]
+    vec!["speech:SynthesizeSpeech", "speech:ListModels"]
   );
-  assert_eq!(asked[1].1, vec!["vrn:vigrise:tts:${ProjectId}:voice/b"]);
+  assert_eq!(asked[1].1, vec!["vrn:vigrise:speech:${ProjectId}:voice/b"]);
 }
 
 #[tokio::test]
 async fn a_denied_additional_action_rejects_the_request_and_returns_held_leases() {
   let platform = Arc::new(SelectivePlatform::default());
   let (status, json, _) = send(
-    two_action_app(Arc::clone(&platform), "tts:ListVoices"),
+    two_action_app(Arc::clone(&platform), "speech:ListVoices"),
     signed("/v1/audio/speech", BODY, SECRET),
   )
   .await;
@@ -773,6 +773,6 @@ async fn a_denied_additional_action_rejects_the_request_and_returns_held_leases(
   assert_eq!(json["error"]["code"], "AccessDenied");
   assert_eq!(
     *platform.released.lock().unwrap(),
-    vec![vec!["lease-tts:SynthesizeSpeech".to_string()]]
+    vec![vec!["lease-speech:SynthesizeSpeech".to_string()]]
   );
 }

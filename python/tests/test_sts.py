@@ -47,13 +47,13 @@ def test_assume_role_signs_under_the_sts_scope_and_returns_the_session():
             "expiration": "2026-09-26T10:30:00Z",
         },
         "assumed_role": {
-            "role_vrn": "vrn:vigrise:iam:p:role/tts-client",
-            "session_vrn": "vrn:vigrise:sts:p:assumed-role/tts-client/web",
+            "role_vrn": "vrn:vigrise:iam:p:role/speech-client",
+            "session_vrn": "vrn:vigrise:sts:p:assumed-role/speech-client/web",
         },
     })
     try:
         session = assume_role(
-            "vrn:vigrise:iam:p:role/tts-client",
+            "vrn:vigrise:iam:p:role/speech-client",
             "web",
             endpoint=endpoint,
             credentials=BACKEND,
@@ -63,12 +63,12 @@ def test_assume_role_signs_under_the_sts_scope_and_returns_the_session():
         httpd.shutdown()
     assert session.credentials == SESSION
     assert session.expiration == datetime(2026, 9, 26, 10, 30, tzinfo=timezone.utc)
-    assert session.session_vrn == "vrn:vigrise:sts:p:assumed-role/tts-client/web"
+    assert session.session_vrn == "vrn:vigrise:sts:p:assumed-role/speech-client/web"
     headers, body = seen[0]
     assert "Credential=VGAKBACKEND/" in headers["authorization"]
     assert "/sts/vgr4_request" in headers["authorization"]
     assert json.loads(body) == {
-        "role_vrn": "vrn:vigrise:iam:p:role/tts-client",
+        "role_vrn": "vrn:vigrise:iam:p:role/speech-client",
         "role_session_name": "web",
         "duration_seconds": 900,
     }
@@ -96,9 +96,9 @@ def test_auth_classes_accept_a_credentials_provider(client):
 
     try:
         if client == "requests":
-            requests.post(endpoint, data=b"{}", auth=ViGriseAuth("tts", provider))
+            requests.post(endpoint, data=b"{}", auth=ViGriseAuth("speech", provider))
         else:
-            httpx.post(endpoint, content=b"{}", auth=ViGriseHttpxAuth("tts", provider))
+            httpx.post(endpoint, content=b"{}", auth=ViGriseHttpxAuth("speech", provider))
     finally:
         httpd.shutdown()
     assert calls == [1]

@@ -30,14 +30,14 @@ describe("assumeRole", () => {
         session_token: "v1.sealed",
         expiration: "2026-09-26T10:30:00Z",
       },
-      assumed_role: { role_vrn: "vrn:vigrise:iam:p:role/tts-client", session_vrn: "vrn:vigrise:sts:p:assumed-role/tts-client/web" },
+      assumed_role: { role_vrn: "vrn:vigrise:iam:p:role/speech-client", session_vrn: "vrn:vigrise:sts:p:assumed-role/speech-client/web" },
     });
     const session = await assumeRole(
       {
-        roleVrn: "vrn:vigrise:iam:p:role/tts-client",
+        roleVrn: "vrn:vigrise:iam:p:role/speech-client",
         roleSessionName: "web",
         durationSeconds: 900,
-        sessionPolicy: { Version: "2026-10-01", Statement: { Effect: "Allow", Action: "tts:ListVoices", Resource: "*" } },
+        sessionPolicy: { Version: "2026-10-01", Statement: { Effect: "Allow", Action: "speech:ListVoices", Resource: "*" } },
       },
       { endpoint: sts.endpoint, credentials: { accessKeyId: "VGAKBACKEND", secretAccessKey: "secret" } },
     );
@@ -48,13 +48,13 @@ describe("assumeRole", () => {
       sessionToken: "v1.sealed",
     });
     expect(session.expiration.toISOString()).toBe("2026-09-26T10:30:00.000Z");
-    expect(session.sessionVrn).toBe("vrn:vigrise:sts:p:assumed-role/tts-client/web");
+    expect(session.sessionVrn).toBe("vrn:vigrise:sts:p:assumed-role/speech-client/web");
     expect(String(sts.seen[0].headers.authorization)).toMatch(/Credential=VGAKBACKEND\/\d{8}\/sts\/vgr4_request/);
     expect(JSON.parse(sts.seen[0].body)).toEqual({
-      role_vrn: "vrn:vigrise:iam:p:role/tts-client",
+      role_vrn: "vrn:vigrise:iam:p:role/speech-client",
       role_session_name: "web",
       duration_seconds: 900,
-      session_policy: { Version: "2026-10-01", Statement: { Effect: "Allow", Action: "tts:ListVoices", Resource: "*" } },
+      session_policy: { Version: "2026-10-01", Statement: { Effect: "Allow", Action: "speech:ListVoices", Resource: "*" } },
     });
   });
 
@@ -72,7 +72,7 @@ describe("assumeRole", () => {
   it("signedFetch accepts a credentials provider", async () => {
     const target = await serve(200, {});
     await signedFetch(target.endpoint, {}, {
-      service: "tts",
+      service: "speech",
       credentials: () => ({ accessKeyId: "VGSTABCDEFGHIJKLMNOP", secretAccessKey: "s", sessionToken: "t" }),
     });
     target.close();

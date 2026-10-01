@@ -12,7 +12,7 @@ describe("session token signing", () => {
         secretAccessKey: "secret",
         sessionToken: "sealed-token",
       },
-      service: "tts",
+      service: "speech",
       now: new Date("2026-09-26T10:00:00Z"),
     });
     expect(signed["x-vgr-security-token"]).toBe("sealed-token");
@@ -24,7 +24,7 @@ describe("session token signing", () => {
       method: "GET",
       url: "https://example.test/",
       credentials: { accessKeyId: "VGSTABCDEFGHIJKLMNOP", secretAccessKey: "secret" },
-      service: "tts",
+      service: "speech",
     })).toThrow(/session token/i);
   });
 });

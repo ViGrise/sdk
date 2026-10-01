@@ -62,7 +62,7 @@ async fn serve(statuses: Vec<StatusCode>) -> (String, Received) {
 }
 
 fn config(url: String) -> UsageReporterConfig {
-  let mut config = UsageReporterConfig::new(url, Credentials::new("VGAKTESTKEY", "secret"), "tts");
+  let mut config = UsageReporterConfig::new(url, Credentials::new("VGAKTESTKEY", "secret"), "speech");
   config.flush_interval = Duration::from_secs(3600);
   config.retry_backoff = Duration::from_millis(1);
   config.max_backoff = Duration::from_millis(5);
@@ -112,7 +112,7 @@ async fn sends_a_batch_when_it_is_full_signed_with_the_metering_scope() {
   }
   wait_for_batches(&received, 1).await;
   let batch = received.batches.lock().unwrap()[0].clone();
-  assert_eq!(batch.service, "tts");
+  assert_eq!(batch.service, "speech");
   assert_eq!(
     batch.records.iter().map(|r| r.quantity).collect::<Vec<_>>(),
     vec![1, 2, 3]

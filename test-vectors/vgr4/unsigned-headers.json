@@ -3,7 +3,7 @@
     "access_key_id": "VGAKEXAMPLE7TESTKEY",
     "secret_access_key": "wJalrXUtnFEMI0K7MDENGbPxRfiCYEXAMPLEKEY01"
   },
-  "service": "tts",
+  "service": "speech",
   "time": "20261001T120000Z",
   "description": "Headers outside host, content-type and x-vgr-* are not signed",
   "request": {
@@ -13,7 +13,7 @@
     "headers": [
       [
         "Host",
-        "tts.vigrise.com"
+        "speech.vigrise.com"
       ],
       [
         "User-Agent",
@@ -29,9 +29,9 @@
   "expected": {
     "payload_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "signed_headers": "host;x-vgr-content-sha256;x-vgr-date",
-    "canonical_request": "GET\n/v1/voices\n\nhost:tts.vigrise.com\nx-vgr-content-sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\nx-vgr-date:20261001T120000Z\n\nhost;x-vgr-content-sha256;x-vgr-date\ne3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-    "string_to_sign": "VGR4-HMAC-SHA256\n20261001T120000Z\n20261001/tts/vgr4_request\n985eab3634e2e768fa73b9375584e851923e1eef513389b743dd212e08d39317",
-    "signature": "7755ea09121436ad468ceaefa261acf3935b7c155f8b8c3be1acb63c7e3b41bc",
-    "authorization": "VGR4-HMAC-SHA256 Credential=VGAKEXAMPLE7TESTKEY/20261001/tts/vgr4_request, SignedHeaders=host;x-vgr-content-sha256;x-vgr-date, Signature=7755ea09121436ad468ceaefa261acf3935b7c155f8b8c3be1acb63c7e3b41bc"
+    "canonical_request": "GET\n/v1/voices\n\nhost:speech.vigrise.com\nx-vgr-content-sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\nx-vgr-date:20261001T120000Z\n\nhost;x-vgr-content-sha256;x-vgr-date\ne3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "string_to_sign": "VGR4-HMAC-SHA256\n20261001T120000Z\n20261001/speech/vgr4_request\n50adc6244844291ae812b33c9b046e8ee25b71fc61e50e66e3662c0929be2b1a",
+    "signature": "e2582e810a4e539cc987c22fcce639c220085733cc22e2e2f6e15abc374eee91",
+    "authorization": "VGR4-HMAC-SHA256 Credential=VGAKEXAMPLE7TESTKEY/20261001/speech/vgr4_request, SignedHeaders=host;x-vgr-content-sha256;x-vgr-date, Signature=e2582e810a4e539cc987c22fcce639c220085733cc22e2e2f6e15abc374eee91"
   }
 }

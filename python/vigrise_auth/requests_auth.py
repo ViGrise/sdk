@@ -1,4 +1,4 @@
-"""`requests` integration: `requests.post(url, json=..., auth=ViGriseAuth("tts"))`."""
+"""`requests` integration: `requests.post(url, json=..., auth=ViGriseAuth("speech"))`."""
 
 from typing import Optional
 

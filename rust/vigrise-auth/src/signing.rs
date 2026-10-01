@@ -151,7 +151,7 @@ mod tests {
 
   #[test]
   fn verify_accepts_own_signature_and_rejects_others() {
-    let key = derive_signing_key("secret", "20261001", "tts");
+    let key = derive_signing_key("secret", "20261001", "speech");
     let sig = signature(&key, "payload");
     assert!(verify_signature(&key, "payload", &sig));
     assert!(!verify_signature(&key, "payload2", &sig));
@@ -160,10 +160,10 @@ mod tests {
 
   #[test]
   fn parse_string_to_sign_round_trips() {
-    let sts = string_to_sign("20261001T120000Z", &scope("20261001", "tts"), "req");
+    let sts = string_to_sign("20261001T120000Z", &scope("20261001", "speech"), "req");
     let parsed = parse_string_to_sign(&sts).unwrap();
     assert_eq!(parsed.date, "20261001");
-    assert_eq!(parsed.service, "tts");
+    assert_eq!(parsed.service, "speech");
   }
 
   #[test]
@@ -180,7 +180,7 @@ mod tests {
     );
     let vgr4 = parse_string_to_sign(&string_to_sign(
       "20261001T120000Z",
-      &super::scope("20261001", "tts"),
+      &super::scope("20261001", "speech"),
       "req",
     ))
     .unwrap();
@@ -188,7 +188,7 @@ mod tests {
     assert_eq!(vgr4.region, None);
     assert_eq!(
       vgr4.signing_key("secret"),
-      derive_signing_key("secret", "20261001", "tts")
+      derive_signing_key("secret", "20261001", "speech")
     );
   }
 
@@ -208,7 +208,7 @@ mod tests {
   fn parse_rejects_partial_or_empty_scope_date() {
     for date in ["", "2026", "2026100"] {
       let sts = format!(
-        "{ALGORITHM}\n20261001T120000Z\n{date}/tts/{TERMINATOR}\n{}",
+        "{ALGORITHM}\n20261001T120000Z\n{date}/speech/{TERMINATOR}\n{}",
         "a".repeat(64)
       );
       assert!(
@@ -221,7 +221,7 @@ mod tests {
   #[test]
   fn parse_rejects_non_digit_timestamp() {
     let sts = format!(
-      "{ALGORITHM}\n202610 1T120000Z\n202610 1/tts/{TERMINATOR}\n{}",
+      "{ALGORITHM}\n202610 1T120000Z\n202610 1/speech/{TERMINATOR}\n{}",
       "a".repeat(64)
     );
     assert!(parse_string_to_sign(&sts).is_err());
@@ -229,7 +229,7 @@ mod tests {
 
   #[test]
   fn parse_rejects_scope_date_mismatch() {
-    let sts = string_to_sign("20261001T120000Z", &scope("20261002", "tts"), "req");
+    let sts = string_to_sign("20261001T120000Z", &scope("20261002", "speech"), "req");
     assert!(parse_string_to_sign(&sts).is_err());
   }
 }

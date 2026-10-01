@@ -27,7 +27,7 @@ async fn handler(
   let auth = AuthorizationHeader::parse(headers["authorization"].to_str().unwrap()).unwrap();
   assert_eq!(auth.service, "iam");
   assert_eq!(auth.access_key_id, "VGAKSERVICE");
-  assert_eq!(body["action"], "tts:SynthesizeSpeech");
+  assert_eq!(body["action"], "speech:SynthesizeSpeech");
   if let Some(status) = script.statuses.get(n) {
     return (*status, Json(json!({})));
   }
@@ -67,7 +67,7 @@ fn request() -> AuthorizeRequest {
     access_key_id: "VGAKUSER".into(),
     string_to_sign: "sts".into(),
     signature: "sig".into(),
-    action: "tts:SynthesizeSpeech".into(),
+    action: "speech:SynthesizeSpeech".into(),
     resources: vec![],
     context: Map::new(),
     usage: Default::default(),
@@ -132,7 +132,7 @@ async fn release_posts_the_leases_signed_under_the_iam_scope() {
   let addr = listener.local_addr().unwrap();
   tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
   let client = client(format!("http://{addr}/api/internal/v1/authorize"));
-  client.release(vec!["p:tts:concurrent-syntheses:1".into()]);
+  client.release(vec!["p:speech:concurrent-syntheses:1".into()]);
   for _ in 0..200 {
     if !received.lock().unwrap().is_empty() {
       break;
@@ -144,6 +144,6 @@ async fn release_posts_the_leases_signed_under_the_iam_scope() {
   assert_eq!(received[0].0, "iam");
   assert_eq!(
     received[0].1,
-    json!({ "leases": ["p:tts:concurrent-syntheses:1"] })
+    json!({ "leases": ["p:speech:concurrent-syntheses:1"] })
   );
 }

@@ -3,7 +3,7 @@
     "access_key_id": "VGAKEXAMPLE7TESTKEY",
     "secret_access_key": "wJalrXUtnFEMI0K7MDENGbPxRfiCYEXAMPLEKEY01"
   },
-  "service": "tts",
+  "service": "speech",
   "time": "20261001T120000Z",
   "description": "Repeated keys, empty values, reserved characters and literal plus",
   "request": {
@@ -13,7 +13,7 @@
     "headers": [
       [
         "Host",
-        "tts.vigrise.com"
+        "speech.vigrise.com"
       ]
     ],
     "body": ""
@@ -21,9 +21,9 @@
   "expected": {
     "payload_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "signed_headers": "host;x-vgr-content-sha256;x-vgr-date",
-    "canonical_request": "GET\n/v1/voices\na=&b=2&lang=en&lang=vi&q=a%2Bb%20c&x=%2A\nhost:tts.vigrise.com\nx-vgr-content-sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\nx-vgr-date:20261001T120000Z\n\nhost;x-vgr-content-sha256;x-vgr-date\ne3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-    "string_to_sign": "VGR4-HMAC-SHA256\n20261001T120000Z\n20261001/tts/vgr4_request\n778fe4fe32428915d81e33b1aae19f430d52878fc0a98eb2a7af255f8376611e",
-    "signature": "e432d2125498e25bc73021092e083bb9e95bc7910b15060d51f65ed2bdebdf0f",
-    "authorization": "VGR4-HMAC-SHA256 Credential=VGAKEXAMPLE7TESTKEY/20261001/tts/vgr4_request, SignedHeaders=host;x-vgr-content-sha256;x-vgr-date, Signature=e432d2125498e25bc73021092e083bb9e95bc7910b15060d51f65ed2bdebdf0f"
+    "canonical_request": "GET\n/v1/voices\na=&b=2&lang=en&lang=vi&q=a%2Bb%20c&x=%2A\nhost:speech.vigrise.com\nx-vgr-content-sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\nx-vgr-date:20261001T120000Z\n\nhost;x-vgr-content-sha256;x-vgr-date\ne3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "string_to_sign": "VGR4-HMAC-SHA256\n20261001T120000Z\n20261001/speech/vgr4_request\nd8ba9d0b45e13cb75d5b8898961dea3ba21999c14c5c075ab3a1926d8edcffa2",
+    "signature": "811d5ab102988a2c37b11c553c02b162f1df77750519310ed1a7fd5f0a449422",
+    "authorization": "VGR4-HMAC-SHA256 Credential=VGAKEXAMPLE7TESTKEY/20261001/speech/vgr4_request, SignedHeaders=host;x-vgr-content-sha256;x-vgr-date, Signature=811d5ab102988a2c37b11c553c02b162f1df77750519310ed1a7fd5f0a449422"
   }
 }

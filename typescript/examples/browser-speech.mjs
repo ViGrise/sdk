@@ -1,6 +1,6 @@
-// Calls the ViGrise TTS gateway the way a web page does: with the Web Crypto
+// Calls the ViGrise Speech API the way a web page does: with the Web Crypto
 // signer and a role session its backend obtained through `assumeRole`.
-// node examples/browser-tts.mjs <gateway url> [voice]   (run `npm run build` first)
+// node examples/browser-speech.mjs <gateway url> [voice]   (run `npm run build` first)
 // The session comes from VIGRISE_ACCESS_KEY_ID, VIGRISE_SECRET_ACCESS_KEY and
 // VIGRISE_SESSION_TOKEN here; a page receives it from its backend instead.
 import { signedFetch } from "../dist/browser.js";
@@ -16,7 +16,7 @@ const response = voice
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ input: "Xin chào", voice, response_format: "wav" }),
-    }, { service: "tts", credentials })
-  : await signedFetch(`${base}/v1/voices`, {}, { service: "tts", credentials });
+    }, { service: "speech", credentials })
+  : await signedFetch(`${base}/v1/voices`, {}, { service: "speech", credentials });
 const body = new Uint8Array(await response.arrayBuffer());
 console.log(`${response.status} ${body.length}`);

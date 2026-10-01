@@ -3,7 +3,7 @@ import { signRequest } from "./signer.js";
 import type { Credentials, CredentialsProvider } from "./types.js";
 
 export interface SignedFetchOptions {
-  /** Catalog namespace of the service, for example `tts`. */
+  /** Catalog namespace of the service, for example `speech`. */
   service: string;
   /** Fixed credentials or a provider called before each request; resolved from the environment when omitted. */
   credentials?: Credentials | CredentialsProvider;

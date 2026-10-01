@@ -32,18 +32,18 @@ fails when the committed vectors differ from a fresh generation.
 
 ```ts
 import { signedFetch } from "@vigrise/auth";
-const res = await signedFetch("https://tts.vigrise.com/v1/voices", {}, { service: "tts" });
+const res = await signedFetch("https://speech.vigrise.com/v1/voices", {}, { service: "speech" });
 ```
 
 ```python
 import requests
 from vigrise_auth.requests_auth import ViGriseAuth
-requests.get("https://tts.vigrise.com/v1/voices", auth=ViGriseAuth("tts"))
+requests.get("https://speech.vigrise.com/v1/voices", auth=ViGriseAuth("speech"))
 ```
 
 ```rust
-let mut request = client.get("https://tts.vigrise.com/v1/voices").build()?;
-vigrise_auth::reqwest_signer::sign_reqwest(&mut request, &Credentials::resolve()?, "tts", chrono::Utc::now())?;
+let mut request = client.get("https://speech.vigrise.com/v1/voices").build()?;
+vigrise_auth::reqwest_signer::sign_reqwest(&mut request, &Credentials::resolve()?, "speech", chrono::Utc::now())?;
 client.execute(request).await?;
 ```
 
@@ -80,18 +80,18 @@ A backend handing a web page a narrowed session:
 import { assumeRole } from "@vigrise/auth";
 const session = await assumeRole(
   { roleVrn, roleSessionName: `user-${userId}`, durationSeconds: 900,
-    sessionPolicy: { Version: "2026-10-01", Statement: { Effect: "Allow", Action: "tts:SynthesizeSpeech", Resource: "*" } } },
+    sessionPolicy: { Version: "2026-10-01", Statement: { Effect: "Allow", Action: "speech:SynthesizeSpeech", Resource: "*" } } },
   { endpoint: "https://platform.vigrise.com/api/v1/sts/assume-role" },
 );
 // send session.credentials to the page, which signs with @vigrise/auth/browser:
 import { signedFetch } from "@vigrise/auth/browser";
-await signedFetch(url, init, { service: "tts", credentials: session.credentials });
+await signedFetch(url, init, { service: "speech", credentials: session.credentials });
 ```
 
 ```python
 from vigrise_auth import assume_role
 session = assume_role(role_vrn, "nightly-job", endpoint="https://platform.vigrise.com/api/v1/sts/assume-role")
-requests.get(url, auth=ViGriseAuth("tts", session.credentials))
+requests.get(url, auth=ViGriseAuth("speech", session.credentials))
 ```
 
 Rust keeps one session and refreshes it before it expires, five minutes early
@@ -115,7 +115,7 @@ profile of `~/.vigrise/credentials`, which every SDK reads:
 ```bash
 cargo install --path rust/vigrise-cli
 vigrise login --role vrn:vigrise:iam:<project_id>:role/<name> --profile dev
-VIGRISE_PROFILE=dev python examples/tts.py https://tts.vigrise.com
+VIGRISE_PROFILE=dev python examples/speech.py https://speech.vigrise.com
 ```
 
 It opens a browser (`--device` shows a code to enter on another device

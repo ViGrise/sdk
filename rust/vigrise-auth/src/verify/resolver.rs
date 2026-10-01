@@ -9,7 +9,7 @@ use crate::error::AuthError;
 /// What a request asks to do, in catalog terms.
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct ResolvedAction {
-  /// `<namespace>:<Action>`, for example `tts:SynthesizeSpeech`.
+  /// `<namespace>:<Action>`, for example `speech:SynthesizeSpeech`.
   pub action: String,
   /// VRNs; `${ProjectId}` is substituted by the platform.
   pub resources: Vec<String>,

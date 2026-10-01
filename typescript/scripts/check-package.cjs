@@ -9,9 +9,9 @@ import("@vigrise/auth").then((esm) => {
   assert.strictEqual(typeof esm.signRequest, "function", "import() exposes signRequest");
   const input = {
     method: "GET",
-    url: "https://tts.vigrise.com/v1/voices",
+    url: "https://speech.vigrise.com/v1/voices",
     credentials: { accessKeyId: "VGAK", secretAccessKey: "s" },
-    service: "tts",
+    service: "speech",
     now: new Date("2026-10-01T12:00:00Z"),
   };
   assert.deepStrictEqual(cjs.signRequest(input), esm.signRequest(input), "both builds sign identically");

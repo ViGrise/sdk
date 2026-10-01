@@ -20,13 +20,13 @@ describe("signedFetch", () => {
     const response = await signedFetch(
       `http://127.0.0.1:${port}/v1/audio/speech`,
       { method: "POST", headers: { "content-type": "application/json" }, body: '{"input":"xin chào"}' },
-      { service: "tts", credentials: { accessKeyId: "VGAKTEST", secretAccessKey: "secret" } },
+      { service: "speech", credentials: { accessKeyId: "VGAKTEST", secretAccessKey: "secret" } },
     );
     server.close();
     expect(await response.text()).toBe("ok");
     expect(seen[0].body).toBe('{"input":"xin chào"}');
     expect(String(seen[0].headers.authorization)).toMatch(
-      /^VGR4-HMAC-SHA256 Credential=VGAKTEST\/\d{8}\/tts\/vgr4_request, SignedHeaders=content-type;host;x-vgr-content-sha256;x-vgr-date, Signature=[0-9a-f]{64}$/,
+      /^VGR4-HMAC-SHA256 Credential=VGAKTEST\/\d{8}\/speech\/vgr4_request, SignedHeaders=content-type;host;x-vgr-content-sha256;x-vgr-date, Signature=[0-9a-f]{64}$/,
     );
   });
 
@@ -34,7 +34,7 @@ describe("signedFetch", () => {
     const stream = new ReadableStream();
     await expect(
       signedFetch("http://127.0.0.1:9/x", { method: "POST", body: stream, duplex: "half" } as RequestInit, {
-        service: "tts",
+        service: "speech",
         credentials: { accessKeyId: "A", secretAccessKey: "s" },
       }),
     ).rejects.toThrow(/Streaming/);

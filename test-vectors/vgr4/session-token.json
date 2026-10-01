@@ -7,7 +7,7 @@
     "headers": [
       [
         "host",
-        "tts.vigrise.test"
+        "speech.vigrise.test"
       ],
       [
         "content-type",
@@ -21,14 +21,14 @@
     "secret_access_key": "temporary-secret",
     "session_token": "v1.7.bm9uY2U.Y2lwaGVydGV4dA"
   },
-  "service": "tts",
+  "service": "speech",
   "time": "20260926T100000Z",
   "expected": {
     "payload_hash": "402397da9d5fb35c9dd2bde9646e07b821eb8c53bac5362303a0e52a925c9caf",
     "signed_headers": "content-type;host;x-vgr-content-sha256;x-vgr-date;x-vgr-security-token",
-    "canonical_request": "POST\n/v1/audio/speech\n\ncontent-type:application/json\nhost:tts.vigrise.test\nx-vgr-content-sha256:402397da9d5fb35c9dd2bde9646e07b821eb8c53bac5362303a0e52a925c9caf\nx-vgr-date:20260926T100000Z\nx-vgr-security-token:v1.7.bm9uY2U.Y2lwaGVydGV4dA\n\ncontent-type;host;x-vgr-content-sha256;x-vgr-date;x-vgr-security-token\n402397da9d5fb35c9dd2bde9646e07b821eb8c53bac5362303a0e52a925c9caf",
-    "string_to_sign": "VGR4-HMAC-SHA256\n20260926T100000Z\n20260926/tts/vgr4_request\n3315b06abb61e54679cf6f050864e5d6f01cbbc3ff1269716ddd7bf58b5c95d2",
-    "signature": "9c4e1759e6566fef2f107ce335355b619b9689301b6bb44ddebcd7e9504f2bf9",
-    "authorization": "VGR4-HMAC-SHA256 Credential=VGSTABCDEFGHIJKLMNOP/20260926/tts/vgr4_request, SignedHeaders=content-type;host;x-vgr-content-sha256;x-vgr-date;x-vgr-security-token, Signature=9c4e1759e6566fef2f107ce335355b619b9689301b6bb44ddebcd7e9504f2bf9"
+    "canonical_request": "POST\n/v1/audio/speech\n\ncontent-type:application/json\nhost:speech.vigrise.test\nx-vgr-content-sha256:402397da9d5fb35c9dd2bde9646e07b821eb8c53bac5362303a0e52a925c9caf\nx-vgr-date:20260926T100000Z\nx-vgr-security-token:v1.7.bm9uY2U.Y2lwaGVydGV4dA\n\ncontent-type;host;x-vgr-content-sha256;x-vgr-date;x-vgr-security-token\n402397da9d5fb35c9dd2bde9646e07b821eb8c53bac5362303a0e52a925c9caf",
+    "string_to_sign": "VGR4-HMAC-SHA256\n20260926T100000Z\n20260926/speech/vgr4_request\n655640756627a3b2feaf68a7b8b2983205d44a5ebc24fc77ce3acdf209c7bc78",
+    "signature": "432e79a4b78785b392011b5f36cee25077309652309ca841654c7b0daf08c9fb",
+    "authorization": "VGR4-HMAC-SHA256 Credential=VGSTABCDEFGHIJKLMNOP/20260926/speech/vgr4_request, SignedHeaders=content-type;host;x-vgr-content-sha256;x-vgr-date;x-vgr-security-token, Signature=432e79a4b78785b392011b5f36cee25077309652309ca841654c7b0daf08c9fb"
   }
 }

@@ -11,7 +11,7 @@ export type { Credentials, CredentialsProvider } from "./types.js";
 export { signRequest } from "./webcrypto.js";
 
 export interface BrowserSignedFetchOptions {
-  /** Catalog namespace of the service, for example `tts`. */
+  /** Catalog namespace of the service, for example `speech`. */
   service: string;
   credentials: Credentials | CredentialsProvider;
 }

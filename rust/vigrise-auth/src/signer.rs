@@ -183,7 +183,7 @@ mod tests {
       &HeaderMap::new(),
       b"",
       &credentials,
-      "tts",
+      "speech",
       Utc::now(),
     )
     .unwrap();
@@ -199,7 +199,7 @@ mod tests {
       &HeaderMap::new(),
       b"",
       &Credentials::new("VGSTABCDEFGHIJKLMNOP", "secret"),
-      "tts",
+      "speech",
       Utc::now(),
     );
     assert!(matches!(result, Err(AuthError::IncompleteSignature(_))));

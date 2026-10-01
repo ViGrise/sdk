@@ -3,7 +3,7 @@
     "access_key_id": "VGAKEXAMPLE7TESTKEY",
     "secret_access_key": "wJalrXUtnFEMI0K7MDENGbPxRfiCYEXAMPLEKEY01"
   },
-  "service": "tts",
+  "service": "speech",
   "time": "20261001T120000Z",
   "description": "Path with unicode and a percent-encoded slash inside a segment",
   "request": {
@@ -13,7 +13,7 @@
     "headers": [
       [
         "Host",
-        "tts.vigrise.com"
+        "speech.vigrise.com"
       ]
     ],
     "body": ""
@@ -21,9 +21,9 @@
   "expected": {
     "payload_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "signed_headers": "host;x-vgr-content-sha256;x-vgr-date",
-    "canonical_request": "GET\n/v1/voices/gi%E1%BB%8Dng%2Fn%E1%BB%AF\n\nhost:tts.vigrise.com\nx-vgr-content-sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\nx-vgr-date:20261001T120000Z\n\nhost;x-vgr-content-sha256;x-vgr-date\ne3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-    "string_to_sign": "VGR4-HMAC-SHA256\n20261001T120000Z\n20261001/tts/vgr4_request\n3f2f939da57ba10d2d519a30cf206b3bfe89350172a1a707ea10346e0aedb662",
-    "signature": "a4f6c1610ba90de1711c85453024e640cdfeaf3f64db330a920e0ec69fe748ec",
-    "authorization": "VGR4-HMAC-SHA256 Credential=VGAKEXAMPLE7TESTKEY/20261001/tts/vgr4_request, SignedHeaders=host;x-vgr-content-sha256;x-vgr-date, Signature=a4f6c1610ba90de1711c85453024e640cdfeaf3f64db330a920e0ec69fe748ec"
+    "canonical_request": "GET\n/v1/voices/gi%E1%BB%8Dng%2Fn%E1%BB%AF\n\nhost:speech.vigrise.com\nx-vgr-content-sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\nx-vgr-date:20261001T120000Z\n\nhost;x-vgr-content-sha256;x-vgr-date\ne3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "string_to_sign": "VGR4-HMAC-SHA256\n20261001T120000Z\n20261001/speech/vgr4_request\n3dce4c1dd773afe2b79c95788647fe484bfcd1d032b51b9a0e05a8d05763ed7f",
+    "signature": "395d6561d7b2b2287ef1d43dd6c5a9a15ab8ebb6a4bcd01ef95cf1ab62a1ddba",
+    "authorization": "VGR4-HMAC-SHA256 Credential=VGAKEXAMPLE7TESTKEY/20261001/speech/vgr4_request, SignedHeaders=host;x-vgr-content-sha256;x-vgr-date, Signature=395d6561d7b2b2287ef1d43dd6c5a9a15ab8ebb6a4bcd01ef95cf1ab62a1ddba"
   }
 }

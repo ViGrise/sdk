@@ -11,7 +11,7 @@ from vigrise_auth.httpx_auth import ViGriseHttpxAuth
 from vigrise_auth.requests_auth import ViGriseAuth
 
 AUTH = re.compile(
-    r"^VGR4-HMAC-SHA256 Credential=VGAKTEST/\d{8}/tts/vgr4_request, "
+    r"^VGR4-HMAC-SHA256 Credential=VGAKTEST/\d{8}/speech/vgr4_request, "
     r"SignedHeaders=content-type;host;x-vgr-content-sha256;x-vgr-date, Signature=[0-9a-f]{64}$"
 )
 
@@ -43,7 +43,7 @@ CREDS = Credentials("VGAKTEST", "secret")
 
 def test_requests_auth_signs(server):
     url, seen = server
-    response = requests.post(f"{url}/v1/audio/speech", json={"input": "xin chào"}, auth=ViGriseAuth("tts", CREDS))
+    response = requests.post(f"{url}/v1/audio/speech", json={"input": "xin chào"}, auth=ViGriseAuth("speech", CREDS))
     assert response.text == "ok"
     headers, body = seen[0]
     assert AUTH.match(headers.get("Authorization")), headers.get("Authorization")
@@ -52,7 +52,7 @@ def test_requests_auth_signs(server):
 
 def test_httpx_auth_signs(server):
     url, seen = server
-    response = httpx.post(f"{url}/v1/audio/speech", json={"input": "a"}, auth=ViGriseHttpxAuth("tts", CREDS))
+    response = httpx.post(f"{url}/v1/audio/speech", json={"input": "a"}, auth=ViGriseHttpxAuth("speech", CREDS))
     assert response.text == "ok"
     assert AUTH.match(seen[0][0].get("Authorization"))
 
@@ -62,13 +62,13 @@ def test_streaming_bodies_are_rejected():
         yield b"x"
 
     with pytest.raises(ValueError, match="Streaming"):
-        requests.Request("POST", "http://127.0.0.1:9/x", data=chunks(), auth=ViGriseAuth("tts", CREDS)).prepare()
+        requests.Request("POST", "http://127.0.0.1:9/x", data=chunks(), auth=ViGriseAuth("speech", CREDS)).prepare()
 
 
 def test_httpx_signs_repeated_signed_headers_as_sent(server):
     url, seen = server
     headers = httpx.Headers([("x-vgr-meta", "a"), ("x-vgr-meta", "b")])
-    response = httpx.post(f"{url}/v1/audio/speech", content=b"x", headers=headers, auth=ViGriseHttpxAuth("tts", CREDS))
+    response = httpx.post(f"{url}/v1/audio/speech", content=b"x", headers=headers, auth=ViGriseHttpxAuth("speech", CREDS))
     assert response.text == "ok"
     sent_headers, body = seen[0]
     from vigrise_auth.canonical import canonical_request, sha256_hex
@@ -79,6 +79,6 @@ def test_httpx_signs_repeated_signed_headers_as_sent(server):
     timestamp = sent_headers.get("x-vgr-date")
     pairs = [(k.lower(), v) for k, v in sent_headers.items()]
     creq = canonical_request("POST", "/v1/audio/speech", "", pairs, signed, sha256_hex(body))
-    sts = string_to_sign(timestamp, scope(timestamp[:8], "tts"), creq)
-    expected = signature(derive_signing_key("secret", timestamp[:8], "tts"), sts)
+    sts = string_to_sign(timestamp, scope(timestamp[:8], "speech"), creq)
+    expected = signature(derive_signing_key("secret", timestamp[:8], "speech"), sts)
     assert auth.endswith(f"Signature={expected}")

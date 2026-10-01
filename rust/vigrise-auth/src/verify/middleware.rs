@@ -24,7 +24,7 @@ use crate::verify::types::{AuthorizeRequest, AuthorizeResponse, Authorized, Deci
 use crate::QuotaStatus;
 
 pub struct Verifier {
-  /// Catalog namespace this service owns, for example `tts`.
+  /// Catalog namespace this service owns, for example `speech`.
   pub service: String,
   pub authorizer: Arc<dyn Authorizer>,
   pub resolver: Arc<dyn ActionResolver>,

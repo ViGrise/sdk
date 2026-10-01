@@ -121,7 +121,7 @@ mod tests {
 
   fn header(signed: &str) -> String {
     format!(
-      "VGR4-HMAC-SHA256 Credential=VGAKEXAMPLE7TESTKEY/20261001/tts/vgr4_request, SignedHeaders={signed}, Signature={SIG}"
+      "VGR4-HMAC-SHA256 Credential=VGAKEXAMPLE7TESTKEY/20261001/speech/vgr4_request, SignedHeaders={signed}, Signature={SIG}"
     )
   }
 
@@ -130,7 +130,7 @@ mod tests {
     let raw = header("host;x-vgr-content-sha256;x-vgr-date");
     let parsed = AuthorizationHeader::parse(&raw).unwrap();
     assert_eq!(parsed.access_key_id, "VGAKEXAMPLE7TESTKEY");
-    assert_eq!(parsed.service, "tts");
+    assert_eq!(parsed.service, "speech");
     assert_eq!(parsed.to_string(), raw);
   }
 
