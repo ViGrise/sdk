@@ -112,6 +112,9 @@ pub struct PresignRequest {
     pub content_type: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub max_size: Option<u64>,
+    /// The `Content-Disposition` a download's response states; part of the signature.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub response_content_disposition: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
