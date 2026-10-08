@@ -63,6 +63,10 @@ pub struct Principal {
   /// principals and for sessions that set none.
   #[serde(default, skip_serializing_if = "Option::is_none")]
   pub source_identity: Option<String>,
+  /// The VRN of the principal that assumed the role, as recorded in the
+  /// session; absent for principals that are not role sessions.
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub source_principal: Option<String>,
 }
 
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]

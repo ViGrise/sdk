@@ -61,6 +61,7 @@ impl Authorizer for SigningPlatform {
           project_id: Uuid::nil(),
           organization_id: Uuid::nil(),
           source_identity: None,
+          source_principal: None,
         }),
         tier: Some("Pro".into()),
         quotas: vec![],
