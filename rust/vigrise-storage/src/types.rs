@@ -33,6 +33,9 @@ pub struct Object {
     /// Size of the whole object, also for a range.
     pub size: Option<u64>,
     pub metadata: BTreeMap<String, String>,
+    /// Lowercase hex SHA-256 of the object, returned by `head_object` once the
+    /// service knows it.
+    pub checksum_sha256: Option<String>,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -102,7 +105,7 @@ pub struct CompletedPart {
     pub etag: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize)]
 pub struct PresignRequest {
     pub key: String,
     /// `GET` or `PUT`.
@@ -115,6 +118,15 @@ pub struct PresignRequest {
     /// The `Content-Disposition` a download's response states; part of the signature.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub response_content_disposition: Option<String>,
+    /// Lowercase hex SHA-256 an upload's content must have; the service refuses
+    /// a mismatch with `BadDigest` and stores nothing.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub checksum_sha256: Option<String>,
+    /// With `part_number`, a `PUT` stores that part of the multipart upload.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub upload_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub part_number: Option<u32>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]

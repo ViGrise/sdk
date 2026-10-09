@@ -299,6 +299,7 @@ impl StorageClient {
         let size = header("content-range")
             .and_then(|r| r.rsplit('/').next().and_then(|s| s.parse().ok()))
             .or_else(|| header("content-length").and_then(|l| l.parse().ok()));
+        let checksum_sha256 = header("x-vgr-checksum-sha256");
         let content_type = header("content-type");
         let etag = header("etag").map(|e| e.trim_matches('"').to_string());
         let metadata: BTreeMap<String, String> = response
@@ -319,6 +320,7 @@ impl StorageClient {
             etag,
             size,
             metadata,
+            checksum_sha256,
         })
     }
 
