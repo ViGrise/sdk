@@ -488,6 +488,26 @@ impl StorageClient {
         .await
     }
 
+    /// The parts stored so far in a multipart upload, by part number.
+    pub async fn list_parts(
+        &self,
+        bucket: &str,
+        upload_id: &str,
+    ) -> Result<Vec<UploadedPart>, StorageError> {
+        #[derive(Deserialize)]
+        struct Parts {
+            parts: Vec<UploadedPart>,
+        }
+        let listed: Parts = self
+            .json(
+                Method::GET,
+                &format!("/v1/buckets/{bucket}/uploads/{upload_id}/parts"),
+                None,
+            )
+            .await?;
+        Ok(listed.parts)
+    }
+
     async fn json_with_payload<T: DeserializeOwned>(
         &self,
         method: Method,

@@ -99,6 +99,14 @@ pub struct ListPage {
     pub next_continuation_token: Option<String>,
 }
 
+/// A part stored so far in a multipart upload.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+pub struct UploadedPart {
+    pub number: u32,
+    pub etag: String,
+    pub size: u64,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CompletedPart {
     pub number: u32,
