@@ -62,7 +62,8 @@ async fn serve(statuses: Vec<StatusCode>) -> (String, Received) {
 }
 
 fn config(url: String) -> UsageReporterConfig {
-  let mut config = UsageReporterConfig::new(url, Credentials::new("VGAKTESTKEY", "secret"), "speech");
+  let mut config =
+    UsageReporterConfig::new(url, Credentials::new("VGAKTESTKEY", "secret"), "speech");
   config.flush_interval = Duration::from_secs(3600);
   config.retry_backoff = Duration::from_millis(1);
   config.max_backoff = Duration::from_millis(5);

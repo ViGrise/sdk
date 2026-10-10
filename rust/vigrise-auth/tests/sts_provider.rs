@@ -124,7 +124,11 @@ fn provider(base: &str) -> AssumeRoleProvider {
     format!("{base}/api/v1/sts/assume-role"),
     Credentials::new("VGAKBOOTSTRAP", "bootstrap-secret"),
   );
-  AssumeRoleProvider::new(client, "vrn:vigrise:iam:p:role/speech-service", "speech-gateway")
+  AssumeRoleProvider::new(
+    client,
+    "vrn:vigrise:iam:p:role/speech-service",
+    "speech-gateway",
+  )
 }
 
 #[tokio::test]

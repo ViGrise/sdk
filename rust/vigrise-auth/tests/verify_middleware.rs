@@ -754,7 +754,10 @@ async fn every_additional_action_is_authorized_with_the_requests_signature() {
   )
   .await;
   assert_eq!(status, StatusCode::OK);
-  assert_eq!(text, "lease-speech:SynthesizeSpeech,lease-speech:ListModels");
+  assert_eq!(
+    text,
+    "lease-speech:SynthesizeSpeech,lease-speech:ListModels"
+  );
   let asked = platform.asked.lock().unwrap().clone();
   assert_eq!(
     asked
