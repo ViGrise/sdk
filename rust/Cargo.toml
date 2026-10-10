@@ -1,0 +1,12 @@
+[workspace]
+resolver = "2"
+members = ["vigrise-auth", "vigrise-storage", "vigrise-cli"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.85"
+license = "Apache-2.0"
+repository = "https://github.com/vigrise/sdk"
+homepage = "https://vigrise.com"
+authors = ["ViGrise"]

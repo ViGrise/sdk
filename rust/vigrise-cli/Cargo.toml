@@ -1,10 +1,18 @@
 [package]
 name = "vigrise-cli"
-version = "0.1.0"
-edition = "2021"
-rust-version = "1.85"
-license = "Apache-2.0"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
 description = "ViGrise command line: sign in with your ViGrise account and get role session credentials"
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+documentation = "https://docs.rs/vigrise-cli"
+readme = "README.md"
+keywords = ["vigrise", "cli", "login", "credentials", "sso"]
+categories = ["command-line-utilities", "authentication"]
+include = ["src/**", "README.md", "LICENSE"]
 
 [lib]
 name = "vigrise_cli"
@@ -30,4 +38,8 @@ url = "2"
 [dev-dependencies]
 axum = { version = "0.8", features = ["tokio", "http1", "query", "form", "json"] }
 tempfile = "3"
-vigrise-auth = { path = "../vigrise-auth" }
+vigrise-auth = { path = "../vigrise-auth", version = "0.1.0" }
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]

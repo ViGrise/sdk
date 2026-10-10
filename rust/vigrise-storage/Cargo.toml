@@ -1,13 +1,21 @@
 [package]
 name = "vigrise-storage"
-version = "0.1.0"
-edition = "2021"
-rust-version = "1.85"
-license = "Apache-2.0"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
 description = "Client for ViGrise Storage: buckets, objects, multipart uploads, presigned URLs and lifecycle rules"
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+documentation = "https://docs.rs/vigrise-storage"
+readme = "README.md"
+keywords = ["vigrise", "storage", "object-storage", "s3", "client"]
+categories = ["api-bindings", "asynchronous"]
+include = ["src/**", "README.md", "LICENSE"]
 
 [dependencies]
-vigrise-auth = { path = "../vigrise-auth", features = ["reqwest"] }
+vigrise-auth = { path = "../vigrise-auth", version = "0.1.0", features = ["reqwest"] }
 bytes = "1"
 chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
 futures-util = "0.3"
@@ -17,3 +25,7 @@ reqwest = { version = "0.13", default-features = false, features = ["json", "rus
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 thiserror = "2"
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
