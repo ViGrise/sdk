@@ -15,11 +15,17 @@ use crate::canonical::hex_sha256;
 use crate::error::AuthError;
 use crate::signing::{hmac_sha256, signature};
 
+/// Algorithm identifier that opens every SigV4 string to sign and `Authorization` header.
 pub const ALGORITHM: &str = "AWS4-HMAC-SHA256";
+/// Last component of a SigV4 credential scope.
 pub const TERMINATOR: &str = "aws4_request";
+/// Payload hash of a body that is not signed.
 pub const UNSIGNED_PAYLOAD: &str = "UNSIGNED-PAYLOAD";
+/// Payload hash of an unsigned aws-chunked body with trailing headers.
 pub const STREAMING_UNSIGNED_PAYLOAD_TRAILER: &str = "STREAMING-UNSIGNED-PAYLOAD-TRAILER";
+/// Payload hash of a signed aws-chunked body.
 pub const STREAMING_SIGNED_PAYLOAD: &str = "STREAMING-AWS4-HMAC-SHA256-PAYLOAD";
+/// Payload hash of a signed aws-chunked body with trailing headers.
 pub const STREAMING_SIGNED_PAYLOAD_TRAILER: &str = "STREAMING-AWS4-HMAC-SHA256-PAYLOAD-TRAILER";
 /// Longest validity of a presigned request, in seconds.
 pub const MAX_PRESIGN_EXPIRES: i64 = 604_800;
@@ -27,12 +33,16 @@ pub const MAX_PRESIGN_EXPIRES: i64 = 604_800;
 /// The credential scope of a signature.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Scope {
+  /// Credential scope date, `yyyymmdd`.
   pub date: String,
+  /// Credential scope region.
   pub region: String,
+  /// Credential scope service.
   pub service: String,
 }
 
 impl Scope {
+  /// Creates a scope from its components.
   pub fn new(date: &str, region: &str, service: &str) -> Self {
     Self {
       date: date.to_string(),
@@ -84,6 +94,8 @@ pub fn decode_signing_key(hex_key: &str) -> Option<[u8; 32]> {
   hex::decode(hex_key).ok()?.try_into().ok()
 }
 
+/// The string to sign: algorithm, timestamp, scope and the hash of the
+/// canonical request.
 pub fn string_to_sign(timestamp: &str, scope: &Scope, canonical_request: &str) -> String {
   format!(
     "{ALGORITHM}\n{timestamp}\n{scope}\n{}",
@@ -91,6 +103,7 @@ pub fn string_to_sign(timestamp: &str, scope: &Scope, canonical_request: &str) -
   )
 }
 
+/// The canonical request that the string to sign hashes.
 pub fn canonical_request(
   method: &str,
   raw_path: &str,
@@ -133,6 +146,8 @@ pub fn chunk_string_to_sign(
   )
 }
 
+/// Signature of one chunk of a signed aws-chunked body, chained from the
+/// signature `previous`.
 pub fn chunk_signature(
   signing_key: &[u8; 32],
   timestamp: &str,
@@ -160,6 +175,8 @@ pub fn trailer_string_to_sign(
   )
 }
 
+/// Signature of the trailing headers of a signed aws-chunked body, chained
+/// from the signature `previous`.
 pub fn trailer_signature(
   signing_key: &[u8; 32],
   timestamp: &str,
@@ -224,13 +241,18 @@ fn parse_credential(value: &str) -> Result<(String, Scope), AuthError> {
 /// The `Authorization` header of a SigV4 request.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct HeaderAuthorization {
+  /// Access key ID of the signer.
   pub access_key_id: String,
+  /// Credential scope.
   pub scope: Scope,
+  /// Lowercase names of the signed headers.
   pub signed_headers: Vec<String>,
+  /// Hex-encoded signature.
   pub signature: String,
 }
 
 impl HeaderAuthorization {
+  /// Parses the value of an `Authorization` header.
   pub fn parse(value: &str) -> Result<Self, AuthError> {
     let incomplete = |message: &str| AuthError::IncompleteSignature(message.to_string());
     let rest = value
@@ -283,13 +305,19 @@ impl fmt::Display for HeaderAuthorization {
 /// The authentication parameters of a presigned request's query.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Presigned {
+  /// Access key ID of the signer.
   pub access_key_id: String,
+  /// Credential scope.
   pub scope: Scope,
+  /// Request timestamp.
   pub timestamp: String,
   /// Validity in seconds from `timestamp`, between 1 and [`MAX_PRESIGN_EXPIRES`].
   pub expires: i64,
+  /// Lowercase names of the signed headers.
   pub signed_headers: Vec<String>,
+  /// Hex-encoded signature.
   pub signature: String,
+  /// Session token of a role session.
   pub security_token: Option<String>,
 }
 

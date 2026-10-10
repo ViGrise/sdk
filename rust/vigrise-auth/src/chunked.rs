@@ -29,8 +29,11 @@ const MAX_TRAILER_BYTES: usize = 16 * 1024;
 /// What a signed body's chunk signatures chain from.
 #[derive(Clone)]
 pub struct ChunkSigning {
+  /// Signing key of the credential scope.
   pub signing_key: [u8; 32],
+  /// Request timestamp.
   pub timestamp: String,
+  /// Credential scope.
   pub scope: Scope,
   /// The signature of the request's `Authorization` header.
   pub seed_signature: String,
@@ -57,8 +60,10 @@ pub enum ChunkedMode {
   SignedTrailer(ChunkSigning),
 }
 
+/// How to decode and verify an aws-chunked body.
 #[derive(Debug, Clone)]
 pub struct ChunkedOptions {
+  /// The payload mode the request declared.
   pub mode: ChunkedMode,
   /// `x-amz-decoded-content-length`, the size of the object.
   pub decoded_length: Option<u64>,
@@ -67,16 +72,25 @@ pub struct ChunkedOptions {
   pub trailer_checksum: Option<ChecksumAlgorithm>,
 }
 
+/// Why an aws-chunked body could not be decoded or verified.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum ChunkedError {
+  /// The framing of the body is invalid.
   #[error("{0}")]
   Malformed(String),
+  /// The body ended before the declared content was complete.
   #[error("The request body ended before the declared content was complete")]
   Truncated,
+  /// A chunk or trailer signature does not match.
   #[error("The chunk or trailer signature does not match")]
   SignatureMismatch,
+  /// The checksum in the trailer does not match the decoded bytes.
   #[error("The {algorithm} checksum sent in the trailer does not match the body")]
-  ChecksumMismatch { algorithm: &'static str },
+  ChecksumMismatch {
+    /// Name of the checksum algorithm.
+    algorithm: &'static str,
+  },
+  /// The inner body failed while being read.
   #[error("The request body could not be read: {0}")]
   Read(String),
 }
@@ -86,6 +100,7 @@ pub enum ChunkedError {
 pub struct Trailers(Arc<OnceLock<Vec<(String, String)>>>);
 
 impl Trailers {
+  /// The value of the trailing header `name`, ignoring ASCII case.
   pub fn get(&self, name: &str) -> Option<String> {
     self
       .0
@@ -114,6 +129,8 @@ enum Step {
   Finished,
 }
 
+/// Decodes an aws-chunked body into a stream of its content, verifying chunk
+/// signatures and the trailer checksum as the bytes pass.
 pub struct AwsChunkedBody<B> {
   inner: B,
   inner_ended: bool,
@@ -130,6 +147,7 @@ pub struct AwsChunkedBody<B> {
 }
 
 impl<B> AwsChunkedBody<B> {
+  /// Wraps `inner`; the returned [`Trailers`] fill once the body has ended.
   pub fn new(inner: B, options: ChunkedOptions) -> (Self, Trailers) {
     let (signing, has_trailer) = match options.mode {
       ChunkedMode::UnsignedTrailer => (None, true),

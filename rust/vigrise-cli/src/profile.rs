@@ -14,13 +14,18 @@ const SESSION_KEYS: [&str; 5] = [
   "vigrise_role_vrn",
 ];
 
+/// A role session stored in a profile of the credentials file.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SessionProfile {
+  /// Access key ID, `VGST...`.
   pub access_key_id: String,
+  /// Secret access key.
   pub secret_access_key: String,
+  /// Session token.
   pub session_token: String,
   /// RFC 3339 timestamp.
   pub expiration: String,
+  /// VRN of the role the session assumed.
   pub role_vrn: String,
 }
 
@@ -120,6 +125,8 @@ fn joined(lines: &[String]) -> String {
   contents
 }
 
+/// Writes `session` into `profile`, keeping every other profile and key of the
+/// file.
 pub fn write_session(path: &Path, profile: &str, session: &SessionProfile) -> std::io::Result<()> {
   let (mut lines, end) = without_session(&read(path)?, profile);
   let entries: Vec<String> = session
@@ -142,6 +149,7 @@ pub fn write_session(path: &Path, profile: &str, session: &SessionProfile) -> st
   write_private(path, &joined(&lines))
 }
 
+/// Removes the session keys of `profile`, keeping everything else.
 pub fn remove_session(path: &Path, profile: &str) -> std::io::Result<()> {
   if !path.exists() {
     return Ok(());
@@ -150,6 +158,8 @@ pub fn remove_session(path: &Path, profile: &str) -> std::io::Result<()> {
   write_private(path, &joined(&lines))
 }
 
+/// Reads the session of `profile`; `None` when the profile holds no complete
+/// session.
 pub fn read_session(path: &Path, profile: &str) -> std::io::Result<Option<SessionProfile>> {
   let contents = read(path)?;
   let mut in_profile = false;

@@ -7,8 +7,11 @@ use crate::credentials::Credentials;
 use crate::error::AuthError;
 use crate::signing::{derive_signing_key, scope, signature, string_to_sign, TIMESTAMP_FORMAT};
 
+/// Header carrying the signing timestamp.
 pub const X_VGR_DATE: &str = "x-vgr-date";
+/// Header carrying the SHA-256 of the request payload.
 pub const X_VGR_CONTENT_SHA256: &str = "x-vgr-content-sha256";
+/// Header carrying the session token of temporary credentials.
 pub const X_VGR_SECURITY_TOKEN: &str = "x-vgr-security-token";
 /// Payload hash of a request whose body streams unsigned; only routes that
 /// verify with `verify_streaming` accept it.
@@ -17,13 +20,18 @@ pub const UNSIGNED_PAYLOAD: &str = "UNSIGNED-PAYLOAD";
 /// Headers a client adds to a request to sign it.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SignedRequestHeaders {
+  /// Value of the `Authorization` header.
   pub authorization: String,
+  /// Value of the `x-vgr-date` header.
   pub x_vgr_date: String,
+  /// Value of the `x-vgr-content-sha256` header.
   pub x_vgr_content_sha256: String,
+  /// Value of the `x-vgr-security-token` header, set for role sessions.
   pub x_vgr_security_token: Option<String>,
 }
 
 impl SignedRequestHeaders {
+  /// Writes the signing headers into `headers`.
   pub fn apply(&self, headers: &mut HeaderMap) -> Result<(), AuthError> {
     let value = |v: &str| {
       HeaderValue::from_str(v)

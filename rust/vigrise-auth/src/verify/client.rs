@@ -11,12 +11,14 @@ use crate::provider::CredentialsProvider;
 use crate::reqwest_signer::sign_reqwest;
 use crate::verify::types::{AuthorizeRequest, AuthorizeResponse};
 
+/// The future an [`Authorizer`] returns.
 pub type AuthorizeFuture<'a> =
   Pin<Box<dyn Future<Output = Result<AuthorizeResponse, AuthError>> + Send + 'a>>;
 
 /// Decides whether a request is allowed. `AuthorizeClient` calls the platform;
 /// tests substitute their own implementation.
 pub trait Authorizer: Send + Sync + 'static {
+  /// Authorizes `request`.
   fn authorize<'a>(&'a self, request: &'a AuthorizeRequest) -> AuthorizeFuture<'a>;
 
   /// Returns concurrency slots once a request ends. It must not block: the
@@ -36,6 +38,7 @@ pub struct AuthorizeClient {
 }
 
 impl AuthorizeClient {
+  /// Scope the calls are signed under.
   pub const SIGNING_SERVICE: &'static str = "iam";
 
   /// `endpoint` is the full URL, for example

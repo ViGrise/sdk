@@ -23,11 +23,15 @@ use crate::verify::resolver::{ActionResolver, ResolvedAction};
 use crate::verify::types::{AuthorizeRequest, AuthorizeResponse, Authorized, Decision, Principal};
 use crate::QuotaStatus;
 
+/// Settings of the [`verify`] middleware.
 pub struct Verifier {
   /// Catalog namespace this service owns, for example `speech`.
   pub service: String,
+  /// Decides whether a request is allowed.
   pub authorizer: Arc<dyn Authorizer>,
+  /// Maps requests to catalog actions.
   pub resolver: Arc<dyn ActionResolver>,
+  /// Largest request body the middleware buffers.
   pub max_body_bytes: usize,
   /// Take client IP and scheme from `x-forwarded-for` / `x-forwarded-proto`.
   /// The source IP is the rightmost `x-forwarded-for` entry, the one the

@@ -21,55 +21,90 @@ pub const DEFAULT_ACCOUNTS_URL: &str = "https://accounts.vigrise.com/o/oauth2";
 /// How long the browser sign-in may take before the listener gives up.
 const BROWSER_TIMEOUT: Duration = Duration::from_secs(300);
 
+/// Why a sign-in failed.
 #[derive(Debug, thiserror::Error)]
 pub enum LoginError {
+  /// ViGrise Accounts refused the sign-in or answered unexpectedly.
   #[error("{0}")]
   Accounts(String),
+  /// The platform refused to issue the role session.
   #[error("{code}: {message}")]
-  Platform { code: String, message: String },
+  Platform {
+    /// Error code of the platform.
+    code: String,
+    /// Human-readable message.
+    message: String,
+  },
+  /// A request failed before an answer arrived.
   #[error("request to {url} failed: {source}")]
-  Http { url: String, source: reqwest::Error },
+  Http {
+    /// The URL that was called.
+    url: String,
+    /// The underlying HTTP error.
+    source: reqwest::Error,
+  },
+  /// A local file could not be read or written.
   #[error("{0}")]
   Io(#[from] std::io::Error),
+  /// No role was chosen from the roles on offer.
   #[error("no role was chosen")]
   NoRole,
+  /// The profile holds a long-term access key that a session would replace.
   #[error("profile {profile} holds the long-term access key {access_key_id}; choose another profile with --profile")]
   LongTermKeys {
+    /// The profile that holds the key.
     profile: String,
+    /// The access key ID of the long-term key.
     access_key_id: String,
   },
 }
 
+/// Settings of a sign-in.
 #[derive(Debug, Clone)]
 pub struct LoginOptions {
   /// Accounts issuer, for example `https://accounts.vigrise.com/o/oauth2`.
   pub accounts_url: String,
   /// Platform base URL, for example `https://platform.vigrise.com`.
   pub platform_url: String,
+  /// OAuth client ID of the command line at Accounts.
   pub client_id: String,
+  /// Profile of the credentials file that receives the session.
   pub profile: String,
+  /// Role to assume; when `None`, the person chooses from the roles on offer.
   pub role_vrn: Option<String>,
+  /// Project the session acts from; defaults to the role's project.
   pub project_id: Option<String>,
+  /// Session length in seconds, from 900 up to the role's maximum.
   pub duration_seconds: Option<u32>,
   /// Sign in with a code shown in the terminal instead of a local browser.
   pub device: bool,
+  /// Path of the credentials file.
   pub credentials_file: PathBuf,
   /// Directory of the cached Accounts refresh tokens, one file per profile.
   pub sso_dir: PathBuf,
 }
 
+/// A role the signed-in person may assume.
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 pub struct AssumableRole {
+  /// Project the role belongs to.
   pub project_id: String,
+  /// VRN of the role.
   pub role_vrn: String,
+  /// Name of the role.
   pub name: String,
+  /// Longest session of the role, in seconds.
   pub max_session_seconds: i64,
 }
 
 /// What login needs from the person at the terminal.
 pub trait Ui: Send + Sync {
+  /// Opens `url` in a browser.
   fn open_browser(&self, url: &str);
+  /// Shows the code to enter at `verification_uri`, or open `complete` when
+  /// it is given.
   fn show_device_code(&self, user_code: &str, verification_uri: &str, complete: Option<&str>);
+  /// Returns the index of the chosen role, or `None` when none is chosen.
   fn choose_role(&self, roles: &[AssumableRole]) -> Option<usize>;
 }
 

@@ -39,6 +39,8 @@ enum Payload {
     Streamed(reqwest::Body, u64),
 }
 
+/// A client for one ViGrise Storage endpoint. Clones share the credentials
+/// provider.
 #[derive(Clone)]
 pub struct StorageClient {
     endpoint: String,
@@ -195,11 +197,13 @@ impl StorageClient {
         Ok(headers)
     }
 
+    /// Creates a bucket in the caller's project.
     pub async fn create_bucket(&self, name: &str) -> Result<Bucket, StorageError> {
         self.json(Method::POST, "/v1/buckets", Some(json!({ "name": name })))
             .await
     }
 
+    /// Lists the buckets of the caller's project.
     pub async fn list_buckets(&self) -> Result<Vec<Bucket>, StorageError> {
         #[derive(Deserialize)]
         struct Listed {
@@ -209,11 +213,13 @@ impl StorageClient {
         Ok(listed.buckets)
     }
 
+    /// Returns the bucket `name`.
     pub async fn get_bucket(&self, name: &str) -> Result<Bucket, StorageError> {
         self.json(Method::GET, &format!("/v1/buckets/{name}"), None)
             .await
     }
 
+    /// Deletes the bucket `name`.
     pub async fn delete_bucket(&self, name: &str) -> Result<(), StorageError> {
         self.empty(Method::DELETE, &format!("/v1/buckets/{name}"), None)
             .await
@@ -339,6 +345,7 @@ impl StorageClient {
         self.read(Method::HEAD, bucket, key, None).await
     }
 
+    /// Deletes an object.
     pub async fn delete_object(&self, bucket: &str, key: &str) -> Result<(), StorageError> {
         self.empty(
             Method::DELETE,
@@ -348,6 +355,7 @@ impl StorageClient {
         .await
     }
 
+    /// Lists the objects of a bucket, one page at a time.
     pub async fn list_objects(
         &self,
         bucket: &str,
@@ -473,6 +481,7 @@ impl StorageClient {
         Ok(created.upload_id)
     }
 
+    /// Uploads part `number` of a multipart upload in one request.
     pub async fn upload_part(
         &self,
         bucket: &str,
@@ -521,6 +530,7 @@ impl StorageClient {
             .map_err(|e| StorageError::Transport(e.to_string()))
     }
 
+    /// Completes a multipart upload from its parts and returns the stored object.
     pub async fn complete_upload(
         &self,
         bucket: &str,
@@ -535,6 +545,7 @@ impl StorageClient {
         .await
     }
 
+    /// Aborts a multipart upload and discards its parts.
     pub async fn abort_upload(&self, bucket: &str, upload_id: &str) -> Result<(), StorageError> {
         self.empty(
             Method::DELETE,
@@ -595,6 +606,7 @@ impl StorageClient {
         result
     }
 
+    /// Replaces the tags of an object.
     pub async fn put_tags(
         &self,
         bucket: &str,
@@ -609,6 +621,7 @@ impl StorageClient {
         .await
     }
 
+    /// Returns the tags of an object.
     pub async fn get_tags(
         &self,
         bucket: &str,
@@ -628,6 +641,7 @@ impl StorageClient {
         Ok(tags.tags)
     }
 
+    /// Removes the tags of an object.
     pub async fn delete_tags(&self, bucket: &str, key: &str) -> Result<(), StorageError> {
         self.empty(
             Method::DELETE,
@@ -637,6 +651,8 @@ impl StorageClient {
         .await
     }
 
+    /// Creates a presigned URL for downloading or uploading an object without
+    /// credentials.
     pub async fn presign(
         &self,
         bucket: &str,
@@ -650,6 +666,7 @@ impl StorageClient {
         .await
     }
 
+    /// Replaces the lifecycle rules of a bucket.
     pub async fn put_lifecycle(
         &self,
         bucket: &str,
@@ -663,6 +680,7 @@ impl StorageClient {
         .await
     }
 
+    /// Returns the lifecycle rules of a bucket.
     pub async fn get_lifecycle(&self, bucket: &str) -> Result<Vec<LifecycleRule>, StorageError> {
         #[derive(Deserialize)]
         struct Rules {
@@ -678,6 +696,7 @@ impl StorageClient {
         Ok(rules.rules)
     }
 
+    /// Removes the lifecycle rules of a bucket.
     pub async fn delete_lifecycle(&self, bucket: &str) -> Result<(), StorageError> {
         self.empty(
             Method::DELETE,

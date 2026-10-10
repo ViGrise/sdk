@@ -16,25 +16,31 @@ const SIGNING_SERVICE: &str = "metering";
 /// platform accepts records up to 24 hours old.
 const MAX_RETRY_AGE_HOURS: i64 = 23;
 
+/// Settings of a [`UsageReporter`].
 #[derive(Debug, Clone)]
 pub struct UsageReporterConfig {
   /// Full URL, for example `https://platform.vigrise.com/api/internal/v1/usage`.
   pub endpoint: String,
+  /// Credentials the batches are signed with.
   pub credentials: Arc<dyn CredentialsProvider>,
   /// Catalog namespace the usage belongs to.
   pub service: String,
+  /// How often buffered records are sent.
   pub flush_interval: Duration,
+  /// Most records in one batch.
   pub max_batch: usize,
   /// Records waiting to be sent; further records are dropped.
   pub capacity: usize,
   /// First delay between retries of a batch; it doubles up to `max_backoff`.
   pub retry_backoff: Duration,
+  /// Longest delay between retries of a batch.
   pub max_backoff: Duration,
   /// How long `shutdown` waits for buffered usage to be sent.
   pub shutdown_timeout: Duration,
 }
 
 impl UsageReporterConfig {
+  /// Creates a configuration with default batching and retry settings.
   pub fn new(
     endpoint: impl Into<String>,
     credentials: impl CredentialsProvider + 'static,
@@ -65,6 +71,7 @@ pub struct UsageReporter {
 }
 
 impl UsageReporter {
+  /// Starts the background task that sends records. Must run inside a Tokio runtime.
   pub fn spawn(config: UsageReporterConfig) -> Self {
     let (sender, receiver) = mpsc::channel(config.capacity.max(1));
     let shutdown_timeout = config.shutdown_timeout;
@@ -78,6 +85,8 @@ impl UsageReporter {
     }
   }
 
+  /// Buffers one usage record for the project and principal of `authorized`.
+  /// The record is dropped when the buffer is full.
   pub fn record(&self, authorized: &Authorized, action: &str, dimension: &str, quantity: i64) {
     let record = UsageRecord {
       record_id: Uuid::new_v4(),

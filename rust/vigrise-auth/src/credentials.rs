@@ -1,16 +1,25 @@
 use std::fmt;
 use std::path::{Path, PathBuf};
 
+/// Environment variable holding the access key ID.
 pub const ENV_ACCESS_KEY_ID: &str = "VIGRISE_ACCESS_KEY_ID";
+/// Environment variable holding the secret access key.
 pub const ENV_SECRET_ACCESS_KEY: &str = "VIGRISE_SECRET_ACCESS_KEY";
+/// Environment variable holding the session token of a role session.
 pub const ENV_SESSION_TOKEN: &str = "VIGRISE_SESSION_TOKEN";
+/// Environment variable naming the profile of the credentials file.
 pub const ENV_PROFILE: &str = "VIGRISE_PROFILE";
+/// Environment variable naming the credentials file.
 pub const ENV_CREDENTIALS_FILE: &str = "VIGRISE_SHARED_CREDENTIALS_FILE";
 
+/// An access key and its secret, with the session token of a role session.
 #[derive(Clone, PartialEq, Eq)]
 pub struct Credentials {
+  /// Access key ID, `VGAK...` for long-term keys and `VGST...` for role sessions.
   pub access_key_id: String,
+  /// Secret access key.
   pub secret_access_key: String,
+  /// Session token; present for role sessions only.
   pub session_token: Option<String>,
 }
 
@@ -27,20 +36,27 @@ impl fmt::Debug for Credentials {
   }
 }
 
+/// Why credentials could not be resolved.
 #[derive(Debug, thiserror::Error)]
 pub enum CredentialsError {
+  /// No credentials were found in the environment or the credentials file.
   #[error("no ViGrise credentials found in the environment or {0}")]
   NotFound(String),
+  /// The credentials file could not be read.
   #[error("failed to read credentials file {path}: {source}")]
   Io {
+    /// Path of the credentials file.
     path: String,
+    /// The underlying I/O error.
     source: std::io::Error,
   },
+  /// The credentials exist but miss a required value.
   #[error("{0}")]
   Incomplete(String),
 }
 
 impl Credentials {
+  /// Creates long-term credentials.
   pub fn new(access_key_id: impl Into<String>, secret_access_key: impl Into<String>) -> Self {
     Self {
       access_key_id: access_key_id.into(),
@@ -49,6 +65,7 @@ impl Credentials {
     }
   }
 
+  /// Adds the session token of a role session.
   pub fn with_session_token(mut self, session_token: impl Into<String>) -> Self {
     self.session_token = Some(session_token.into());
     self

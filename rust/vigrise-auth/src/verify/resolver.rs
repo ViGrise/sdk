@@ -22,6 +22,7 @@ pub struct ResolvedAction {
 /// Maps an incoming request to its catalog action. Returning an error rejects
 /// the request before the platform is called; unknown routes must be rejected.
 pub trait ActionResolver: Send + Sync + 'static {
+  /// Resolves the action of a request from its head and body.
   fn resolve(&self, parts: &Parts, body: &Bytes) -> Result<ResolvedAction, AuthError>;
 
   /// Further actions the caller must be allowed to perform for the same

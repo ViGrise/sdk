@@ -1,16 +1,22 @@
 use serde::Deserialize;
 
+/// Errors of Storage calls.
 #[derive(Debug, thiserror::Error)]
 pub enum StorageError {
     /// The service answered with an error, such as `NoSuchKey`.
     #[error("{code} ({status}): {message}")]
     Service {
+        /// HTTP status of the answer.
         status: u16,
+        /// Error code of the service, such as `NoSuchKey`.
         code: String,
+        /// Human-readable message.
         message: String,
     },
+    /// The request could not be sent, or the answer could not be read.
     #[error("request failed: {0}")]
     Transport(String),
+    /// The request could not be signed.
     #[error("signing failed: {0}")]
     Signing(String),
 }

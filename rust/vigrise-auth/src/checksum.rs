@@ -7,16 +7,23 @@ use crc_fast::CrcAlgorithm;
 use sha1::Sha1;
 use sha2::{Digest, Sha256};
 
+/// An additional checksum algorithm of S3.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ChecksumAlgorithm {
+  /// CRC-32.
   Crc32,
+  /// CRC-32C (Castagnoli).
   Crc32c,
+  /// CRC-64/NVME.
   Crc64Nvme,
+  /// SHA-1.
   Sha1,
+  /// SHA-256.
   Sha256,
 }
 
 impl ChecksumAlgorithm {
+  /// Every supported algorithm.
   pub const ALL: [Self; 5] = [
     Self::Crc32,
     Self::Crc32c,
@@ -36,6 +43,7 @@ impl ChecksumAlgorithm {
     }
   }
 
+  /// Finds an algorithm by its name, such as `CRC32C`, ignoring ASCII case.
   pub fn from_name(name: &str) -> Option<Self> {
     Self::ALL
       .into_iter()
@@ -54,6 +62,7 @@ impl ChecksumAlgorithm {
     }
   }
 
+  /// Finds an algorithm by its header name, ignoring ASCII case.
   pub fn from_header_name(name: &str) -> Option<Self> {
     Self::ALL
       .into_iter()
@@ -106,6 +115,7 @@ pub struct Checksum {
 }
 
 impl Checksum {
+  /// Starts an empty checksum of `algorithm`.
   pub fn new(algorithm: ChecksumAlgorithm) -> Self {
     let state = match algorithm.crc() {
       Some(crc) => State::Crc(crc_fast::Digest::new(crc), algorithm),
@@ -115,6 +125,7 @@ impl Checksum {
     Self { state }
   }
 
+  /// Feeds `data` into the checksum.
   pub fn update(&mut self, data: &[u8]) {
     match &mut self.state {
       State::Crc(digest, _) => digest.update(data),
@@ -135,6 +146,7 @@ impl Checksum {
     }
   }
 
+  /// The base64-encoded value.
   pub fn finalize_base64(self) -> String {
     STANDARD.encode(self.finalize())
   }
@@ -164,10 +176,12 @@ pub fn combine_crc(
   Some(combined.to_be_bytes()[8 - width..].to_vec())
 }
 
+/// Base64-encodes a binary checksum value.
 pub fn encode_base64(bytes: &[u8]) -> String {
   STANDARD.encode(bytes)
 }
 
+/// Decodes a base64 checksum value; `None` when `value` is not valid base64.
 pub fn decode_base64(value: &str) -> Option<Vec<u8>> {
   STANDARD.decode(value).ok()
 }

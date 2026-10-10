@@ -11,13 +11,20 @@ pub use crate::QuotaStatus;
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub struct AuthorizeRequest {
+  /// Access key ID of the signer.
   pub access_key_id: String,
+  /// Session token of a role session.
   #[serde(default, skip_serializing_if = "Option::is_none")]
   pub security_token: Option<String>,
+  /// The string to sign the request was signed over.
   pub string_to_sign: String,
+  /// Hex-encoded signature of the request.
   pub signature: String,
+  /// Action the request asks to perform, `<namespace>:<Action>`.
   pub action: String,
+  /// VRNs the action applies to.
   pub resources: Vec<String>,
+  /// Condition keys the policies may test.
   pub context: Map<String, Value>,
   /// Usage the request is expected to consume, per catalog usage dimension.
   #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
@@ -35,29 +42,42 @@ fn is_false(value: &bool) -> bool {
   !value
 }
 
+/// The outcome of an authorization.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub enum Decision {
+  /// The request is allowed.
   Allow,
+  /// The request is denied.
   Deny,
 }
 
+/// The reason an authorization was refused.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub struct ErrorBody {
+  /// Wire error code.
   pub code: String,
+  /// Human-readable message.
   pub message: String,
 }
 
+/// The authenticated caller.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub struct Principal {
+  /// VRN of the principal.
   pub vrn: String,
+  /// ID of the principal.
   pub id: Uuid,
+  /// Kind of principal, such as a user or a role session.
   #[serde(rename = "type")]
   pub principal_type: String,
+  /// Name of the principal.
   pub name: String,
+  /// Project the principal acts in.
   pub project_id: Uuid,
+  /// Organization that owns the project.
   pub organization_id: Uuid,
   /// The source identity a role session was started with; absent for other
   /// principals and for sessions that set none.
@@ -69,16 +89,22 @@ pub struct Principal {
   pub source_principal: Option<String>,
 }
 
+/// The platform's answer to an authorization request.
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub struct AuthorizeResponse {
+  /// Whether the request is allowed.
   pub decision: Decision,
+  /// Why the request is denied.
   #[serde(default, skip_serializing_if = "Option::is_none")]
   pub error: Option<ErrorBody>,
+  /// The caller, present on an allow.
   #[serde(default, skip_serializing_if = "Option::is_none")]
   pub principal: Option<Principal>,
+  /// Subscription tier of the project.
   #[serde(default, skip_serializing_if = "Option::is_none")]
   pub tier: Option<String>,
+  /// Quotas that were checked.
   #[serde(default, skip_serializing_if = "Vec::is_empty")]
   pub quotas: Vec<QuotaStatus>,
   /// Concurrency slots held for this request; released when it ends.
@@ -110,7 +136,9 @@ impl fmt::Debug for AuthorizeResponse {
 /// Inserted into request extensions for handlers behind the verify middleware.
 #[derive(Clone, PartialEq, Eq)]
 pub struct Authorized {
+  /// The authenticated caller.
   pub principal: Principal,
+  /// Subscription tier of the project.
   pub tier: Option<String>,
   /// Quotas checked for this request, for services to expose limits to callers.
   pub quotas: Vec<QuotaStatus>,

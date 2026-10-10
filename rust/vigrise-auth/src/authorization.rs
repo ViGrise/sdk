@@ -6,20 +6,28 @@ use crate::signing::{scope, ALGORITHM, TERMINATOR};
 /// Headers every VGR4 signature must cover.
 pub const REQUIRED_SIGNED_HEADERS: [&str; 3] = ["host", "x-vgr-content-sha256", "x-vgr-date"];
 
+/// A parsed VGR4 `Authorization` header.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AuthorizationHeader {
+  /// Access key ID of the signer.
   pub access_key_id: String,
+  /// Credential scope date, `yyyymmdd`.
   pub date: String,
+  /// Credential scope service.
   pub service: String,
+  /// Lowercase names of the signed headers, in header order.
   pub signed_headers: Vec<String>,
+  /// Hex-encoded signature.
   pub signature: String,
 }
 
 impl AuthorizationHeader {
+  /// The credential scope, `<date>/<service>/vgr4_request`.
   pub fn scope(&self) -> String {
     scope(&self.date, &self.service)
   }
 
+  /// Parses the value of an `Authorization` header.
   pub fn parse(value: &str) -> Result<Self, AuthError> {
     let incomplete = |message: &str| AuthError::IncompleteSignature(message.to_string());
     let rest = value

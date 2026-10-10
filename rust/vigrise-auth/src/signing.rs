@@ -9,14 +9,20 @@ use crate::error::AuthError;
 
 type HmacSha256 = Hmac<Sha256>;
 
+/// Algorithm identifier that opens every VGR4 string to sign and `Authorization` header.
 pub const ALGORITHM: &str = "VGR4-HMAC-SHA256";
+/// Last component of a VGR4 credential scope and of the signing key derivation.
 pub const TERMINATOR: &str = "vgr4_request";
+/// `chrono` format of the `x-vgr-date` timestamp.
 pub const TIMESTAMP_FORMAT: &str = "%Y%m%dT%H%M%SZ";
 
+/// The credential scope, `<date>/<service>/vgr4_request`.
 pub fn scope(date: &str, service: &str) -> String {
   format!("{date}/{service}/{TERMINATOR}")
 }
 
+/// The string to sign: algorithm, timestamp, scope and the hash of the
+/// canonical request.
 pub fn string_to_sign(timestamp: &str, scope: &str, canonical_request: &str) -> String {
   format!(
     "{ALGORITHM}\n{timestamp}\n{scope}\n{}",
@@ -30,12 +36,14 @@ pub(crate) fn hmac_sha256(key: &[u8], message: &str) -> [u8; 32] {
   mac.finalize().into_bytes().into()
 }
 
+/// Derives the signing key of a date and service from the secret access key.
 pub fn derive_signing_key(secret_access_key: &str, date: &str, service: &str) -> [u8; 32] {
   let k_date = hmac_sha256(format!("VGR4{secret_access_key}").as_bytes(), date);
   let k_service = hmac_sha256(&k_date, service);
   hmac_sha256(&k_service, TERMINATOR)
 }
 
+/// Hex-encoded HMAC-SHA256 of `string_to_sign` under `signing_key`.
 pub fn signature(signing_key: &[u8; 32], string_to_sign: &str) -> String {
   hex::encode(hmac_sha256(signing_key, string_to_sign))
 }
@@ -53,7 +61,9 @@ pub fn verify_signature(signing_key: &[u8; 32], string_to_sign: &str, provided_h
 /// The signature scheme a string to sign belongs to.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SigningAlgorithm {
+  /// VGR4.
   Vgr4,
+  /// AWS Signature Version 4.
   Aws4,
 }
 
@@ -71,17 +81,24 @@ impl SigningAlgorithm {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error)]
 #[error("{} does not match the request body", .algorithm.payload_hash_header())]
 pub struct PayloadHashMismatch {
+  /// The scheme of the string to sign.
   pub algorithm: SigningAlgorithm,
 }
 
+/// The components of a string to sign.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ParsedStringToSign {
+  /// The scheme of the string to sign.
   pub algorithm: SigningAlgorithm,
+  /// Request timestamp.
   pub timestamp: String,
+  /// Credential scope date.
   pub date: String,
   /// The credential scope region; present for AWS4 only.
   pub region: Option<String>,
+  /// Credential scope service.
   pub service: String,
+  /// Hex-encoded SHA-256 of the canonical request.
   pub canonical_request_hash: String,
 }
 
@@ -97,6 +114,7 @@ impl ParsedStringToSign {
   }
 }
 
+/// Parses a VGR4 or AWS4 string to sign into its components.
 pub fn parse_string_to_sign(value: &str) -> Result<ParsedStringToSign, AuthError> {
   let invalid = || AuthError::IncompleteSignature("Malformed string to sign".to_string());
   let lines: Vec<&str> = value.split('\n').collect();

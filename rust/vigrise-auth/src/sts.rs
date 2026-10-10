@@ -15,7 +15,9 @@ use crate::provider::{CredentialsFuture, CredentialsProvider};
 use crate::reqwest_signer::sign_reqwest;
 
 const SIGNING_SERVICE: &str = "sts";
+/// Environment variable naming the role a service assumes.
 pub const ENV_ROLE_VRN: &str = "VIGRISE_ROLE_VRN";
+/// Environment variable holding the endpoint of the role session service.
 pub const ENV_STS_URL: &str = "VIGRISE_STS_URL";
 /// Sessions at least this long are refreshed `REFRESH_BEFORE_EXPIRY` before
 /// they expire; shorter ones after 80 percent of their lifetime.
@@ -24,19 +26,27 @@ const REFRESH_BEFORE_EXPIRY: chrono::Duration = chrono::Duration::minutes(5);
 /// Pause before calling STS again after a failed refresh.
 const RETRY_AFTER_FAILURE: chrono::Duration = chrono::Duration::seconds(5);
 
+/// A request for a role session.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct AssumeRoleRequest {
+  /// VRN of the role to assume.
   pub role_vrn: String,
+  /// Name that identifies the session in logs and audit records.
   pub role_session_name: String,
+  /// Session length in seconds, from 900 up to the role's maximum.
   #[serde(skip_serializing_if = "Option::is_none")]
   pub duration_seconds: Option<u32>,
+  /// Identity of the end user the session acts for, recorded with the session.
   #[serde(skip_serializing_if = "Option::is_none")]
   pub source_identity: Option<String>,
+  /// A policy that narrows what the session may do.
   #[serde(skip_serializing_if = "Option::is_none")]
   pub session_policy: Option<Value>,
 }
 
 impl AssumeRoleRequest {
+  /// Creates a request with the role's default session length and no session
+  /// policy.
   pub fn new(role_vrn: impl Into<String>, role_session_name: impl Into<String>) -> Self {
     Self {
       role_vrn: role_vrn.into(),
@@ -48,11 +58,16 @@ impl AssumeRoleRequest {
   }
 }
 
+/// Temporary credentials of a role session.
 #[derive(Clone, PartialEq, Deserialize)]
 pub struct SessionCredentials {
+  /// Access key ID, `VGST...`.
   pub access_key_id: String,
+  /// Secret access key.
   pub secret_access_key: String,
+  /// Session token to send with every request.
   pub session_token: String,
+  /// When the credentials stop working.
   pub expiration: DateTime<Utc>,
 }
 
@@ -68,21 +83,28 @@ impl fmt::Debug for SessionCredentials {
 }
 
 impl SessionCredentials {
+  /// The credentials as a [`Credentials`] to sign requests with.
   pub fn to_credentials(&self) -> Credentials {
     Credentials::new(&self.access_key_id, &self.secret_access_key)
       .with_session_token(&self.session_token)
   }
 }
 
+/// The role a session was started from.
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 pub struct AssumedRole {
+  /// VRN of the role.
   pub role_vrn: String,
+  /// VRN of the session.
   pub session_vrn: String,
 }
 
+/// The answer to an assume-role request.
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 pub struct AssumeRoleResponse {
+  /// The temporary credentials.
   pub credentials: SessionCredentials,
+  /// The assumed role and session.
   pub assumed_role: AssumedRole,
 }
 
@@ -151,6 +173,8 @@ impl StsClient {
     }
   }
 
+  /// Asks the service for a role session, signing the call with the client's
+  /// credentials.
   pub async fn assume_role(
     &self,
     request: &AssumeRoleRequest,
@@ -224,6 +248,7 @@ impl fmt::Debug for AssumeRoleProvider {
 }
 
 impl AssumeRoleProvider {
+  /// Creates a provider for `role_vrn` with the default session length.
   pub fn new(
     client: StsClient,
     role_vrn: impl Into<String>,
@@ -232,6 +257,7 @@ impl AssumeRoleProvider {
     Self::with_request(client, AssumeRoleRequest::new(role_vrn, role_session_name))
   }
 
+  /// Creates a provider that sends `request` for each new session.
   pub fn with_request(client: StsClient, request: AssumeRoleRequest) -> Self {
     Self {
       client,
@@ -301,6 +327,8 @@ pub fn service_credentials(
   service_credentials_with(bootstrap, session_name, |name| std::env::var(name).ok())
 }
 
+/// Like [`service_credentials`], reading environment variables through
+/// `lookup`.
 pub fn service_credentials_with(
   bootstrap: Credentials,
   session_name: &str,

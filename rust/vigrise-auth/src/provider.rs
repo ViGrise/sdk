@@ -6,12 +6,14 @@ use std::sync::Arc;
 use crate::credentials::Credentials;
 use crate::error::AuthError;
 
+/// The future a [`CredentialsProvider`] returns.
 pub type CredentialsFuture<'a> =
   Pin<Box<dyn Future<Output = Result<Credentials, AuthError>> + Send + 'a>>;
 
 /// Supplies the credentials to sign each request with. Long-term keys are a
 /// provider of themselves; role sessions come from `sts::AssumeRoleProvider`.
 pub trait CredentialsProvider: Send + Sync + fmt::Debug {
+  /// Resolves the credentials to sign the next request with.
   fn credentials(&self) -> CredentialsFuture<'_>;
 
   /// Called when the platform refuses the current credentials, for example a

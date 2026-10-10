@@ -21,10 +21,13 @@ fn reencode(raw: &str) -> String {
   percent_encode(&bytes, UNRESERVED).to_string()
 }
 
+/// Hex-encoded SHA-256 of `data`.
 pub fn hex_sha256(data: &[u8]) -> String {
   hex::encode(Sha256::digest(data))
 }
 
+/// The canonical URI of a raw request path: every segment is decoded and
+/// re-encoded with the unreserved character set.
 pub fn canonical_uri(raw_path: &str) -> String {
   if raw_path.is_empty() {
     return "/".to_string();
@@ -36,6 +39,8 @@ pub fn canonical_uri(raw_path: &str) -> String {
     .join("/")
 }
 
+/// The canonical query string: pairs are re-encoded and sorted by key, then
+/// value.
 pub fn canonical_query(raw_query: &str) -> String {
   let mut pairs: Vec<(String, String)> = raw_query
     .split('&')
@@ -81,6 +86,7 @@ pub fn canonical_headers(
   Ok(out)
 }
 
+/// The canonical request that the string to sign hashes.
 pub fn canonical_request(
   method: &str,
   raw_path: &str,

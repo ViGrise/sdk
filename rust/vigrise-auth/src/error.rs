@@ -4,62 +4,88 @@ use http::StatusCode;
 /// stable wire identifier shared with the platform authorize API.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum AuthError {
+  /// The request has no `Authorization` header.
   #[error("Request is missing an Authorization header")]
   MissingAuthenticationToken,
+  /// The `Authorization` header or the signed headers are malformed.
   #[error("{0}")]
   IncompleteSignature(String),
+  /// The access key ID or session token is not recognized.
   #[error("{0}")]
   InvalidClientTokenId(String),
+  /// The computed signature differs from the provided one.
   #[error("{message}")]
   SignatureDoesNotMatch {
+    /// Human-readable message.
     message: String,
+    /// The string to sign the service computed, for debugging.
     string_to_sign: Option<String>,
   },
+  /// The request timestamp is outside the accepted clock skew.
   #[error("{0}")]
   RequestExpired(String),
   /// The role session the request was signed with has expired.
   #[error("{0}")]
   ExpiredToken(String),
+  /// The policy evaluation denies the action.
   #[error("{0}")]
   AccessDenied(String),
+  /// The service is not part of the caller's tier.
   #[error("{0}")]
   ServiceNotAvailableForTier(String),
+  /// A quota of the service is exhausted.
   #[error("{message}")]
   ServiceQuotaExceeded {
+    /// Human-readable message.
     message: String,
+    /// The quota that refused the request.
     quota: Option<crate::QuotaStatus>,
   },
   /// A spending cap of the organization or the project is reached.
   #[error("{message}")]
   SpendingCapReached {
+    /// Human-readable message.
     message: String,
+    /// The cap that was reached.
     quota: Option<crate::QuotaStatus>,
   },
+  /// Requests arrive faster than a rate quota allows.
   #[error("{message}")]
   Throttling {
+    /// Human-readable message.
     message: String,
+    /// The quota that throttled the request.
     quota: Option<crate::QuotaStatus>,
   },
+  /// A resource limit is reached.
   #[error("{message}")]
   LimitExceeded {
+    /// Human-readable message.
     message: String,
+    /// The limit that was reached.
     quota: Option<crate::QuotaStatus>,
   },
+  /// The request body exceeds the size the service accepts.
   #[error("{0}")]
   RequestEntityTooLarge(String),
+  /// The service cannot authorize requests right now.
   #[error("{0}")]
   ServiceUnavailable(String),
   /// Rejection produced by a service's own request resolution, such as an
   /// unknown route or a malformed body.
   #[error("{message}")]
   Rejected {
+    /// HTTP status of the rejection.
     status: StatusCode,
+    /// Wire error code.
     code: String,
+    /// Human-readable message.
     message: String,
   },
 }
 
 impl AuthError {
+  /// The stable wire identifier of the error.
   pub fn code(&self) -> &str {
     match self {
       AuthError::MissingAuthenticationToken => "MissingAuthenticationToken",
@@ -80,6 +106,7 @@ impl AuthError {
     }
   }
 
+  /// The HTTP status a service answers with.
   pub fn status(&self) -> StatusCode {
     match self {
       AuthError::MissingAuthenticationToken

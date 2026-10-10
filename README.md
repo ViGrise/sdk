@@ -15,11 +15,27 @@ services that accept VGR4 requests.
 ## VGR4 in one paragraph
 
 VGR4 is AWS Signature Version 4 without the region component. The credential
-scope is `<yyyymmdd>/<service>/vgr4_request`, the signing key is derived as
-`HMAC(HMAC(HMAC("VGR4" + secret, date), service), "vgr4_request")`, and every
-signature covers `host`, `x-vgr-date` and `x-vgr-content-sha256`. The full
-specification lives in the platform repo:
-`docs/superpowers/specs/2026-09-25-catalog-iam-1a-design.md`, section 7.
+scope is `<yyyymmdd>/<service>/vgr4_request`, where `<service>` names the
+ViGrise service being called (`speech`, `storage`, and so on). The signing key
+is derived as
+`HMAC(HMAC(HMAC("VGR4" + secret, date), service), "vgr4_request")`. The
+canonical request follows SigV4: method, canonical URI, sorted canonical query,
+canonical headers, signed header names and the hex SHA-256 of the payload. The
+string to sign is `VGR4-HMAC-SHA256`, the timestamp, the scope and the hash of
+the canonical request, each on its own line. Every signature covers `host`,
+`x-vgr-date` (`yyyymmddThhmmssZ`) and `x-vgr-content-sha256`; temporary
+credentials also sign `x-vgr-security-token`. The result travels in
+`Authorization: VGR4-HMAC-SHA256 Credential=<access key>/<scope>, SignedHeaders=<names>, Signature=<hex>`.
+
+## Installation
+
+```bash
+cargo add vigrise-auth                 # signing; add --features reqwest,sts as needed
+cargo add vigrise-storage              # Storage client
+cargo install vigrise-cli              # the `vigrise` command line
+npm install @vigrise/auth
+pip install vigrise-auth
+```
 
 ## Test vectors
 
