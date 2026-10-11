@@ -23,6 +23,8 @@ profile of `~/.vigrise/credentials`. It opens a browser; `--device` shows a code
 to enter on another device instead. Without `--role` it lists the roles you may
 assume. The sign-in is cached in `~/.vigrise/sso/<profile>.json`, so the next
 `vigrise login` needs no browser until it expires.
+`vigrise login --select-account` skips the cached sign-in and opens the ViGrise
+account chooser in the browser, so another account can take over the profile.
 
 | Command | Does |
 | --- | --- |

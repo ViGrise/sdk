@@ -78,6 +78,9 @@ pub struct LoginOptions {
   pub duration_seconds: Option<u32>,
   /// Sign in with a code shown in the terminal instead of a local browser.
   pub device: bool,
+  /// Ignore the cached sign-in and open the Accounts account chooser, so another account can
+  /// take over the profile. Needs the browser sign-in.
+  pub select_account: bool,
   /// Path of the credentials file.
   pub credentials_file: PathBuf,
   /// Directory of the cached Accounts refresh tokens, one file per profile.
@@ -315,6 +318,7 @@ async fn browser_sign_in(
   http: &reqwest::Client,
   discovery: &Discovery,
   client_id: &str,
+  select_account: bool,
   ui: &dyn Ui,
 ) -> Result<TokenResponse, LoginError> {
   let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await?;
@@ -336,6 +340,11 @@ async fn browser_sign_in(
     .append_pair("state", &state)
     .append_pair("code_challenge", &challenge)
     .append_pair("code_challenge_method", "S256");
+  if select_account {
+    url
+      .query_pairs_mut()
+      .append_pair("prompt", "select_account");
+  }
   ui.open_browser(url.as_str());
   let code = tokio::time::timeout(BROWSER_TIMEOUT, wait_for_code(listener, &state))
     .await
@@ -472,8 +481,17 @@ pub async fn login(options: &LoginOptions, ui: &dyn Ui) -> Result<SessionProfile
     .timeout(Duration::from_secs(30))
     .build()
     .expect("reqwest client builds with static configuration");
+  if options.select_account && options.device {
+    return Err(LoginError::Accounts(
+      "choosing an account needs the browser sign-in, not the device code".into(),
+    ));
+  }
   let discovery = discover(&http, &options.accounts_url).await?;
-  let refreshed = match cached_refresh_token(&options.sso_dir, &options.profile) {
+  let cached = match options.select_account {
+    true => None,
+    false => cached_refresh_token(&options.sso_dir, &options.profile),
+  };
+  let refreshed = match cached {
     Some(refresh_token) => token_request(
       &http,
       &discovery.token_endpoint,
@@ -491,7 +509,16 @@ pub async fn login(options: &LoginOptions, ui: &dyn Ui) -> Result<SessionProfile
   let tokens = match refreshed {
     Some(tokens) => tokens,
     None if options.device => device_sign_in(&http, &discovery, &options.client_id, ui).await?,
-    None => browser_sign_in(&http, &discovery, &options.client_id, ui).await?,
+    None => {
+      browser_sign_in(
+        &http,
+        &discovery,
+        &options.client_id,
+        options.select_account,
+        ui,
+      )
+      .await?
+    }
   };
   let id_token = tokens
     .id_token

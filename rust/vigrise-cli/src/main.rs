@@ -33,6 +33,9 @@ enum Command {
     /// Sign in by entering a code on another device instead of a local browser.
     #[arg(long)]
     device: bool,
+    /// Choose which ViGrise account to sign in with instead of reusing the cached sign-in.
+    #[arg(long, conflicts_with = "device")]
+    select_account: bool,
     /// Accounts issuer URL.
     #[arg(long, env = "VIGRISE_ACCOUNTS_URL", default_value = DEFAULT_ACCOUNTS_URL)]
     accounts_url: String,
@@ -119,6 +122,7 @@ async fn main() {
       project,
       duration,
       device,
+      select_account,
       accounts_url,
       platform_url,
       client_id,
@@ -132,6 +136,7 @@ async fn main() {
         project_id: project,
         duration_seconds: duration,
         device,
+        select_account,
         credentials_file: credentials_file(),
         sso_dir: vigrise_dir().join("sso"),
       };

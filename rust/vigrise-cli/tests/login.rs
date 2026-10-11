@@ -23,6 +23,8 @@ struct Accounts {
   refresh: HashMap<String, String>,
   device_polls: usize,
   issued: usize,
+  /// The `prompt` of every authorization request.
+  prompts: Vec<Option<String>>,
 }
 
 type Shared = Arc<Mutex<Accounts>>;
@@ -50,9 +52,9 @@ async fn authorize(
   assert_eq!(redirect.host_str(), Some("127.0.0.1"));
   assert_eq!(redirect.path(), "/callback");
   let code = format!("code-{}", query["state"].len());
+  let mut accounts = accounts.lock().unwrap();
+  accounts.prompts.push(query.get("prompt").cloned());
   accounts
-    .lock()
-    .unwrap()
     .codes
     .insert(code.clone(), query["code_challenge"].clone());
   let location = format!(
@@ -217,6 +219,7 @@ fn options(dir: &std::path::Path, accounts_url: &str, platform_url: &str) -> Log
     project_id: None,
     duration_seconds: Some(900),
     device: false,
+    select_account: false,
     credentials_file: dir.join("credentials"),
     sso_dir: dir.join("sso"),
   }
@@ -258,6 +261,52 @@ async fn a_browser_login_writes_the_profile_and_the_next_login_is_silent() {
     "no browser for a cached sign-in"
   );
   assert_eq!(second.access_key_id, "VGSTIDT2");
+}
+
+#[tokio::test]
+async fn select_account_skips_the_cached_sign_in_and_opens_the_account_chooser() {
+  let (accounts_url, platform_url, accounts, _) = serve().await;
+  let dir = tempfile::tempdir().unwrap();
+  let user = FakeUser::default();
+  let mut options = options(dir.path(), &accounts_url, &platform_url);
+
+  login(&options, &user).await.unwrap();
+  login(&options, &user).await.unwrap();
+  assert_eq!(
+    user.opened.lock().unwrap().len(),
+    1,
+    "the cached sign-in is silent"
+  );
+
+  options.select_account = true;
+  let switched = login(&options, &user).await.unwrap();
+  assert_eq!(
+    user.opened.lock().unwrap().len(),
+    2,
+    "a switch goes through the browser"
+  );
+  assert_eq!(
+    accounts.lock().unwrap().prompts,
+    vec![None, Some("select_account".to_string())]
+  );
+  assert!(switched.access_key_id.starts_with("VGST"));
+
+  // The account chosen last is the one the next silent login keeps.
+  options.select_account = false;
+  login(&options, &user).await.unwrap();
+  assert_eq!(user.opened.lock().unwrap().len(), 2);
+}
+
+#[tokio::test]
+async fn select_account_needs_the_browser_sign_in() {
+  let (accounts_url, platform_url, _, _) = serve().await;
+  let dir = tempfile::tempdir().unwrap();
+  let user = FakeUser::default();
+  let mut options = options(dir.path(), &accounts_url, &platform_url);
+  options.device = true;
+  options.select_account = true;
+  assert!(login(&options, &user).await.is_err());
+  assert!(user.device_codes.lock().unwrap().is_empty());
 }
 
 #[tokio::test]
