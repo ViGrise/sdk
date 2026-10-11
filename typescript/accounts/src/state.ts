@@ -1,10 +1,15 @@
 import type { SessionChannel } from "./session-channel.js"
 
-/** What the Astro middleware found out about the SSO session of a page request. */
-export type SsoState<Auth = unknown> =
-  | { status: "signed_in"; auth: Auth }
+/** What the Astro middleware found out about the SSO cookie of a page request. */
+export type SsoState =
+  | { status: "changed" }
   | { status: "unchanged" }
   | { status: "signed_out" }
+  | { status: "anonymous" }
+
+/** The answer of the session endpoint, which exchanges the SSO cookie at the app backend. */
+export type SsoExchange<Auth = unknown> =
+  | { status: "signed_in"; auth: Auth }
   | { status: "anonymous" }
   | { status: "unavailable" }
 
@@ -14,19 +19,40 @@ export const SSO_MARKER_COOKIE = "vigrise_app_sso"
 /** Id of the script element that carries the state to the browser. */
 export const SSO_STATE_ELEMENT_ID = "vigrise-sso-state"
 
-/** JSON for the state script element; `<` is escaped so the payload cannot close the element. */
+/** Request header the session endpoint requires, so that only the app's own scripts call it. */
+export const SSO_EXCHANGE_HEADER = "x-vigrise-sso-exchange"
+
+/** JSON for the state script element. */
 export function renderSsoStateJson(state: SsoState): string {
   return JSON.stringify(state).replace(/</g, "\\u003c")
 }
 
 /** Reads the state the server rendered; anonymous when the element is missing. */
-export function readSsoState<Auth = unknown>(doc: Pick<Document, "getElementById"> = document): SsoState<Auth> {
+export function readSsoState(doc: Pick<Document, "getElementById"> = document): SsoState {
   const text = doc.getElementById(SSO_STATE_ELEMENT_ID)?.textContent
   if (!text) return { status: "anonymous" }
   try {
-    return JSON.parse(text) as SsoState<Auth>
+    return JSON.parse(text) as SsoState
   } catch {
     return { status: "anonymous" }
+  }
+}
+
+/** Asks the app's session endpoint to exchange the SSO cookie for an app session. */
+export async function fetchSsoExchange<Auth = unknown>(
+  endpoint = "/sso/session",
+  fetchImpl: typeof fetch = fetch,
+): Promise<SsoExchange<Auth>> {
+  try {
+    const response = await fetchImpl(endpoint, {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { [SSO_EXCHANGE_HEADER]: "1" },
+    })
+    if (response.status === 503) return { status: "unavailable" }
+    return (await response.json()) as SsoExchange<Auth>
+  } catch {
+    return { status: "unavailable" }
   }
 }
 
@@ -39,44 +65,35 @@ export interface SsoStateHandlers<Auth> {
   clear(): void
   /** Drops client caches keyed to the user. */
   clearCaches?(): void
-  /** Starts a new exchange; used when the cookie is unchanged but the tokens are gone. */
-  requestExchange(): void
+  /** Exchanges the SSO cookie at the app; defaults to `fetchSsoExchange`. */
+  exchange?(): Promise<SsoExchange<Auth>>
   /** Announces account changes to the other tabs. */
   channel?: SessionChannel
 }
 
-export type SsoOutcome = "adopted" | "cleared" | "kept" | "needs-exchange"
+export type SsoOutcome = "adopted" | "cleared" | "kept"
 
-/** Applies the server-rendered SSO state to the browser's app session. */
-export function applySsoState<Auth>(state: SsoState<Auth>, handlers: SsoStateHandlers<Auth>): SsoOutcome {
-  switch (state.status) {
-    case "signed_in": {
-      const hadSession = handlers.hasSession()
-      handlers.clearCaches?.()
-      handlers.adopt(state.auth)
-      if (hadSession) handlers.channel?.notify({ type: "session-changed" })
-      return "adopted"
-    }
-    case "signed_out": {
-      const hadSession = handlers.hasSession()
-      handlers.clear()
-      handlers.clearCaches?.()
-      if (hadSession) handlers.channel?.notify({ type: "session-changed" })
-      return "cleared"
-    }
-    case "unchanged":
-      if (!handlers.hasSession()) {
-        handlers.requestExchange()
-        return "needs-exchange"
-      }
-      return "kept"
-    default:
-      return "kept"
+/**
+ * Applies the server-rendered SSO state to the browser's app session. A changed cookie, or an
+ * unchanged one without a stored session, is exchanged; a missing cookie ends the session.
+ */
+export async function applySsoState<Auth>(
+  state: SsoState,
+  handlers: SsoStateHandlers<Auth>,
+): Promise<SsoOutcome> {
+  const hadSession = handlers.hasSession()
+  if (state.status === "signed_out") {
+    handlers.clear()
+    handlers.clearCaches?.()
+    if (hadSession) handlers.channel?.notify({ type: "session-changed" })
+    return "cleared"
   }
-}
+  if (state.status === "anonymous" || (state.status === "unchanged" && hadSession)) return "kept"
 
-/** Removes the marker cookie and reloads, which makes the middleware exchange the SSO cookie again. */
-export function requestExchangeByReload(): void {
-  document.cookie = `${SSO_MARKER_COOKIE}=; Max-Age=0; Path=/`
-  globalThis.location.reload()
+  const result = await (handlers.exchange ?? (() => fetchSsoExchange<Auth>()))()
+  if (result.status !== "signed_in") return "kept"
+  handlers.clearCaches?.()
+  handlers.adopt(result.auth)
+  if (hadSession) handlers.channel?.notify({ type: "session-changed" })
+  return "adopted"
 }

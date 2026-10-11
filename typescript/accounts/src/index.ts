@@ -14,11 +14,13 @@ export {
 } from "./session-channel.js"
 export {
   applySsoState,
+  fetchSsoExchange,
   readSsoState,
   renderSsoStateJson,
-  requestExchangeByReload,
+  SSO_EXCHANGE_HEADER,
   SSO_MARKER_COOKIE,
   SSO_STATE_ELEMENT_ID,
+  type SsoExchange,
   type SsoOutcome,
   type SsoState,
   type SsoStateHandlers,
