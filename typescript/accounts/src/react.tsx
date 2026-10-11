@@ -30,6 +30,8 @@ export interface AccountMenuProps {
   postLogoutRedirectUri?: string
   labels?: Partial<AccountMenuLabels>
   className?: string
+  /** Runs when the person chooses sign-out, before the browser leaves for Accounts. */
+  onSignOut?: () => void
 }
 
 const styles: Record<string, CSSProperties> = {
@@ -96,6 +98,7 @@ export function AccountMenuList(props: AccountMenuProps) {
           role="menuitem"
           href={signOutUrl({ accountsUrl: props.accountsUrl, clientId: props.clientId, postLogoutRedirectUri: redirect })}
           style={styles.row}
+          onClick={props.onSignOut}
         >
           {labels.signOut}
         </a>

@@ -41,6 +41,11 @@ describe("AccountMenuList", () => {
     expect(html).toContain("Sign in again")
   })
 
+  it("accepts a sign-out hook", () => {
+    const onSignOut = () => {}
+    expect(renderToStaticMarkup(<AccountMenuList {...props} onSignOut={onSignOut} />)).toContain("Sign out")
+  })
+
   it("takes labels from the app for translation", () => {
     const vi = renderToStaticMarkup(
       <AccountMenuList {...props} labels={{ addAccount: "Them tai khoan", signOut: "Dang xuat" }} />,
