@@ -79,6 +79,8 @@ describe("fetchSsoExchange", () => {
     expect(result).toEqual({ status: "signed_in", auth })
     const [, init] = impl.mock.calls[0] as unknown as [string, RequestInit]
     expect((init.headers as Record<string, string>)["x-vigrise-sso-exchange"]).toBe("1")
+    // A JSON content type keeps the request out of the form-post origin check of Astro servers.
+    expect((init.headers as Record<string, string>)["content-type"]).toBe("application/json")
   })
 
   it("reports unavailable on a 503 or a network failure", async () => {

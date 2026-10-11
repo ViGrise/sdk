@@ -47,7 +47,8 @@ export async function fetchSsoExchange<Auth = unknown>(
     const response = await fetchImpl(endpoint, {
       method: "POST",
       credentials: "same-origin",
-      headers: { [SSO_EXCHANGE_HEADER]: "1" },
+      headers: { [SSO_EXCHANGE_HEADER]: "1", "content-type": "application/json" },
+      body: "{}",
     })
     if (response.status === 503) return { status: "unavailable" }
     return (await response.json()) as SsoExchange<Auth>
