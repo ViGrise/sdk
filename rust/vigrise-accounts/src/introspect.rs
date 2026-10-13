@@ -186,7 +186,9 @@ impl SsoIntrospector {
         Ok(answer)
     }
 
-    /// Drops every cached answer of an Accounts session.
+    /// Drops every cached answer of an Accounts session. The cache lives in this
+    /// process, so other instances of the application keep answering from their
+    /// own cache until the entries expire (30 seconds by default).
     pub fn invalidate_session(&self, session_id: &str) {
         self.cache.lock().unwrap().retain(|_, (_, answer)| {
             answer.session.as_ref().map(|s| s.id.as_str()) != Some(session_id)
