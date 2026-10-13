@@ -73,7 +73,10 @@ async fn an_active_token_returns_identity_session_and_accounts() {
     let (introspector, _) = start(StatusCode::OK, true).await;
     let answer = introspector.introspect("good-token").await.unwrap();
     assert!(answer.active);
-    assert_eq!(answer.identity.unwrap().email, "a@example.com");
+    assert_eq!(
+        answer.identity.unwrap().email.as_deref(),
+        Some("a@example.com")
+    );
     assert_eq!(answer.session.unwrap().id, "sid-1");
     assert_eq!(answer.accounts.len(), 1);
     assert!(answer.accounts[0].active);
@@ -172,4 +175,52 @@ fn the_token_hash_is_lowercase_sha256_hex() {
         sso_token_hash("abc"),
         "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
     );
+}
+
+#[test]
+fn an_identity_without_an_email_deserializes() {
+    let answer: vigrise_accounts::Introspection = serde_json::from_value(json!({
+        "active": true,
+        "identity": {"id": "i1", "email": null, "name": null, "picture": null, "email_verified": false},
+        "session": {"id": "s1", "authenticated_at": "2026-10-11T10:00:00Z", "aal": "aal1",
+            "expires_at": "2026-10-12T10:00:00Z"},
+        "accounts": []
+    }))
+    .unwrap();
+    assert_eq!(answer.identity.unwrap().email, None);
+    let expires_at = answer.session.unwrap().expires_at;
+    assert_eq!(expires_at.to_rfc3339(), "2026-10-12T10:00:00+00:00");
+}
+
+#[tokio::test]
+async fn unavailability_is_counted() {
+    let (introspector, _) = start(StatusCode::SERVICE_UNAVAILABLE, true).await;
+    assert_eq!(introspector.unavailable_count(), 0);
+    assert!(matches!(
+        introspector.introspect("good-token").await,
+        Err(AccountsError::Unavailable(_))
+    ));
+    assert_eq!(introspector.unavailable_count(), 1);
+}
+
+#[tokio::test]
+async fn a_slow_accounts_times_out_as_unavailable() {
+    async fn slow() -> Json<Value> {
+        tokio::time::sleep(Duration::from_secs(10)).await;
+        Json(json!({"active": false}))
+    }
+    let addr = common::serve(Router::new().route("/sessions/sso/introspect", post(slow))).await;
+    let client = reqwest::Client::builder()
+        .timeout(Duration::from_millis(200))
+        .build()
+        .unwrap();
+    let introspector = SsoIntrospector::with_client(
+        SsoIntrospectorConfig::new(format!("http://{addr}"), "drive", "secret"),
+        client,
+    );
+    assert!(matches!(
+        introspector.introspect("t").await,
+        Err(AccountsError::Unavailable(_))
+    ));
+    assert_eq!(introspector.unavailable_count(), 1);
 }

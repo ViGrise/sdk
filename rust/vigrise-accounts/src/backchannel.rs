@@ -30,6 +30,24 @@ pub struct LogoutToken {
     nonce: Option<Value>,
 }
 
+/// The result of verifying a `logout_token`.
+#[derive(Debug, Clone)]
+pub enum BackchannelOutcome {
+    /// First delivery of a valid token: end the session.
+    Verified(LogoutToken),
+    /// A valid token whose `jti` was already processed: answer 200 and do nothing.
+    Replayed(LogoutToken),
+}
+
+impl BackchannelOutcome {
+    /// The verified claims.
+    pub fn into_token(self) -> LogoutToken {
+        match self {
+            Self::Verified(token) | Self::Replayed(token) => token,
+        }
+    }
+}
+
 /// Verifies back-channel `logout_token`s sent by Accounts: signature against
 /// the JWKS, `iss`, `aud`, the logout event, the time window and `jti` replay.
 pub struct BackchannelLogout {
@@ -50,8 +68,9 @@ impl BackchannelLogout {
         }
     }
 
-    /// Verifies a `logout_token` and records its `jti`.
-    pub async fn verify(&self, logout_token: &str) -> Result<LogoutToken, AccountsError> {
+    /// Verifies a `logout_token` and records its `jti`. A repeated `jti` of an
+    /// otherwise valid token yields [`BackchannelOutcome::Replayed`].
+    pub async fn verify(&self, logout_token: &str) -> Result<BackchannelOutcome, AccountsError> {
         let invalid = |m: &str| AccountsError::InvalidLogoutToken(m.to_string());
         let header = decode_header(logout_token).map_err(|e| invalid(&e.to_string()))?;
         if header.alg != Algorithm::RS256 {
@@ -87,8 +106,8 @@ impl BackchannelLogout {
         let mut seen = self.seen.lock().unwrap();
         seen.retain(|_, exp| *exp >= now);
         if seen.insert(token.jti.clone(), token.exp).is_some() {
-            return Err(invalid("jti replay"));
+            return Ok(BackchannelOutcome::Replayed(token));
         }
-        Ok(token)
+        Ok(BackchannelOutcome::Verified(token))
     }
 }

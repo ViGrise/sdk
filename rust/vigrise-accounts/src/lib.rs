@@ -15,7 +15,7 @@
 //! let introspector = SsoIntrospector::new(config);
 //! let answer = introspector.introspect("value of the vigrise_sso cookie").await?;
 //! if answer.active {
-//!     println!("signed in as {}", answer.identity.unwrap().email);
+//!     println!("signed in as {:?}", answer.identity.unwrap().email);
 //! }
 //! # Ok(())
 //! # }
@@ -31,8 +31,11 @@ mod extractor;
 mod introspect;
 mod jwks;
 pub mod oauth2;
+#[cfg(feature = "testing")]
+#[cfg_attr(docsrs, doc(cfg(feature = "testing")))]
+pub mod testing;
 
-pub use backchannel::{BackchannelLogout, LogoutToken};
+pub use backchannel::{BackchannelLogout, BackchannelOutcome, LogoutToken};
 pub use error::AccountsError;
 #[cfg(feature = "axum")]
 #[cfg_attr(docsrs, doc(cfg(feature = "axum")))]

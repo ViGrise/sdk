@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
@@ -9,6 +10,18 @@ use sha2::{Digest, Sha256};
 use crate::AccountsError;
 
 const MAX_CACHE_ENTRIES: usize = 10_000;
+const CONNECT_TIMEOUT: Duration = Duration::from_secs(2);
+const REQUEST_TIMEOUT: Duration = Duration::from_secs(5);
+
+/// A `reqwest::Client` with the connect (2 s) and total (5 s) timeouts the
+/// ViGrise Accounts helpers use by default.
+pub(crate) fn default_http_client() -> reqwest::Client {
+    reqwest::Client::builder()
+        .connect_timeout(CONNECT_TIMEOUT)
+        .timeout(REQUEST_TIMEOUT)
+        .build()
+        .unwrap_or_default()
+}
 
 /// Hash of a `vigrise_sso` cookie value: lowercase hex SHA-256. Apps store it
 /// as `sso_hash` to notice when the cookie changes.
@@ -21,8 +34,9 @@ pub fn sso_token_hash(token: &str) -> String {
 pub struct SsoIdentity {
     /// Accounts identity id, the `sub` apps key their users by.
     pub id: String,
-    /// Primary email address.
-    pub email: String,
+    /// Primary email address; absent for identities without one.
+    #[serde(default)]
+    pub email: Option<String>,
     /// Display name.
     #[serde(default)]
     pub name: Option<String>,
@@ -122,16 +136,29 @@ pub struct SsoIntrospector {
     http: reqwest::Client,
     config: SsoIntrospectorConfig,
     cache: Mutex<HashMap<String, (Instant, Introspection)>>,
+    unavailable: AtomicU64,
 }
 
 impl SsoIntrospector {
     /// Creates an introspector.
     pub fn new(config: SsoIntrospectorConfig) -> Self {
+        Self::with_client(config, default_http_client())
+    }
+
+    /// Creates an introspector that sends its requests through `http`.
+    pub fn with_client(config: SsoIntrospectorConfig, http: reqwest::Client) -> Self {
         Self {
-            http: reqwest::Client::new(),
+            http,
             config,
             cache: Mutex::new(HashMap::new()),
+            unavailable: AtomicU64::new(0),
         }
+    }
+
+    /// How many introspections failed because Accounts was unreachable or
+    /// answered with a server error. Export it as a metric to alert on.
+    pub fn unavailable_count(&self) -> u64 {
+        self.unavailable.load(Ordering::Relaxed)
     }
 
     /// Replaces the cache lifetime.
@@ -163,6 +190,7 @@ impl SsoIntrospector {
             .send()
             .await
             .map_err(|e| {
+                self.unavailable.fetch_add(1, Ordering::Relaxed);
                 tracing::warn!(error = %e, "ViGrise Accounts introspection unreachable");
                 AccountsError::Unavailable(e.to_string())
             })?;
@@ -173,6 +201,7 @@ impl SsoIntrospector {
             403 => return Err(AccountsError::Forbidden),
             429 => return Err(AccountsError::RateLimited),
             s if s >= 500 => {
+                self.unavailable.fetch_add(1, Ordering::Relaxed);
                 tracing::warn!(status = s, "ViGrise Accounts introspection failed");
                 return Err(AccountsError::Unavailable(format!("status {s}")));
             }

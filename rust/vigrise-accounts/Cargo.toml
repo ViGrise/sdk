@@ -17,6 +17,7 @@ include = ["src/**", "README.md", "LICENSE"]
 [features]
 default = []
 axum = ["dep:axum"]
+testing = ["dep:rsa", "dep:rand_core"]
 
 [dependencies]
 base64 = "0.22"
@@ -33,8 +34,11 @@ tracing = "0.1"
 url = "2"
 
 axum = { version = "0.8", optional = true, default-features = false, features = ["json"] }
+rsa = { version = "0.9", optional = true, features = ["pem"] }
+rand_core = { version = "0.6", optional = true, features = ["getrandom"] }
 
 [dev-dependencies]
+vigrise-accounts = { path = ".", features = ["testing"] }
 axum = { version = "0.8", features = ["tokio", "http1", "json"] }
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "net"] }
 tower = { version = "0.5", features = ["util"] }

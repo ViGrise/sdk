@@ -85,6 +85,8 @@ async fn the_code_exchange_posts_the_verifier_and_credentials() {
         if form.get("grant_type").map(String::as_str) != Some("authorization_code")
             || form.get("code_verifier").map(String::as_str) != Some("ver")
             || form.get("client_secret").map(String::as_str) != Some("sec")
+            || form.get("redirect_uri").map(String::as_str)
+                != Some("https://console.vigrise.com/callback")
         {
             return (
                 axum::http::StatusCode::BAD_REQUEST,
@@ -144,6 +146,73 @@ async fn id_tokens_are_verified_for_issuer_audience_and_nonce() {
     expired["exp"] = json!(common::now() - 600);
     assert!(id_verifier()
         .verify(&common::sign(&expired), None)
+        .await
+        .is_err());
+}
+
+#[tokio::test]
+async fn a_public_client_exchanges_a_code_without_a_secret() {
+    async fn token(
+        Form(form): Form<HashMap<String, String>>,
+    ) -> (axum::http::StatusCode, Json<Value>) {
+        let ok = form.get("client_id").map(String::as_str) == Some("vigrise-wallet-desktop")
+            && form.get("code_verifier").map(String::as_str) == Some("ver")
+            && form.get("redirect_uri").map(String::as_str) == Some("http://127.0.0.1:4455/cb")
+            && !form.contains_key("client_secret");
+        if ok {
+            (
+                axum::http::StatusCode::OK,
+                Json(json!({"access_token": "at", "id_token": "it"})),
+            )
+        } else {
+            (
+                axum::http::StatusCode::BAD_REQUEST,
+                Json(json!({"error": "invalid_request"})),
+            )
+        }
+    }
+    let addr = common::serve(Router::new().route("/token", post(token))).await;
+    let client = OAuth2Client::public(
+        format!("http://{addr}/token"),
+        "vigrise-wallet-desktop",
+        "http://127.0.0.1:4455/cb",
+    );
+    let tokens = client.exchange_code("code", "ver").await.unwrap();
+    assert_eq!(tokens.id_token.as_deref(), Some("it"));
+}
+
+#[tokio::test]
+async fn a_slow_token_endpoint_times_out_as_unavailable() {
+    async fn slow() -> Json<Value> {
+        tokio::time::sleep(std::time::Duration::from_secs(10)).await;
+        Json(json!({}))
+    }
+    let addr = common::serve(Router::new().route("/token", post(slow))).await;
+    let http = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_millis(200))
+        .build()
+        .unwrap();
+    let client = OAuth2Client::public(format!("http://{addr}/token"), "c", "http://127.0.0.1/cb")
+        .with_client(http);
+    assert!(matches!(
+        client.exchange_code("code", "ver").await,
+        Err(vigrise_accounts::AccountsError::Unavailable(_))
+    ));
+}
+
+#[tokio::test]
+async fn verify_id_token_checks_the_given_audience() {
+    let mut claims = id_claims();
+    claims["aud"] = json!(["vigrise-wallet-desktop"]);
+    let token = common::sign(&claims);
+    let verifier = id_verifier();
+    let verified = verifier
+        .verify_id_token(&token, "vigrise-wallet-desktop")
+        .await
+        .unwrap();
+    assert_eq!(verified.sub, "u1");
+    assert!(verifier
+        .verify_id_token(&token, "vigrise-drive")
         .await
         .is_err());
 }

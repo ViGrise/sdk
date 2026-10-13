@@ -76,7 +76,7 @@ pub struct LoginOptions {
   pub project_id: Option<String>,
   /// Session length in seconds, from 900 up to the role's maximum.
   pub duration_seconds: Option<u32>,
-  /// Sign in with a code shown in the terminal instead of a local browser.
+  /// Sign in with a code shown in the terminal.
   pub device: bool,
   /// Ignore the cached sign-in and open the Accounts account chooser, so another account can
   /// take over the profile. Needs the browser sign-in.

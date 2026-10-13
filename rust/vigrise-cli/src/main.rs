@@ -30,10 +30,10 @@ enum Command {
     /// Session length in seconds, 900 up to the role's maximum.
     #[arg(long)]
     duration: Option<u32>,
-    /// Sign in by entering a code on another device instead of a local browser.
+    /// Sign in by entering a code on another device.
     #[arg(long)]
     device: bool,
-    /// Choose which ViGrise account to sign in with instead of reusing the cached sign-in.
+    /// Choose which ViGrise account to sign in with.
     #[arg(long, conflicts_with = "device")]
     select_account: bool,
     /// Accounts issuer URL.

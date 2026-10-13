@@ -141,7 +141,7 @@ pub struct OAuth2Client {
     http: reqwest::Client,
     token_endpoint: String,
     client_id: String,
-    client_secret: String,
+    client_secret: Option<String>,
     redirect_uri: String,
 }
 
@@ -154,12 +154,34 @@ impl OAuth2Client {
         redirect_uri: impl Into<String>,
     ) -> Self {
         Self {
-            http: reqwest::Client::new(),
+            http: crate::introspect::default_http_client(),
             token_endpoint: token_endpoint.into(),
             client_id: client_id.into(),
-            client_secret: client_secret.into(),
+            client_secret: Some(client_secret.into()),
             redirect_uri: redirect_uri.into(),
         }
+    }
+
+    /// Creates a public client (CLI, desktop app) that proves possession of
+    /// the PKCE verifier and holds no secret.
+    pub fn public(
+        token_endpoint: impl Into<String>,
+        client_id: impl Into<String>,
+        redirect_uri: impl Into<String>,
+    ) -> Self {
+        Self {
+            http: crate::introspect::default_http_client(),
+            token_endpoint: token_endpoint.into(),
+            client_id: client_id.into(),
+            client_secret: None,
+            redirect_uri: redirect_uri.into(),
+        }
+    }
+
+    /// Sends the token requests through `http`.
+    pub fn with_client(mut self, http: reqwest::Client) -> Self {
+        self.http = http;
+        self
     }
 
     /// Exchanges `code` with the PKCE `verifier` of the authorization request.
@@ -168,18 +190,21 @@ impl OAuth2Client {
         code: &str,
         verifier: &str,
     ) -> Result<TokenResponse, AccountsError> {
+        let mut form = vec![
+            ("grant_type", "authorization_code"),
+            ("code", code),
+            ("redirect_uri", self.redirect_uri.as_str()),
+            ("client_id", self.client_id.as_str()),
+            ("code_verifier", verifier),
+        ];
+        if let Some(secret) = &self.client_secret {
+            form.push(("client_secret", secret.as_str()));
+        }
         let response = self
             .http
             .post(&self.token_endpoint)
             .header("Accept", "application/json")
-            .form(&[
-                ("grant_type", "authorization_code"),
-                ("code", code),
-                ("redirect_uri", self.redirect_uri.as_str()),
-                ("client_id", self.client_id.as_str()),
-                ("client_secret", self.client_secret.as_str()),
-                ("code_verifier", verifier),
-            ])
+            .form(&form)
             .send()
             .await
             .map_err(|e| AccountsError::Unavailable(e.to_string()))?;
@@ -236,6 +261,23 @@ impl IdTokenVerifier {
         id_token: &str,
         expected_nonce: Option<&str>,
     ) -> Result<IdTokenClaims, AccountsError> {
+        let claims = self.verify_id_token(id_token, &self.client_id).await?;
+        if let Some(expected) = expected_nonce {
+            if claims.nonce.as_deref() != Some(expected) {
+                return Err(AccountsError::InvalidIdToken("nonce mismatch".into()));
+            }
+        }
+        Ok(claims)
+    }
+
+    /// Verifies signature, `iss`, expiry and that the token is addressed to
+    /// `audience`, for backends that accept ID tokens minted for another
+    /// client such as a desktop app.
+    pub async fn verify_id_token(
+        &self,
+        id_token: &str,
+        audience: &str,
+    ) -> Result<IdTokenClaims, AccountsError> {
         let invalid = |m: String| AccountsError::InvalidIdToken(m);
         let header = decode_header(id_token).map_err(|e| invalid(e.to_string()))?;
         if header.alg != Algorithm::RS256 {
@@ -244,16 +286,10 @@ impl IdTokenVerifier {
         let key = self.jwks.key(header.kid.as_deref()).await?;
         let mut validation = Validation::new(Algorithm::RS256);
         validation.set_issuer(&[&self.issuer]);
-        validation.set_audience(&[&self.client_id]);
+        validation.set_audience(&[audience]);
         validation.set_required_spec_claims(&["iss", "aud", "exp", "sub"]);
-        let claims = decode::<IdTokenClaims>(id_token, &key, &validation)
+        Ok(decode::<IdTokenClaims>(id_token, &key, &validation)
             .map_err(|e| invalid(e.to_string()))?
-            .claims;
-        if let Some(expected) = expected_nonce {
-            if claims.nonce.as_deref() != Some(expected) {
-                return Err(invalid("nonce mismatch".into()));
-            }
-        }
-        Ok(claims)
+            .claims)
     }
 }

@@ -1,7 +1,7 @@
 mod common;
 
 use serde_json::{json, Value};
-use vigrise_accounts::{AccountsError, BackchannelLogout, Jwks};
+use vigrise_accounts::{AccountsError, BackchannelLogout, BackchannelOutcome, Jwks};
 
 const ISS: &str = "https://accounts.vigrise.com";
 
@@ -29,7 +29,10 @@ async fn check(
 ) -> Result<vigrise_accounts::LogoutToken, AccountsError> {
     let mut value = claims();
     mutate(&mut value);
-    verifier().verify(&common::sign(&value)).await
+    verifier()
+        .verify(&common::sign(&value))
+        .await
+        .map(BackchannelOutcome::into_token)
 }
 
 #[tokio::test]
@@ -82,10 +85,32 @@ async fn a_tampered_or_unsigned_token_is_rejected() {
 }
 
 #[tokio::test]
-async fn a_replayed_jti_is_rejected() {
+async fn a_replayed_jti_is_reported_as_replayed() {
     let verifier = verifier();
     let token = common::sign(&claims());
-    verifier.verify(&token).await.unwrap();
-    let err = verifier.verify(&token).await.unwrap_err();
-    assert!(matches!(err, AccountsError::InvalidLogoutToken(ref m) if m.contains("replay")));
+    let first = verifier.verify(&token).await.unwrap();
+    assert!(matches!(first, BackchannelOutcome::Verified(_)));
+    let second = verifier.verify(&token).await.unwrap();
+    assert!(matches!(second, BackchannelOutcome::Replayed(_)));
+    assert_eq!(second.into_token().sid.as_deref(), Some("sid-1"));
+}
+
+#[cfg(feature = "testing")]
+mod with_generated_keys {
+    use super::*;
+    use vigrise_accounts::testing::TestSigner;
+
+    #[tokio::test]
+    async fn a_generated_key_signs_a_token_the_verifier_accepts() {
+        let signer = TestSigner::generate();
+        let verifier = BackchannelLogout::new(ISS, "vigrise-drive", signer.jwks());
+        let token = signer.logout_token(ISS, "vigrise-drive", "sid-9");
+        let outcome = verifier.verify(&token).await.unwrap();
+        assert_eq!(outcome.into_token().sid.as_deref(), Some("sid-9"));
+        let other = TestSigner::generate();
+        assert!(verifier
+            .verify(&other.logout_token(ISS, "vigrise-drive", "sid-9"))
+            .await
+            .is_err());
+    }
 }

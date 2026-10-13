@@ -26,7 +26,11 @@ impl FromRef<AppState> for Arc<SsoIntrospector> {
 }
 
 async fn who(identity: AccountsIdentity) -> String {
-    format!("{}:{}", identity.identity.email, identity.session.id)
+    format!(
+        "{}:{}",
+        identity.identity.email.as_deref().unwrap_or(""),
+        identity.session.id
+    )
 }
 
 async fn fake_introspect(Json(body): Json<serde_json::Value>) -> Json<serde_json::Value> {
