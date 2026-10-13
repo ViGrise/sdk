@@ -53,4 +53,12 @@ describe("URL builders", () => {
     expect(url.pathname).toBe("/o/custom/logout")
     expect(url.searchParams.get("id_token_hint")).toBe("idt")
   })
+
+  it("passes the app session's sso_sid as logout_hint and sid", () => {
+    const url = new URL(
+      signOutUrl({ accountsUrl, clientId: "c", postLogoutRedirectUri: "https://x/", ssoSid: "sid-1" }),
+    )
+    expect(url.searchParams.get("logout_hint")).toBe("sid-1")
+    expect(url.searchParams.get("sid")).toBe("sid-1")
+  })
 })

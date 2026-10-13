@@ -28,6 +28,8 @@ export interface AccountMenuProps {
   clientId: string
   /** Where sign-out returns; defaults to `returnTo`. */
   postLogoutRedirectUri?: string
+  /** The `sso_sid` of the app session, so sign-out ends that Accounts session. */
+  ssoSid?: string
   labels?: Partial<AccountMenuLabels>
   className?: string
   /** Runs when the person chooses sign-out, before the browser leaves for Accounts. */
@@ -96,7 +98,7 @@ export function AccountMenuList(props: AccountMenuProps) {
       <li role="none">
         <a
           role="menuitem"
-          href={signOutUrl({ accountsUrl: props.accountsUrl, clientId: props.clientId, postLogoutRedirectUri: redirect })}
+          href={signOutUrl({ accountsUrl: props.accountsUrl, clientId: props.clientId, postLogoutRedirectUri: redirect, ssoSid: props.ssoSid })}
           style={styles.row}
           onClick={props.onSignOut}
         >

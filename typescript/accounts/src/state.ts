@@ -76,7 +76,8 @@ export type SsoOutcome = "adopted" | "cleared" | "kept"
 
 /**
  * Applies the server-rendered SSO state to the browser's app session. A changed cookie, or an
- * unchanged one without a stored session, is exchanged; a missing cookie ends the session.
+ * unchanged one without a stored session, is exchanged; a missing cookie, or a changed cookie that
+ * no longer exchanges to a session, ends the session.
  */
 export async function applySsoState<Auth>(
   state: SsoState,
@@ -92,9 +93,68 @@ export async function applySsoState<Auth>(
   if (state.status === "anonymous" || (state.status === "unchanged" && hadSession)) return "kept"
 
   const result = await (handlers.exchange ?? (() => fetchSsoExchange<Auth>()))()
-  if (result.status !== "signed_in") return "kept"
+  if (result.status !== "signed_in") {
+    if (state.status !== "changed") return "kept"
+    handlers.clear()
+    handlers.clearCaches?.()
+    if (hadSession) handlers.channel?.notify({ type: "session-changed" })
+    return "cleared"
+  }
   handlers.clearCaches?.()
   handlers.adopt(result.auth)
   if (hadSession) handlers.channel?.notify({ type: "session-changed" })
   return "adopted"
+}
+
+export interface WatchSsoStateOptions {
+  /** The state the page holds, usually `readSsoState()`. */
+  current: SsoState
+  /** Applies a state that differs from the one held, usually `applySsoState` with the app handlers. */
+  apply(state: SsoState): Promise<SsoOutcome>
+  /** Same-origin endpoint serving `createSsoStateEndpoint`. */
+  endpoint?: string
+  fetch?: typeof fetch
+  window?: Pick<EventTarget, "addEventListener" | "removeEventListener">
+  document?: Pick<EventTarget, "addEventListener" | "removeEventListener"> & { visibilityState: string }
+}
+
+/**
+ * Re-checks the SSO state whenever the page becomes visible or gains focus and applies it when it
+ * differs from the state the page holds. Returns a function that stops watching.
+ */
+export function watchSsoState(options: WatchSsoStateOptions): () => void {
+  const win = options.window ?? window
+  const doc = options.document ?? document
+  const doFetch = options.fetch ?? fetch
+  const endpoint = options.endpoint ?? "/sso/state"
+  let current = options.current
+  let checking = false
+
+  const check = async () => {
+    if (checking || doc.visibilityState !== "visible") return
+    checking = true
+    try {
+      const response = await doFetch(endpoint, {
+        cache: "no-store",
+        credentials: "same-origin",
+        headers: { accept: "application/json" },
+      })
+      if (!response.ok) return
+      const next = (await response.json()) as SsoState
+      if (next.status === current.status) return
+      current = next
+      await options.apply(next)
+    } catch {
+      // A failed check leaves the held session untouched; the next focus retries.
+    } finally {
+      checking = false
+    }
+  }
+
+  win.addEventListener("focus", check)
+  doc.addEventListener("visibilitychange", check)
+  return () => {
+    win.removeEventListener("focus", check)
+    doc.removeEventListener("visibilitychange", check)
+  }
 }

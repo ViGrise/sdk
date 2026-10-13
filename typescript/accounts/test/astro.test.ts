@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest"
 import { ssoTokenHash } from "../src/index.js"
 import {
   createSsoMiddleware,
+  createSsoStateEndpoint,
   createSsoSessionEndpoint,
   type SsoState,
 } from "../src/astro.js"
@@ -147,5 +148,22 @@ describe("createSsoSessionEndpoint", () => {
       expect(ctx.cookies.deleted).toEqual([])
       expect(ctx.cookies.get("vigrise_app_sso")?.value).toBe("old")
     }
+  })
+})
+
+describe("createSsoStateEndpoint", () => {
+  it("answers the state of the cookie as no-store JSON for any accept header", async () => {
+    const hash = await ssoTokenHash("token-1")
+    const handler = createSsoStateEndpoint()
+    const call = async (cookies: Record<string, string>) => {
+      const ctx = pageContext(cookies, "application/json")
+      const response = await handler(ctx)
+      expect(response.headers.get("cache-control")).toBe("no-store")
+      return response.json()
+    }
+    expect(await call({ vigrise_sso: "token-1", vigrise_app_sso: hash })).toEqual({ status: "unchanged" })
+    expect(await call({ vigrise_sso: "token-2", vigrise_app_sso: hash })).toEqual({ status: "changed" })
+    expect(await call({ vigrise_app_sso: hash })).toEqual({ status: "signed_out" })
+    expect(await call({})).toEqual({ status: "anonymous" })
   })
 })

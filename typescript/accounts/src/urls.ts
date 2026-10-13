@@ -28,6 +28,8 @@ export interface SignOutUrlOptions {
   postLogoutRedirectUri: string
   /** ID token of an OAuth2 fallback session; selects that session at Accounts. */
   idTokenHint?: string
+  /** The `sso_sid` of the app session; selects the Accounts session to end. */
+  ssoSid?: string
 }
 
 /** RP-initiated logout URL: signs the active account out of ViGrise and returns to the app. */
@@ -37,6 +39,10 @@ export function signOutUrl(options: SignOutUrlOptions): string {
     client_id: options.clientId,
     post_logout_redirect_uri: options.postLogoutRedirectUri,
   })
+  if (options.ssoSid) {
+    query.set("logout_hint", options.ssoSid)
+    query.set("sid", options.ssoSid)
+  }
   if (options.idTokenHint) query.set("id_token_hint", options.idTokenHint)
   return `${endpoint}?${query}`
 }

@@ -24,6 +24,8 @@ export {
   type SsoOutcome,
   type SsoState,
   type SsoStateHandlers,
+  watchSsoState,
+  type WatchSsoStateOptions,
 } from "./state.js"
 
 /** An account of the browser's group, as the backend returns it for the account menu. */

@@ -41,6 +41,12 @@ describe("AccountMenuList", () => {
     expect(html).toContain("Sign in again")
   })
 
+  it("passes the app session's sso_sid to the sign-out link", () => {
+    const html = renderToStaticMarkup(<AccountMenuList {...props} ssoSid="sid-9" />)
+    expect(html).toContain("logout_hint=sid-9")
+    expect(html).toContain("sid=sid-9")
+  })
+
   it("accepts a sign-out hook", () => {
     const onSignOut = () => {}
     expect(renderToStaticMarkup(<AccountMenuList {...props} onSignOut={onSignOut} />)).toContain("Sign out")

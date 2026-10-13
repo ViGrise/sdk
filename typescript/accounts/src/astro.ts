@@ -43,25 +43,42 @@ const MARKER_MAX_AGE_SECS = 60 * 60 * 24 * 30
  * SSO session. The page hands the state to the browser, which calls the session endpoint.
  */
 export function createSsoMiddleware(options: SsoOptions = {}) {
-  const cookieName = options.cookieName ?? "vigrise_sso"
-  const markerName = options.markerCookieName ?? SSO_MARKER_COOKIE
+  const resolve = ssoStateResolver(options)
 
   return async (context: SsoContext): Promise<void> => {
     const accept = context.request.headers.get("accept") ?? ""
     if (!accept.includes("text/html")) return
+    context.locals.sso = await resolve(context)
+  }
+}
 
+function ssoStateResolver(options: SsoOptions) {
+  const cookieName = options.cookieName ?? "vigrise_sso"
+  const markerName = options.markerCookieName ?? SSO_MARKER_COOKIE
+
+  return async (context: Pick<SsoContext, "cookies">): Promise<SsoState> => {
     const token = context.cookies.get(cookieName)?.value
     const marker = context.cookies.get(markerName)?.value
-
-    let state: SsoState
     if (!token) {
       if (marker) context.cookies.delete(markerName, { path: "/" })
-      state = marker ? { status: "signed_out" } : { status: "anonymous" }
-    } else {
-      state = marker === (await ssoTokenHash(token)) ? { status: "unchanged" } : { status: "changed" }
+      return marker ? { status: "signed_out" } : { status: "anonymous" }
     }
-    context.locals.sso = state
+    return marker === (await ssoTokenHash(token)) ? { status: "unchanged" } : { status: "changed" }
   }
+}
+
+/**
+ * Astro `GET` endpoint (mount it at `/sso/state`) that answers the current SSO state of the
+ * request's cookies as no-store JSON, for `watchSsoState` in the browser.
+ */
+export function createSsoStateEndpoint(options: SsoOptions = {}) {
+  const resolve = ssoStateResolver(options)
+
+  return async (context: Pick<SsoContext, "cookies">): Promise<Response> =>
+    new Response(JSON.stringify(await resolve(context)), {
+      status: 200,
+      headers: { "content-type": "application/json", "cache-control": "no-store" },
+    })
 }
 
 function json(body: SsoExchange | { error: string }, status: number): Response {

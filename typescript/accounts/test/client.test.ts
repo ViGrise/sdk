@@ -7,6 +7,7 @@ import {
   type SessionMessage,
   type SsoExchange,
   type SsoState,
+  watchSsoState,
 } from "../src/index.js"
 
 const auth = { user: { id: "u" }, tokens: {}, accounts: [] }
@@ -62,13 +63,78 @@ describe("applySsoState", () => {
     }
   })
 
-  it("keeps the held session when the exchange finds no session or Accounts is down", async () => {
+  it("clears the held session when a changed cookie exchanges to no session or Accounts is down", async () => {
     for (const result of [{ status: "anonymous" }, { status: "unavailable" }] as SsoExchange[]) {
       const h = handlers(true, result)
-      expect(await applySsoState({ status: "changed" }, h)).toBe("kept")
+      expect(await applySsoState({ status: "changed" }, h)).toBe("cleared")
       expect(h.adopt).not.toHaveBeenCalled()
-      expect(h.clear).not.toHaveBeenCalled()
+      expect(h.clear).toHaveBeenCalled()
+      expect(h.clearCaches).toHaveBeenCalled()
+      expect(h.channel.notify).toHaveBeenCalledWith({ type: "session-changed" })
     }
+  })
+
+  it("keeps a missing session missing when the exchange of an unchanged cookie finds nothing", async () => {
+    const h = handlers(false, { status: "anonymous" })
+    expect(await applySsoState({ status: "unchanged" }, h)).toBe("kept")
+    expect(h.clear).not.toHaveBeenCalled()
+  })
+})
+
+describe("watchSsoState", () => {
+  const tick = () => new Promise((r) => setTimeout(r, 0))
+
+  function setup(current: SsoState, served: Response | SsoState) {
+    const win = new EventTarget()
+    const doc = Object.assign(new EventTarget(), { visibilityState: "visible" })
+    const response = served instanceof Response ? served : new Response(JSON.stringify(served), { status: 200 })
+    const fetchImpl = vi.fn(async () => response.clone())
+    const apply = vi.fn(async () => "kept" as const)
+    const stop = watchSsoState({
+      current,
+      fetch: fetchImpl as unknown as typeof fetch,
+      apply,
+      window: win,
+      document: doc,
+    })
+    return { win, doc, fetchImpl, apply, stop }
+  }
+
+  it("checks a no-store same-origin state on focus and applies a state that differs", async () => {
+    const { win, fetchImpl, apply, stop } = setup({ status: "unchanged" }, { status: "changed" })
+    win.dispatchEvent(new Event("focus"))
+    await tick()
+    expect(fetchImpl).toHaveBeenCalledWith(
+      "/sso/state",
+      expect.objectContaining({ cache: "no-store", credentials: "same-origin" }),
+    )
+    expect(apply).toHaveBeenCalledWith({ status: "changed" })
+    stop()
+  })
+
+  it("checks when the page becomes visible and skips hidden pages and matching states", async () => {
+    const { doc, fetchImpl, apply, stop } = setup({ status: "unchanged" }, { status: "unchanged" })
+    doc.visibilityState = "hidden"
+    doc.dispatchEvent(new Event("visibilitychange"))
+    await tick()
+    expect(fetchImpl).not.toHaveBeenCalled()
+    doc.visibilityState = "visible"
+    doc.dispatchEvent(new Event("visibilitychange"))
+    await tick()
+    expect(fetchImpl).toHaveBeenCalledTimes(1)
+    expect(apply).not.toHaveBeenCalled()
+    stop()
+  })
+
+  it("ignores failed checks and stops listening after stop()", async () => {
+    const { win, fetchImpl, apply, stop } = setup({ status: "unchanged" }, new Response("x", { status: 503 }))
+    win.dispatchEvent(new Event("focus"))
+    await tick()
+    expect(apply).not.toHaveBeenCalled()
+    stop()
+    win.dispatchEvent(new Event("focus"))
+    await tick()
+    expect(fetchImpl).toHaveBeenCalledTimes(1)
   })
 })
 
