@@ -82,7 +82,7 @@ pub fn verify_signature_at(
     .filter_map(|entry| entry.strip_prefix("v1,"))
     .filter_map(|encoded| STANDARD.decode(encoded).ok())
     .fold(false, |found, candidate| {
-      found | bool::from(candidate.as_slice().ct_eq(expected.as_slice()))
+      found | bool::from(candidate.as_slice().ct_eq(&expected[..]))
     });
   if matched {
     Ok(())
