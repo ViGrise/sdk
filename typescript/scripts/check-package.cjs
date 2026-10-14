@@ -25,7 +25,7 @@ Promise.all([
   assert.strictEqual(typeof esm.signRequest, "function", "import() exposes signRequest");
   const input = {
     method: "GET",
-    url: "https://speech.vigrise.com/v1/voices",
+    url: "https://speech-api.vigrise.com/v1/voices",
     credentials: { accessKeyId: "VGAK", secretAccessKey: "s" },
     service: "speech",
     now: new Date("2026-10-01T12:00:00Z"),

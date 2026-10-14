@@ -35,6 +35,12 @@ account chooser in the browser, so another account can take over the profile.
 A role lets you in when its trust policy names you as a project member, for
 example `"Principal": {"VGR": "vrn:vigrise:iam:<project_id>:member/*"}`.
 
+## STS endpoint
+
+`vigrise login` asks the STS endpoint for the role session: `--sts-url`, then
+`VIGRISE_ENDPOINT_URL_STS`, then `VIGRISE_ENDPOINT_URL`, then
+`https://sts-api.vigrise.com`.
+
 ## Credential profiles
 
 Sessions are written to the profile named by `--profile` or `VIGRISE_PROFILE`
