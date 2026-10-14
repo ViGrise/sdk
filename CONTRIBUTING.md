@@ -101,7 +101,8 @@ Every package shares one version. To release `X.Y.Z`:
 `main` and that every package carries the tag's version, then publishes to
 crates.io, npm and PyPI through trusted publishing once a reviewer approves the
 `release` environment. npm receives a staged package: a maintainer makes it
-public with 2FA through Approve on npmjs.com or `npm stage approve`. A registry that already holds the version is skipped, so
+public with 2FA through Approve on npmjs.com or `npm stage approve`. A GitHub
+release with the registry links and the generated changelog follows. A registry that already holds the version is skipped, so
 a failed release is retried by re-running the workflow.
 
 Only repository admins create, move or delete `v*` tags (the "Release tags"

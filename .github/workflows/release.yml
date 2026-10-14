@@ -113,3 +113,23 @@ jobs:
       - uses: pypa/gh-action-pypi-publish@release/v1
         with:
           skip-existing: true
+
+  github-release:
+    needs: [version, crates, npm, pypi]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: GitHub release with the registry links and the generated changelog
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --verify-tag \
+            --title "$GITHUB_REF_NAME" --generate-notes --notes "$(cat <<NOTES
+          Packages:
+          - crates.io: [vigrise $VERSION](https://crates.io/crates/vigrise/$VERSION), [vigrise-cli $VERSION](https://crates.io/crates/vigrise-cli/$VERSION)
+          - npm: [@vigrise/sdk $VERSION](https://www.npmjs.com/package/@vigrise/sdk/v/$VERSION) (public once a maintainer approves the staged package)
+          - PyPI: [vigrise $VERSION](https://pypi.org/project/vigrise/$VERSION/)
+          NOTES
+          )"
