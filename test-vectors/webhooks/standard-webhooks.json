@@ -1,0 +1,143 @@
+{
+  "description": "Standard Webhooks signatures: HMAC-SHA256 over '<id>.<timestamp>.<body>' with the base64-decoded secret (whsec_ prefix optional); the signature header holds space-separated 'v1,<base64>' entries. 'error' names the failure: signature, timestamp or secret.",
+  "cases": [
+    {
+      "name": "reference vector",
+      "secret": "whsec_MfKQ9r8GKYqrTwjUPD8ILPZIo2LaLaSw",
+      "id": "msg_p5jXN8AQM9LWM0D4loKWxJek",
+      "timestamp": 1614265330,
+      "body": "{\"test\": 2432232314}",
+      "signature": "v1,g0hM9SsE+OTPJTGt/tmIKtSyZlE3uFJELVlNIOLJ1OE=",
+      "now": 1614265330,
+      "tolerance_seconds": 300,
+      "valid": true
+    },
+    {
+      "name": "secret without the whsec_ prefix",
+      "secret": "MfKQ9r8GKYqrTwjUPD8ILPZIo2LaLaSw",
+      "id": "msg_p5jXN8AQM9LWM0D4loKWxJek",
+      "timestamp": 1614265330,
+      "body": "{\"test\": 2432232314}",
+      "signature": "v1,g0hM9SsE+OTPJTGt/tmIKtSyZlE3uFJELVlNIOLJ1OE=",
+      "now": 1614265330,
+      "tolerance_seconds": 300,
+      "valid": true
+    },
+    {
+      "name": "several signatures in one header, the match last",
+      "secret": "whsec_MfKQ9r8GKYqrTwjUPD8ILPZIo2LaLaSw",
+      "id": "msg_p5jXN8AQM9LWM0D4loKWxJek",
+      "timestamp": 1614265330,
+      "body": "{\"test\": 2432232314}",
+      "signature": "v1,Ju11fKo+2R8Qwv8ERtTW6N3I6UR/7P4K/e3OzGb2uIs= v1,AAAA v1,g0hM9SsE+OTPJTGt/tmIKtSyZlE3uFJELVlNIOLJ1OE=",
+      "now": 1614265330,
+      "tolerance_seconds": 300,
+      "valid": true
+    },
+    {
+      "name": "several signatures in one header, the match first",
+      "secret": "whsec_MfKQ9r8GKYqrTwjUPD8ILPZIo2LaLaSw",
+      "id": "msg_p5jXN8AQM9LWM0D4loKWxJek",
+      "timestamp": 1614265330,
+      "body": "{\"test\": 2432232314}",
+      "signature": "v1,g0hM9SsE+OTPJTGt/tmIKtSyZlE3uFJELVlNIOLJ1OE= v1,Ju11fKo+2R8Qwv8ERtTW6N3I6UR/7P4K/e3OzGb2uIs=",
+      "now": 1614265330,
+      "tolerance_seconds": 300,
+      "valid": true
+    },
+    {
+      "name": "a signature of another version is ignored",
+      "secret": "whsec_MfKQ9r8GKYqrTwjUPD8ILPZIo2LaLaSw",
+      "id": "msg_p5jXN8AQM9LWM0D4loKWxJek",
+      "timestamp": 1614265330,
+      "body": "{\"test\": 2432232314}",
+      "signature": "v2,g0hM9SsE+OTPJTGt/tmIKtSyZlE3uFJELVlNIOLJ1OE= v1,g0hM9SsE+OTPJTGt/tmIKtSyZlE3uFJELVlNIOLJ1OE=",
+      "now": 1614265330,
+      "tolerance_seconds": 300,
+      "valid": true
+    },
+    {
+      "name": "a wrong signature",
+      "secret": "whsec_MfKQ9r8GKYqrTwjUPD8ILPZIo2LaLaSw",
+      "id": "msg_p5jXN8AQM9LWM0D4loKWxJek",
+      "timestamp": 1614265330,
+      "body": "{\"test\": 2432232314}",
+      "signature": "v1,Ju11fKo+2R8Qwv8ERtTW6N3I6UR/7P4K/e3OzGb2uIs=",
+      "now": 1614265330,
+      "tolerance_seconds": 300,
+      "valid": false,
+      "error": "signature"
+    },
+    {
+      "name": "only a signature of an unknown version",
+      "secret": "whsec_MfKQ9r8GKYqrTwjUPD8ILPZIo2LaLaSw",
+      "id": "msg_p5jXN8AQM9LWM0D4loKWxJek",
+      "timestamp": 1614265330,
+      "body": "{\"test\": 2432232314}",
+      "signature": "v2,g0hM9SsE+OTPJTGt/tmIKtSyZlE3uFJELVlNIOLJ1OE=",
+      "now": 1614265330,
+      "tolerance_seconds": 300,
+      "valid": false,
+      "error": "signature"
+    },
+    {
+      "name": "a body that differs from the signed one",
+      "secret": "whsec_MfKQ9r8GKYqrTwjUPD8ILPZIo2LaLaSw",
+      "id": "msg_p5jXN8AQM9LWM0D4loKWxJek",
+      "timestamp": 1614265330,
+      "body": "{\"test\": 2432232314} ",
+      "signature": "v1,g0hM9SsE+OTPJTGt/tmIKtSyZlE3uFJELVlNIOLJ1OE=",
+      "now": 1614265330,
+      "tolerance_seconds": 300,
+      "valid": false,
+      "error": "signature"
+    },
+    {
+      "name": "a timestamp older than the tolerance",
+      "secret": "whsec_MfKQ9r8GKYqrTwjUPD8ILPZIo2LaLaSw",
+      "id": "msg_p5jXN8AQM9LWM0D4loKWxJek",
+      "timestamp": 1614265330,
+      "body": "{\"test\": 2432232314}",
+      "signature": "v1,g0hM9SsE+OTPJTGt/tmIKtSyZlE3uFJELVlNIOLJ1OE=",
+      "now": 1614265631,
+      "tolerance_seconds": 300,
+      "valid": false,
+      "error": "timestamp"
+    },
+    {
+      "name": "a timestamp newer than the tolerance",
+      "secret": "whsec_MfKQ9r8GKYqrTwjUPD8ILPZIo2LaLaSw",
+      "id": "msg_p5jXN8AQM9LWM0D4loKWxJek",
+      "timestamp": 1614265330,
+      "body": "{\"test\": 2432232314}",
+      "signature": "v1,g0hM9SsE+OTPJTGt/tmIKtSyZlE3uFJELVlNIOLJ1OE=",
+      "now": 1614265029,
+      "tolerance_seconds": 300,
+      "valid": false,
+      "error": "timestamp"
+    },
+    {
+      "name": "a timestamp at the edge of the tolerance",
+      "secret": "whsec_MfKQ9r8GKYqrTwjUPD8ILPZIo2LaLaSw",
+      "id": "msg_p5jXN8AQM9LWM0D4loKWxJek",
+      "timestamp": 1614265330,
+      "body": "{\"test\": 2432232314}",
+      "signature": "v1,g0hM9SsE+OTPJTGt/tmIKtSyZlE3uFJELVlNIOLJ1OE=",
+      "now": 1614265630,
+      "tolerance_seconds": 300,
+      "valid": true
+    },
+    {
+      "name": "a secret that is not base64",
+      "secret": "whsec_!!",
+      "id": "msg_p5jXN8AQM9LWM0D4loKWxJek",
+      "timestamp": 1614265330,
+      "body": "{\"test\": 2432232314}",
+      "signature": "v1,g0hM9SsE+OTPJTGt/tmIKtSyZlE3uFJELVlNIOLJ1OE=",
+      "now": 1614265330,
+      "tolerance_seconds": 300,
+      "valid": false,
+      "error": "secret"
+    }
+  ]
+}
