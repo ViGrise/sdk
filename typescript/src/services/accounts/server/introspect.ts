@@ -1,6 +1,6 @@
 import { ssoTokenHash } from "../hash.js";
 import type { SsoAccount as MenuAccount } from "../types.js";
-import { camelize } from "../../internal/case.js";
+import { camelize } from "../../../common/case.js";
 import { AccountsMisconfiguredError, AccountsUnavailableError, InactiveSessionError } from "./errors.js";
 
 const MAX_CACHE_ENTRIES = 10_000;

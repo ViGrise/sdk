@@ -1,4 +1,4 @@
-export { envKey, resolveEndpoint, stsBaseUrl, stsUrl } from "./endpoint.js";
+export { envKey, resolveEndpoint, stsBaseUrl, stsUrl } from "../common/endpoint.js";
 export { canonicalRequest, canonicalQuery, canonicalUri, sha256Hex } from "./canonical.js";
 export { parseProfile, resolveCredentials, type Credentials, type ResolveOptions } from "./credentials.js";
 export { signedFetch, type SignedFetchOptions } from "./fetch.js";

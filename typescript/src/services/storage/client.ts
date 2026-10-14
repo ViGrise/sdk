@@ -1,12 +1,11 @@
-import { resolveEndpoint } from "../auth/endpoint.js";
-import { resolveCredentials } from "../auth/credentials.js";
-import { signRequest, UNSIGNED_PAYLOAD } from "../auth/signer.js";
-import type { Credentials, CredentialsProvider } from "../auth/types.js";
-import { errorFromResponse, StorageError } from "./errors.js";
+import { resolveCredentials } from "../../auth/credentials.js";
+import { SignedHttp } from "../../common/signed.js";
+import type { Credentials, CredentialsProvider } from "../../auth/types.js";
+import { errorFromResponse, StorageError } from "./error.js";
 import type {
   Bucket, CompletedPart, CopyOptions, LifecycleRule, ListOptions, ListPage, ListUploadsOptions, ObjectHead, PresignRequest, Presigned,
   PutOptions, PutResult, ReadOptions, StorageObject, StorageObjectStream, UploadedPart, UploadStreamOptions, UploadsPage,
-} from "./types.js";
+} from "./dto.js";
 
 /** Smallest part of a multipart upload, and the default part size of `uploadStream`. */
 export const DEFAULT_PART_SIZE = 5 * 1024 * 1024;
@@ -97,52 +96,30 @@ function ruleOf(raw: any): LifecycleRule {
 
 /** A client for ViGrise Storage in Node. Every call is VGR4-signed for the `storage` service; browsers use presigned URLs. */
 export class StorageClient {
-  private readonly endpoint: string;
-  private readonly credentials?: Credentials | CredentialsProvider;
+  private readonly http: SignedHttp;
 
   constructor(options: StorageClientOptions = {}) {
-    this.endpoint = resolveEndpoint("storage", options.endpoint);
-    this.credentials = options.credentials;
+    this.http = new SignedHttp({
+      service: "storage",
+      endpoint: options.endpoint,
+      credentials: options.credentials,
+      defaultCredentials: () => resolveCredentials(),
+      failures: {
+        signing: (message, cause) => new StorageError(0, "SigningError", message, { cause }),
+        transport: (message, cause) => new StorageError(0, "TransportError", message, { cause }),
+        response: errorFromResponse,
+      },
+    });
   }
 
-  private async send(call: Call): Promise<Response> {
+  private send(call: Call): Promise<Response> {
     const headers: Record<string, string> = { ...call.headers };
     let body: Body | undefined = call.body;
     if (call.json !== undefined) {
       headers["content-type"] = "application/json";
       body = JSON.stringify(call.json);
     }
-    const url = this.endpoint + withQuery(call.path, call.query);
-    const streamed = call.streamLength !== undefined;
-    const signable = streamed ? undefined : (body as string | Uint8Array | undefined);
-    let signed;
-    try {
-      const credentials = typeof this.credentials === "function" ? await this.credentials() : resolveCredentials({ explicit: this.credentials });
-      signed = signRequest({
-        method: call.method,
-        url,
-        headers,
-        body: signable,
-        payloadHash: streamed ? UNSIGNED_PAYLOAD : undefined,
-        credentials,
-        service: "storage",
-      });
-    } catch (error) {
-      throw new StorageError(0, "SigningError", (error as Error).message, { cause: error });
-    }
-    Object.assign(headers, signed);
-    if (streamed) headers["content-length"] = String(call.streamLength);
-    let response: Response;
-    try {
-      response = await fetch(url, { method: call.method, headers, body: body as BodyInit | undefined, ...(streamed && { duplex: "half" }) } as RequestInit);
-    } catch (error) {
-      throw new StorageError(0, "TransportError", (error as Error).message, { cause: error });
-    }
-    if (!response.ok) {
-      if ((response.status === 401 || response.status === 403) && typeof this.credentials === "function") this.credentials.invalidate?.();
-      throw errorFromResponse(response.status, await response.text());
-    }
-    return response;
+    return this.http.send({ method: call.method, target: withQuery(call.path, call.query), headers, body, streamLength: call.streamLength });
   }
 
   private async json<T = any>(call: Call): Promise<T> {

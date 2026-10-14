@@ -8,7 +8,7 @@ import {
   SsoIntrospector,
   ssoTokenHash,
   toMenuAccount,
-} from "../../../src/accounts/server/index.js";
+} from "../../../src/services/accounts/server/index.js";
 import { fakeServer, jsonReply, type FakeServer, type FakeReply, type SeenRequest } from "../../helpers/fake-server.js";
 
 const active = {

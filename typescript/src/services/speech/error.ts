@@ -1,4 +1,5 @@
-import type { Job } from "./types.js";
+import { parseErrorEnvelope } from "../../common/envelope.js";
+import type { Job } from "./dto.js";
 
 /** Base of every error the Speech client raises. */
 export class SpeechError extends Error {
@@ -47,20 +48,7 @@ export class SpeechWaitTimeoutError extends SpeechError {
 
 /** The error an error response carries: `{"error": {"code", "message", ...}}`, or the status when the body is not that envelope. */
 export function errorFromResponse(status: number, body: string): SpeechServiceError {
-  try {
-    const envelope = JSON.parse(body)?.error;
-    if (envelope && typeof envelope === "object") {
-      const { code, message, resource_id: resourceId, ...details } = envelope as Record<string, unknown>;
-      return new SpeechServiceError(
-        status,
-        typeof code === "string" ? code : "UnknownError",
-        typeof message === "string" ? message : "",
-        typeof resourceId === "string" ? resourceId : undefined,
-        details,
-      );
-    }
-  } catch {
-    // Not JSON: the body becomes the message.
-  }
+  const envelope = parseErrorEnvelope(body);
+  if (envelope) return new SpeechServiceError(status, envelope.code ?? "UnknownError", envelope.message, envelope.resourceId, envelope.details);
   return new SpeechServiceError(status, "UnknownError", body, undefined, {});
 }

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 
-import { Jwks, JwksError } from "../../../src/accounts/server/index.js";
+import { Jwks, JwksError } from "../../../src/services/accounts/server/index.js";
 import { fakeServer, jsonReply, type FakeServer } from "../../helpers/fake-server.js";
 import { TestSigner } from "../../helpers/signer.js";
 

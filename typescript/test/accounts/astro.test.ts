@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from "vitest"
-import { ssoTokenHash } from "../../src/accounts/index.js"
+import { ssoTokenHash } from "../../src/services/accounts/index.js"
 import {
   createSsoMiddleware,
   createSsoStateEndpoint,
   createSsoSessionEndpoint,
   type SsoState,
-} from "../../src/accounts/astro.js"
+} from "../../src/services/accounts/astro.js"
 
 class FakeCookies {
   jar = new Map<string, string>()

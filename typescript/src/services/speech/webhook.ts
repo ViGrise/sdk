@@ -1,6 +1,6 @@
-import { camelize } from "../internal/case.js";
-import { SpeechError } from "./errors.js";
-import type { WebhookEvent } from "./types.js";
+import { camelize } from "../../common/case.js";
+import { SpeechError } from "./error.js";
+import type { WebhookEvent } from "./dto.js";
 
 const SECRET_PREFIX = "whsec_";
 const BASE64 = /^[A-Za-z0-9+/]*={0,2}$/;

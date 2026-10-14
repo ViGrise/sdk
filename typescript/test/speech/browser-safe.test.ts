@@ -17,7 +17,7 @@ function reachable(entry: string): string[] {
 
 describe("the speech entry", () => {
   it("reaches no Node module", () => {
-    const modules = reachable(join(import.meta.dirname, "../../src/speech/index.ts"));
+    const modules = reachable(join(import.meta.dirname, "../../src/services/speech/index.ts"));
     expect(modules.length).toBeGreaterThan(3);
     for (const file of modules) {
       const source = readFileSync(file, "utf8");

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { accountMenuModel, accountPrimaryLine, accountSecondaryLine } from "../../src/accounts/index.js"
+import { accountMenuModel, accountPrimaryLine, accountSecondaryLine } from "../../src/services/accounts/index.js"
 
 const base = { session_id: "s", identity_id: "i", picture: null, active: false, expired: false }
 const ada = { ...base, session_id: "s1", name: "Ada", email: "ada@example.com", active: true }

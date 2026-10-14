@@ -1,4 +1,4 @@
-import { stsUrl } from "./endpoint.js";
+import { stsUrl } from "../common/endpoint.js";
 import { signedFetch } from "./fetch.js";
 import type { Credentials, CredentialsProvider } from "./types.js";
 

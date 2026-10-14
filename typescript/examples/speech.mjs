@@ -1,7 +1,7 @@
 // Lists the voices, or synthesizes "Xin chào", through the Speech API.
 // node examples/speech.mjs <gateway url> [voice]   (run `npm run build` first)
 // Prints the HTTP status, then the number of voices or the bytes of audio.
-import { SpeechClient, SpeechServiceError } from "../dist/speech/index.js";
+import { SpeechClient, SpeechServiceError } from "../dist/services/speech/index.js";
 
 const [endpoint, voice] = process.argv.slice(2);
 const speech = new SpeechClient({ endpoint });

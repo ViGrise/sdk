@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
-import { verifyWebhook, verifyWebhookSignature, WebhookVerificationError } from "../../src/speech/index.js";
+import { verifyWebhook, verifyWebhookSignature, WebhookVerificationError } from "../../src/services/speech/index.js";
 
 interface Vector {
   name: string;

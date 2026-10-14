@@ -4,7 +4,7 @@
 // The gateway must be able to reach 127.0.0.1, where the example listens.
 import { createServer } from "node:http";
 
-import { SpeechClient, verifyWebhook } from "../dist/speech/index.js";
+import { SpeechClient, verifyWebhook } from "../dist/services/speech/index.js";
 
 const [endpoint, voice] = process.argv.slice(2);
 const speech = new SpeechClient({ endpoint });

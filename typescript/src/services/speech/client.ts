@@ -1,13 +1,13 @@
-import { resolveEndpoint } from "../auth/endpoint.js";
-import { signRequest } from "../auth/webcrypto.js";
-import type { Credentials, CredentialsProvider } from "../auth/types.js";
-import { camelize } from "../internal/case.js";
-import { errorFromResponse, SpeechSigningError, SpeechTransportError, SpeechWaitTimeoutError } from "./errors.js";
-import { encodeMultipart } from "./multipart.js";
+import { SignedHttp } from "../../common/signed.js";
+import type { Credentials, CredentialsProvider } from "../../auth/types.js";
+import { camelize } from "../../common/case.js";
+import { errorFromResponse, SpeechSigningError, SpeechTransportError, SpeechWaitTimeoutError } from "./error.js";
+import { encodeMultipart } from "../../common/multipart.js";
 import type {
   AudioUrl, CloneVoiceOptions, Consent, ConsentStatement, Generation, Job, JobInput, JobOptions, ListGenerationsOptions,
-  ListJobsOptions, Model, Page, Speech, SpeechStream, SynthesizeOptions, Voice, VoiceReference, WaitForJobOptions, WebhookSecret,
-} from "./types.js";
+  ListJobsOptions, Model, Speech, SpeechStream, SynthesizeOptions, Voice, VoiceReference, WaitForJobOptions, WebhookSecret,
+} from "./dto.js";
+import type { Page } from "../../common/pagination.js";
 
 export interface SpeechClientOptions {
   /** Base URL of the Speech API; `VIGRISE_ENDPOINT_URL_SPEECH`, `VIGRISE_ENDPOINT_URL` or `https://speech-api.vigrise.com` when omitted. */
@@ -40,28 +40,34 @@ function defined(fields: Record<string, unknown>): Record<string, unknown> {
   return Object.fromEntries(Object.entries(fields).filter(([, value]) => value !== undefined));
 }
 
+/** Credentials from the environment, where there is one. */
+function environmentCredentials(): Credentials {
+  const env = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env;
+  if (env?.VIGRISE_ACCESS_KEY_ID && env.VIGRISE_SECRET_ACCESS_KEY) {
+    return { accessKeyId: env.VIGRISE_ACCESS_KEY_ID, secretAccessKey: env.VIGRISE_SECRET_ACCESS_KEY, sessionToken: env.VIGRISE_SESSION_TOKEN };
+  }
+  throw new Error("no credentials: pass `credentials`, or set VIGRISE_ACCESS_KEY_ID and VIGRISE_SECRET_ACCESS_KEY");
+}
+
 /** A client for the Speech API. Every call is VGR4-signed for the `speech` service. */
 export class SpeechClient {
-  private readonly endpoint: string;
-  private readonly credentials?: Credentials | CredentialsProvider;
+  private readonly http: SignedHttp;
 
   constructor(options: SpeechClientOptions = {}) {
-    this.endpoint = resolveEndpoint("speech", options.endpoint);
-    this.credentials = options.credentials;
+    this.http = new SignedHttp({
+      service: "speech",
+      endpoint: options.endpoint,
+      credentials: options.credentials,
+      defaultCredentials: environmentCredentials,
+      failures: {
+        signing: (message, cause) => new SpeechSigningError(message, { cause }),
+        transport: (message, cause) => new SpeechTransportError(message, { cause }),
+        response: errorFromResponse,
+      },
+    });
   }
 
-  private async resolveCredentials(): Promise<Credentials> {
-    const source = this.credentials;
-    if (typeof source === "function") return source();
-    if (source) return source;
-    const env = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env;
-    if (env?.VIGRISE_ACCESS_KEY_ID && env.VIGRISE_SECRET_ACCESS_KEY) {
-      return { accessKeyId: env.VIGRISE_ACCESS_KEY_ID, secretAccessKey: env.VIGRISE_SECRET_ACCESS_KEY, sessionToken: env.VIGRISE_SESSION_TOKEN };
-    }
-    throw new Error("no credentials: pass `credentials`, or set VIGRISE_ACCESS_KEY_ID and VIGRISE_SECRET_ACCESS_KEY");
-  }
-
-  private async send(call: Call): Promise<Response> {
+  private send(call: Call): Promise<Response> {
     const headers: Record<string, string> = {};
     let body: string | Uint8Array | undefined;
     if (call.json !== undefined) {
@@ -72,24 +78,7 @@ export class SpeechClient {
       body = call.body;
     }
     if (call.idempotencyKey !== undefined) headers["idempotency-key"] = call.idempotencyKey;
-    const url = this.endpoint + target(call.path, call.query);
-    try {
-      const credentials = await this.resolveCredentials();
-      Object.assign(headers, await signRequest({ method: call.method ?? "GET", url, headers, body, credentials, service: "speech" }));
-    } catch (error) {
-      throw new SpeechSigningError((error as Error).message, { cause: error });
-    }
-    let response: Response;
-    try {
-      response = await fetch(url, { method: call.method ?? "GET", headers, body: body as BodyInit | undefined });
-    } catch (error) {
-      throw new SpeechTransportError((error as Error).message, { cause: error });
-    }
-    if (!response.ok) {
-      if ((response.status === 401 || response.status === 403) && typeof this.credentials === "function") this.credentials.invalidate?.();
-      throw errorFromResponse(response.status, await response.text());
-    }
-    return response;
+    return this.http.send({ method: call.method ?? "GET", target: target(call.path, call.query), headers, body });
   }
 
   private async json<T = any>(call: Call): Promise<T> {
@@ -213,12 +202,7 @@ export class SpeechClient {
   /** Downloads the audio of a generation. */
   async downloadGenerationAudio(id: string): Promise<Uint8Array> {
     const location = await this.generationAudioUrl(id);
-    let response: Response;
-    try {
-      response = await fetch(location.url);
-    } catch (error) {
-      throw new SpeechTransportError((error as Error).message, { cause: error });
-    }
+    const response = await this.http.fetchUnsigned(location.url);
     if (!response.ok) throw errorFromResponse(response.status, await response.text());
     return new Uint8Array(await response.arrayBuffer());
   }

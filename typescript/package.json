@@ -19,31 +19,31 @@
       "require": "./dist/cjs/auth/browser.js"
     },
     "./accounts": {
-      "types": "./dist/accounts/index.d.ts",
-      "import": "./dist/accounts/index.js"
+      "types": "./dist/services/accounts/index.d.ts",
+      "import": "./dist/services/accounts/index.js"
     },
     "./accounts/astro": {
-      "types": "./dist/accounts/astro.d.ts",
-      "import": "./dist/accounts/astro.js"
+      "types": "./dist/services/accounts/astro.d.ts",
+      "import": "./dist/services/accounts/astro.js"
     },
     "./accounts/react": {
-      "types": "./dist/accounts/react.d.ts",
-      "import": "./dist/accounts/react.js"
+      "types": "./dist/services/accounts/react.d.ts",
+      "import": "./dist/services/accounts/react.js"
     },
     "./accounts/server": {
-      "types": "./dist/accounts/server/index.d.ts",
-      "import": "./dist/accounts/server/index.js",
-      "require": "./dist/cjs/accounts/server/index.js"
+      "types": "./dist/services/accounts/server/index.d.ts",
+      "import": "./dist/services/accounts/server/index.js",
+      "require": "./dist/cjs/services/accounts/server/index.js"
     },
     "./speech": {
-      "types": "./dist/speech/index.d.ts",
-      "import": "./dist/speech/index.js",
-      "require": "./dist/cjs/speech/index.js"
+      "types": "./dist/services/speech/index.d.ts",
+      "import": "./dist/services/speech/index.js",
+      "require": "./dist/cjs/services/speech/index.js"
     },
     "./storage": {
-      "types": "./dist/storage/index.d.ts",
-      "import": "./dist/storage/index.js",
-      "require": "./dist/cjs/storage/index.js"
+      "types": "./dist/services/storage/index.d.ts",
+      "import": "./dist/services/storage/index.js",
+      "require": "./dist/cjs/services/storage/index.js"
     }
   },
   "files": [

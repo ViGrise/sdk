@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it } from "vitest";
 
-import { BackchannelLogout, InvalidTokenError, Jwks } from "../../../src/accounts/server/index.js";
+import { BackchannelLogout, InvalidTokenError, Jwks } from "../../../src/services/accounts/server/index.js";
 import { TestSigner } from "../../helpers/signer.js";
 
 const ISS = "https://accounts.vigrise.com";

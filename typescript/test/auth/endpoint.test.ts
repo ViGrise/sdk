@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { envKey, resolveEndpoint, stsBaseUrl, stsUrl } from "../../src/auth/endpoint.js";
+import { envKey, resolveEndpoint, stsBaseUrl, stsUrl } from "../../src/common/endpoint.js";
 
 describe("resolveEndpoint", () => {
   const env = {

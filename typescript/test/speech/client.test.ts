@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 
-import { SpeechClient, SpeechServiceError, SpeechSigningError, SpeechTransportError, SpeechWaitTimeoutError } from "../../src/speech/index.js";
+import { SpeechClient, SpeechServiceError, SpeechSigningError, SpeechTransportError, SpeechWaitTimeoutError } from "../../src/services/speech/index.js";
 import { fakeServer, jsonReply, type FakeServer } from "../helpers/fake-server.js";
 
 const credentials = { accessKeyId: "VGAKTEST", secretAccessKey: "secret" };

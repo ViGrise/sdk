@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { StorageClient, StorageError } from "../../src/storage/index.js";
+import { StorageClient, StorageError } from "../../src/services/storage/index.js";
 import { fakeServer, jsonReply, type FakeServer } from "../helpers/fake-server.js";
 
 const credentials = { accessKeyId: "VGAKTEST", secretAccessKey: "secret" };
