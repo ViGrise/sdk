@@ -23,17 +23,42 @@ The VGR4 vectors in `test-vectors/vgr4` are generated from
 committed files differ from a fresh generation. Every language passes every
 vector.
 
+## Source layout
+
+Each language keeps core signing in `auth`, code the services share in `common`,
+and one directory per service.
+
+```
+rust/vigrise/src/            typescript/src/              python/vigrise/
+├── auth/                    ├── auth/                    ├── auth/
+├── common/                  ├── common/                  ├── _common/
+└── services/                └── services/                ├── speech/
+    └── <service>/               └── <service>/           └── <service>/
+```
+
+- `auth`: VGR4 signing, credentials, STS role sessions and, in Rust, the
+  verifier and metering.
+- `common`: the endpoint resolver, signed HTTP sending, the error envelope,
+  multipart bodies and pagination. A service uses these and never repeats them.
+- Inside a service: `client` (the operations), `dto` (request, option and answer
+  types; one file per resource once the service grows), `enums`, `error`, and
+  named domain submodules such as `speech/webhook` or `accounts/jwks`.
+- Public paths do not follow the directories: Rust re-exports
+  `services::<service>` as `vigrise::<service>`, and TypeScript maps
+  `@vigrise/sdk/<service>` in `package.json` `exports`. Python's directory is the
+  import path.
+
 ## Adding a service
 
 A service named `<service>` (lower case, a catalog namespace) needs, in all
 three languages, the same operations under the names of each language's
 convention.
 
-- [ ] **Module in three languages.** `vigrise::<service>` behind the Cargo
-      feature `<service>` (directory module: client, types, errors, options),
-      `src/<service>` in `typescript` with the subpath `./<service>` in
+- [ ] **Module in three languages**, laid out as above: `services/<service>` in
+      Rust behind the Cargo feature `<service>` and re-exported from `lib.rs`,
+      `src/services/<service>` in `typescript` with the subpath `./<service>` in
       `package.json` `exports` (ESM and CommonJS builds, and `check:package`),
-      and `vigrise.<service>` in `python` with a `<service>` extra and sync and
+      and `vigrise/<service>` in `python` with a `<service>` extra and sync and
       async clients.
 - [ ] **Endpoint resolver.** Create the client with
       `resolve_endpoint("<service>", endpoint)` (`resolveEndpoint` in
