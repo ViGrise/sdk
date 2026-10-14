@@ -7,6 +7,7 @@ name = "vigrise"
 version = "0.1.0"
 description = "ViGrise SDK: VGR4 request signing, ViGrise Accounts, ViGrise Storage and the Speech API"
 license = "Apache-2.0"
+readme = "README.md"
 requires-python = ">=3.9"
 dependencies = []
 

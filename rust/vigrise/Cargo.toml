@@ -65,6 +65,14 @@ tokio = { version = "1", features = ["macros", "rt-multi-thread", "net"] }
 axum = { version = "0.8", features = ["tokio", "http1", "json", "query", "form"] }
 tower = { version = "0.5", features = ["util"] }
 
+[[example]]
+name = "speech"
+required-features = ["speech"]
+
+[[example]]
+name = "speech_tour"
+required-features = ["speech"]
+
 [package.metadata.docs.rs]
 all-features = true
 rustdoc-args = ["--cfg", "docsrs"]

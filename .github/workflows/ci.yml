@@ -22,7 +22,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: rust/vigrise-auth
+        working-directory: rust/vigrise
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -31,8 +31,11 @@ jobs:
       - run: cargo fmt --check
       - run: cargo clippy --no-default-features -- -D warnings
       - run: cargo clippy --features reqwest -- -D warnings
-      - run: cargo clippy --all-targets --features verify -- -D warnings
-      - run: cargo test --features verify
+      - run: cargo clippy --features speech -- -D warnings
+      - run: cargo clippy --features storage -- -D warnings
+      - run: cargo clippy --features accounts -- -D warnings
+      - run: cargo clippy --all-targets --all-features -- -D warnings
+      - run: cargo test
 
   cli:
     runs-on: ubuntu-latest

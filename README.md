@@ -1,16 +1,28 @@
 # ViGrise SDK
 
-Request signing (VGR4) for calling ViGrise services, and verification for
-services that accept VGR4 requests.
+One package per language for calling ViGrise: request signing (VGR4), ViGrise
+Accounts, ViGrise Storage and the Speech API. Rust, TypeScript and Python
+cover the same surface.
 
-| Path | Contents |
-| --- | --- |
-| `test-vectors/` | Reference implementation (`generate.py`) and shared VGR4 vectors |
-| `rust/vigrise-auth` | Rust signer (`reqwest` feature), role sessions (`sts` feature: `AssumeRoleProvider`) and service verifier (`verify` feature) |
-| `typescript` | `@vigrise/auth`: `signRequest`, `signedFetch`, `resolveCredentials`, `assumeRole` (Node 18+); `@vigrise/auth/browser`: Web Crypto `signRequest` and `signedFetch` for browsers |
-| `python` | `vigrise-auth`: `sign_request`, `assume_role`, `ViGriseAuth` for requests, `ViGriseHttpxAuth` for httpx (Python 3.9+) |
-| `rust/vigrise-cli` | `vigrise` command line: `login`, `logout`, `whoami` |
-| `rust/vigrise-storage` | Client for ViGrise Storage: buckets, objects (signed or streamed with `UNSIGNED-PAYLOAD`), multipart uploads with a streaming helper, tags, presigned URLs and lifecycle rules |
+| Path | Package | Contents |
+| --- | --- | --- |
+| `rust/vigrise` | crate `vigrise` | `auth` (VGR4 signing, credentials, role sessions, service verifier), `accounts`, `storage`, `speech`; Cargo features switch modules on |
+| `typescript` | `@vigrise/sdk` | Subpaths `/auth`, `/auth/browser`, `/accounts`, `/accounts/astro`, `/accounts/react`, `/accounts/server`, `/speech`, `/storage` (Node 18+) |
+| `python` | `vigrise` | `vigrise.auth`, `vigrise.speech`, `vigrise.storage`, `vigrise.accounts`; extras pull the HTTP libraries (Python 3.9+) |
+| `rust/vigrise-cli` | `vigrise-cli` | The `vigrise` command line: `login`, `logout`, `whoami` |
+| `test-vectors/` | | Reference implementation (`generate.py`) and the shared VGR4 and webhook vectors |
+
+| Module | Rust | TypeScript | Python |
+| --- | --- | --- | --- |
+| Signing | always on | `@vigrise/sdk/auth` | `vigrise.auth` |
+| Accounts, server side | feature `accounts` (`accounts-axum`, `accounts-testing`) | `@vigrise/sdk/accounts/server` | `vigrise.accounts` (extra `accounts`) |
+| Accounts, browser and Astro | | `@vigrise/sdk/accounts`, `/astro`, `/react` | |
+| Storage | feature `storage` | `@vigrise/sdk/storage` | `vigrise.storage` (extra `storage`) |
+| Speech | feature `speech` | `@vigrise/sdk/speech` | `vigrise.speech` (extra `speech`) |
+
+Each module has a short guide in its language's README
+([Rust](rust/vigrise/README.md), [TypeScript](typescript/README.md),
+[Python](python/README.md)) and an example under `examples/`.
 
 ## VGR4 in one paragraph
 
@@ -30,11 +42,10 @@ credentials also sign `x-vgr-security-token`. The result travels in
 ## Installation
 
 ```bash
-cargo add vigrise-auth                 # signing; add --features reqwest,sts as needed
-cargo add vigrise-storage              # Storage client
-cargo install vigrise-cli              # the `vigrise` command line
-npm install @vigrise/auth
-pip install vigrise-auth
+cargo add vigrise --features speech,storage   # modules by feature
+cargo install vigrise-cli                      # the `vigrise` command line
+npm install @vigrise/sdk
+pip install "vigrise[speech,storage]"          # or vigrise[all]
 ```
 
 ## Test vectors
@@ -43,25 +54,51 @@ pip install vigrise-auth
 writes `test-vectors/vgr4/*.json` with expected canonical request, string to
 sign, signature and Authorization header. Every SDK must pass every vector. CI
 fails when the committed vectors differ from a fresh generation.
+`test-vectors/webhooks/standard-webhooks.json` holds the Standard Webhooks
+cases (reference vector, several signatures in one header, a wrong signature,
+a timestamp outside the tolerance, a secret that is not base64) that all three
+`verify_webhook` implementations pass.
 
 ## Usage
 
 ```ts
-import { signedFetch } from "@vigrise/auth";
+import { SpeechClient } from "@vigrise/sdk/speech";
+const speech = new SpeechClient();
+const { audio } = await speech.synthesize("Xin chào", "haley-f1");
+```
+
+```python
+from vigrise.speech import SpeechClient
+with SpeechClient() as speech:
+    audio = speech.synthesize("Xin chào", "haley-f1").audio
+```
+
+```rust
+let speech = SpeechClient::new(Arc::new(Credentials::resolve()?));
+let audio = speech.synthesize("Xin chào", "haley-f1", &SynthesizeOptions::default()).await?;
+```
+
+Signing alone, for services without a client:
+
+```ts
+import { signedFetch } from "@vigrise/sdk/auth";
 const res = await signedFetch("https://speech.vigrise.com/v1/voices", {}, { service: "speech" });
 ```
 
 ```python
 import requests
-from vigrise_auth.requests_auth import ViGriseAuth
+from vigrise.auth.requests_auth import ViGriseAuth
 requests.get("https://speech.vigrise.com/v1/voices", auth=ViGriseAuth("speech"))
 ```
 
 ```rust
 let mut request = client.get("https://speech.vigrise.com/v1/voices").build()?;
-vigrise_auth::reqwest_signer::sign_reqwest(&mut request, &Credentials::resolve()?, "speech", chrono::Utc::now())?;
+vigrise::auth::reqwest_signer::sign_reqwest(&mut request, &Credentials::resolve()?, "speech", chrono::Utc::now())?;
 client.execute(request).await?;
 ```
+
+Clients never retry on their own; pass an idempotency key (`idempotency_key`)
+to repeat a call safely.
 
 ## Credentials
 
@@ -93,19 +130,19 @@ what the session may do.
 A backend handing a web page a narrowed session:
 
 ```ts
-import { assumeRole } from "@vigrise/auth";
+import { assumeRole } from "@vigrise/sdk/auth";
 const session = await assumeRole(
   { roleVrn, roleSessionName: `user-${userId}`, durationSeconds: 900,
     sessionPolicy: { Version: "2026-10-01", Statement: { Effect: "Allow", Action: "speech:SynthesizeSpeech", Resource: "*" } } },
   { endpoint: "https://platform.vigrise.com/api/v1/sts/assume-role" },
 );
-// send session.credentials to the page, which signs with @vigrise/auth/browser:
-import { signedFetch } from "@vigrise/auth/browser";
+// send session.credentials to the page, which signs with @vigrise/sdk/auth/browser:
+import { signedFetch } from "@vigrise/sdk/auth/browser";
 await signedFetch(url, init, { service: "speech", credentials: session.credentials });
 ```
 
 ```python
-from vigrise_auth import assume_role
+from vigrise.auth import assume_role
 session = assume_role(role_vrn, "nightly-job", endpoint="https://platform.vigrise.com/api/v1/sts/assume-role")
 requests.get(url, auth=ViGriseAuth("speech", session.credentials))
 ```
@@ -118,7 +155,7 @@ let provider = AssumeRoleProvider::new(StsClient::new(sts_url, Credentials::reso
 let credentials = provider.credentials().await?;
 ```
 
-ViGrise services use `vigrise_auth::sts::service_credentials`, which assumes
+ViGrise services use `vigrise::auth::sts::service_credentials`, which assumes
 `VIGRISE_ROLE_VRN` through `VIGRISE_STS_URL` when it is set. TypeScript and
 Python callers call `assumeRole` again before `expiration`; `signedFetch` and the
 auth classes also accept a function returning the current credentials.

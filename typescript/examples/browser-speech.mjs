@@ -3,7 +3,7 @@
 // node examples/browser-speech.mjs <gateway url> [voice]   (run `npm run build` first)
 // The session comes from VIGRISE_ACCESS_KEY_ID, VIGRISE_SECRET_ACCESS_KEY and
 // VIGRISE_SESSION_TOKEN here; a page receives it from its backend instead.
-import { signedFetch } from "../dist/browser.js";
+import { signedFetch } from "../dist/auth/browser.js";
 
 const [base, voice] = process.argv.slice(2);
 const credentials = {

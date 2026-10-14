@@ -1,34 +1,37 @@
-//! Calls the ViGrise Speech API with a VGR4 signature.
+//! Lists the voices, or synthesizes "Xin chào", through the Speech API.
 //!
-//! `cargo run --example speech --features reqwest -- <gateway url> [voice]`
-//! lists voices, or synthesizes "Xin chào" with `voice`. Credentials come from
-//! the environment or `~/.vigrise/credentials`.
+//! `cargo run --example speech --features speech -- <gateway url> [voice]`
+//! prints the HTTP status, then the number of voices or the bytes of audio. Credentials come
+//! from the environment or `~/.vigrise/credentials`.
 
-use vigrise::auth::reqwest_signer::sign_reqwest;
+use std::sync::Arc;
+
 use vigrise::auth::Credentials;
+use vigrise::speech::{SpeechClient, SpeechError, SynthesizeOptions};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
   let mut args = std::env::args().skip(1);
-  let base = args.next().ok_or("usage: speech <gateway url> [voice]")?;
+  let endpoint = args.next().ok_or("usage: speech <gateway url> [voice]")?;
   let voice = args.next();
-  let client = reqwest::Client::new();
-  let mut request = match &voice {
-    None => client.get(format!("{base}/v1/voices")).build()?,
-    Some(voice) => client
-      .post(format!("{base}/v1/audio/speech"))
-      .json(&serde_json::json!({ "input": "Xin chào", "voice": voice, "response_format": "wav" }))
-      .build()?,
+  let speech = SpeechClient::new(Arc::new(Credentials::resolve()?)).with_endpoint(endpoint);
+  let outcome = match &voice {
+    None => speech.list_voices().await.map(|voices| voices.len()),
+    Some(voice) => {
+      let options = SynthesizeOptions {
+        format: Some(vigrise::speech::AudioFormat::Wav),
+        ..Default::default()
+      };
+      speech
+        .synthesize("Xin chào", voice, &options)
+        .await
+        .map(|speech| speech.audio.len())
+    }
   };
-  sign_reqwest(
-    &mut request,
-    &Credentials::resolve()?,
-    "speech",
-    chrono::Utc::now(),
-  )?;
-  let response = client.execute(request).await?;
-  let status = response.status();
-  let body = response.bytes().await?;
-  println!("{} {}", status.as_u16(), body.len());
+  match outcome {
+    Ok(size) => println!("200 {size}"),
+    Err(SpeechError::Service { status, code, .. }) => println!("{status} {code}"),
+    Err(other) => return Err(other.into()),
+  }
   Ok(())
 }

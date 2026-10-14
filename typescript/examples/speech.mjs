@@ -1,14 +1,18 @@
-// Calls the ViGrise Speech API with a VGR4 signature.
+// Lists the voices, or synthesizes "Xin chào", through the Speech API.
 // node examples/speech.mjs <gateway url> [voice]   (run `npm run build` first)
-import { signedFetch } from "../dist/index.js";
+// Prints the HTTP status, then the number of voices or the bytes of audio.
+import { SpeechClient, SpeechServiceError } from "../dist/speech/index.js";
 
-const [base, voice] = process.argv.slice(2);
-const response = voice
-  ? await signedFetch(`${base}/v1/audio/speech`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ input: "Xin chào", voice, response_format: "wav" }),
-    }, { service: "speech" })
-  : await signedFetch(`${base}/v1/voices`, {}, { service: "speech" });
-const body = new Uint8Array(await response.arrayBuffer());
-console.log(`${response.status} ${body.length}`);
+const [endpoint, voice] = process.argv.slice(2);
+const speech = new SpeechClient({ endpoint });
+try {
+  if (voice) {
+    const spoken = await speech.synthesize("Xin chào", voice, { format: "wav" });
+    console.log(`200 ${spoken.audio.length}`);
+  } else {
+    console.log(`200 ${(await speech.listVoices()).length}`);
+  }
+} catch (error) {
+  if (!(error instanceof SpeechServiceError)) throw error;
+  console.log(`${error.status} ${error.code}`);
+}

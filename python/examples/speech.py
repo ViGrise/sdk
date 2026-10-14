@@ -1,19 +1,22 @@
-"""Calls the ViGrise Speech API with a VGR4 signature.
+"""Lists the voices, or synthesizes "Xin chào", through the Speech API.
 
 python examples/speech.py <gateway url> [voice]
+
+Prints the HTTP status, then the number of voices or the bytes of audio.
+Credentials come from the environment or ~/.vigrise/credentials.
 """
 
 import sys
 
-import requests
+from vigrise.speech import AudioFormat, SpeechClient, SpeechServiceError
 
-from vigrise.auth.requests_auth import ViGriseAuth
-
-base = sys.argv[1]
+endpoint = sys.argv[1]
 voice = sys.argv[2] if len(sys.argv) > 2 else None
-auth = ViGriseAuth("speech")
-if voice:
-    response = requests.post(f"{base}/v1/audio/speech", json={"input": "Xin chào", "voice": voice, "response_format": "wav"}, auth=auth)
-else:
-    response = requests.get(f"{base}/v1/voices", auth=auth)
-print(response.status_code, len(response.content))
+with SpeechClient(endpoint) as speech:
+    try:
+        if voice:
+            print(200, len(speech.synthesize("Xin chào", voice, format=AudioFormat.WAV).audio))
+        else:
+            print(200, len(speech.list_voices()))
+    except SpeechServiceError as error:
+        print(error.status, error.code)
