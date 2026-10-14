@@ -8,6 +8,7 @@ assert.strictEqual(typeof cjs.signedFetch, "function", "require() exposes signed
 for (const [subpath, name] of [
   ["auth/browser", "signRequest"],
   ["speech", "SpeechClient"],
+  ["storage", "StorageClient"],
 ]) {
   assert.strictEqual(typeof require(`@vigrise/sdk/${subpath}`)[name], "function", `require() exposes ${subpath} ${name}`);
 }
@@ -17,6 +18,7 @@ Promise.all([
   import("@vigrise/sdk/accounts"),
   import("@vigrise/sdk/accounts/astro"),
   import("@vigrise/sdk/speech"),
+  import("@vigrise/sdk/storage"),
 ]).then(([esm]) => {
   assert.strictEqual(typeof esm.signRequest, "function", "import() exposes signRequest");
   const input = {
