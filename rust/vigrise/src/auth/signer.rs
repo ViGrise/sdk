@@ -1,12 +1,12 @@
 use chrono::{DateTime, Utc};
-use http::{header, HeaderMap, HeaderValue, Method, Uri};
+use http::{HeaderMap, HeaderValue, Method, Uri, header};
 
 use crate::auth::authorization::AuthorizationHeader;
 use crate::auth::canonical::{canonical_request, hex_sha256};
 use crate::auth::credentials::Credentials;
 use crate::auth::error::AuthError;
 use crate::auth::signing::{
-  derive_signing_key, scope, signature, string_to_sign, TIMESTAMP_FORMAT,
+  TIMESTAMP_FORMAT, derive_signing_key, scope, signature, string_to_sign,
 };
 
 /// Header carrying the signing timestamp.

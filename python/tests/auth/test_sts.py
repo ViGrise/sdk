@@ -35,7 +35,7 @@ def serve(status, reply):
 
     httpd = HTTPServer(("127.0.0.1", 0), Handler)
     threading.Thread(target=httpd.serve_forever, daemon=True).start()
-    return httpd, f"http://127.0.0.1:{httpd.server_port}/api/v1/sts/assume-role", seen
+    return httpd, f"http://127.0.0.1:{httpd.server_port}/v1/assume-role", seen
 
 
 def test_assume_role_signs_under_the_sts_scope_and_returns_the_session():

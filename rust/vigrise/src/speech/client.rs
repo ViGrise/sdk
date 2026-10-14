@@ -7,18 +7,16 @@ use bytes::Bytes;
 use chrono::Utc;
 use futures_util::{Stream, StreamExt};
 use http::{HeaderMap, HeaderValue, Method};
-use percent_encoding::{utf8_percent_encode, AsciiSet, NON_ALPHANUMERIC};
+use percent_encoding::{AsciiSet, NON_ALPHANUMERIC, utf8_percent_encode};
 use serde::de::DeserializeOwned;
-use serde_json::{json, Map, Value};
+use serde_json::{Map, Value, json};
 
-use crate::auth::{sign_request, CredentialsProvider};
-use crate::speech::error::{from_response, SpeechError};
+use crate::auth::endpoint::resolve_endpoint;
+use crate::auth::{CredentialsProvider, sign_request};
+use crate::speech::error::{SpeechError, from_response};
 use crate::speech::multipart::Multipart;
 use crate::speech::options::*;
 use crate::speech::types::*;
-
-/// Endpoint of the hosted Speech API.
-pub const DEFAULT_ENDPOINT: &str = "https://speech.vigrise.com";
 
 /// Characters left as they are in a path segment or query value.
 const UNRESERVED: &AsciiSet = &NON_ALPHANUMERIC
@@ -78,10 +76,11 @@ pub struct SpeechClient {
 }
 
 impl SpeechClient {
-  /// A client of [`DEFAULT_ENDPOINT`].
+  /// A client of the endpoint that `VIGRISE_ENDPOINT_URL_SPEECH` or
+  /// `VIGRISE_ENDPOINT_URL` names, `https://speech-api.vigrise.com` by default.
   pub fn new(credentials: Arc<dyn CredentialsProvider>) -> Self {
     Self {
-      endpoint: DEFAULT_ENDPOINT.to_string(),
+      endpoint: resolve_endpoint("speech", None),
       credentials,
       http: reqwest::Client::new(),
     }

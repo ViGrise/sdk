@@ -8,11 +8,11 @@ use bytes::Bytes;
 use http_body::{Body, Frame};
 use http_body_util::BodyExt;
 use vigrise::auth::canonical::hex_sha256;
-use vigrise::auth::checksum::{checksum_of, encode_base64, ChecksumAlgorithm};
+use vigrise::auth::checksum::{ChecksumAlgorithm, checksum_of, encode_base64};
 use vigrise::auth::chunked::{
   AwsChunkedBody, ChunkSigning, ChunkedError, ChunkedMode, ChunkedOptions, Trailers,
 };
-use vigrise::auth::sigv4::{chunk_signature, derive_signing_key, trailer_signature, Scope};
+use vigrise::auth::sigv4::{Scope, chunk_signature, derive_signing_key, trailer_signature};
 
 /// Hands out its frames one by one, so chunk boundaries fall anywhere.
 struct Frames(VecDeque<Bytes>);

@@ -2,7 +2,7 @@
 
 use std::net::SocketAddr;
 
-use jsonwebtoken::{jwk::JwkSet, EncodingKey, Header};
+use jsonwebtoken::{EncodingKey, Header, jwk::JwkSet};
 use serde_json::Value;
 
 pub const KID: &str = "test-key";

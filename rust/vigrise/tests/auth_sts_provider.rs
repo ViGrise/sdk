@@ -9,7 +9,7 @@ use axum::http::{HeaderMap, StatusCode};
 use axum::routing::post;
 use axum::{Json, Router};
 use chrono::Utc;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use vigrise::auth::sts::{AssumeRoleProvider, StsClient};
 use vigrise::auth::{AuthError, AuthorizationHeader, Credentials, CredentialsProvider};
 
@@ -110,7 +110,7 @@ async fn serve(lifetime: Duration, delay: Duration, status: StatusCode) -> (Stri
     rejected: Arc::default(),
   };
   let app = Router::new()
-    .route("/api/v1/sts/assume-role", post(assume_role))
+    .route("/v1/assume-role", post(assume_role))
     .route("/api/internal/v1/authorize", post(record_signer))
     .with_state(sts.clone());
   let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
@@ -121,7 +121,7 @@ async fn serve(lifetime: Duration, delay: Duration, status: StatusCode) -> (Stri
 
 fn provider(base: &str) -> AssumeRoleProvider {
   let client = StsClient::new(
-    format!("{base}/api/v1/sts/assume-role"),
+    format!("{base}/v1/assume-role"),
     Credentials::new("VGAKBOOTSTRAP", "bootstrap-secret"),
   );
   AssumeRoleProvider::new(
@@ -227,7 +227,7 @@ async fn service_credentials_use_the_role_session_when_a_role_is_configured() {
   let env = |role: Option<&'static str>, url: Option<String>| {
     move |name: &str| match name {
       "VIGRISE_ROLE_VRN" => role.map(str::to_string),
-      "VIGRISE_STS_URL" => url.clone(),
+      "VIGRISE_ENDPOINT_URL_STS" => url.clone(),
       _ => None,
     }
   };
@@ -236,31 +236,23 @@ async fn service_credentials_use_the_role_session_when_a_role_is_configured() {
     service_credentials_with(bootstrap.clone(), "speech-gateway", env(None, None)).unwrap();
   assert_eq!(long_term.credentials().await.unwrap(), bootstrap);
 
-  let missing_url = service_credentials_with(
-    bootstrap.clone(),
-    "speech-gateway",
-    env(Some("vrn:vigrise:iam:p:role/speech-service"), None),
-  );
-  assert!(missing_url
-    .unwrap_err()
-    .to_string()
-    .contains("VIGRISE_STS_URL"));
-
   let session = service_credentials_with(
     bootstrap,
     "speech-gateway",
     env(
       Some("vrn:vigrise:iam:p:role/speech-service"),
-      Some(format!("{base}/api/v1/sts/assume-role")),
+      Some(format!("{base}/v1/assume-role")),
     ),
   )
   .unwrap();
-  assert!(session
-    .credentials()
-    .await
-    .unwrap()
-    .access_key_id
-    .starts_with("VGST"));
+  assert!(
+    session
+      .credentials()
+      .await
+      .unwrap()
+      .access_key_id
+      .starts_with("VGST")
+  );
   assert_eq!(sts.calls.load(Ordering::SeqCst), 1);
 }
 

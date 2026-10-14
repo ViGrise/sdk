@@ -1,4 +1,4 @@
-use vigrise_cli::profile::{read_session, remove_session, write_session, SessionProfile};
+use vigrise_cli::profile::{SessionProfile, read_session, remove_session, write_session};
 
 fn session(key: &str) -> SessionProfile {
   SessionProfile {

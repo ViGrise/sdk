@@ -4,8 +4,8 @@
 
 use std::time::Duration;
 
-use base64::engine::general_purpose::STANDARD;
 use base64::Engine;
+use base64::engine::general_purpose::STANDARD;
 use chrono::{DateTime, Utc};
 use hmac::{Hmac, Mac};
 use http::HeaderMap;

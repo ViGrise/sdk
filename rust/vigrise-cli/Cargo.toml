@@ -23,6 +23,7 @@ name = "vigrise"
 path = "src/main.rs"
 
 [dependencies]
+vigrise = { path = "../vigrise", version = "0.1.0" }
 base64 = "0.22"
 chrono = { version = "0.4", default-features = false, features = ["clock", "std", "serde"] }
 clap = { version = "4.5", features = ["derive", "env"] }
@@ -38,7 +39,6 @@ url = "2"
 [dev-dependencies]
 axum = { version = "0.8", features = ["tokio", "http1", "query", "form", "json"] }
 tempfile = "3"
-vigrise = { path = "../vigrise", version = "0.1.0" }
 
 [package.metadata.docs.rs]
 all-features = true

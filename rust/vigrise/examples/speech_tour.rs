@@ -7,15 +7,15 @@
 use std::sync::Arc;
 use std::time::Duration;
 
+use axum::Router;
 use axum::body::Bytes;
 use axum::extract::State;
 use axum::http::{HeaderMap, StatusCode};
 use axum::routing::post;
-use axum::Router;
 use tokio::sync::mpsc;
 use vigrise::auth::Credentials;
 use vigrise::speech::{
-  verify_webhook, JobInput, JobOptions, SpeechClient, SynthesizeOptions, WaitOptions, WebhookEvent,
+  JobInput, JobOptions, SpeechClient, SynthesizeOptions, WaitOptions, WebhookEvent, verify_webhook,
 };
 
 #[derive(Clone)]

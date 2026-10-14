@@ -5,6 +5,7 @@ import httpx
 from .. import _http
 from .._client import AsyncSender, Failures, SyncSender
 from ..auth.credentials import CredentialsSource
+from ..auth.endpoint import resolve_endpoint
 from . import _operations as ops
 from ._errors import StorageError, error_from_response, signing_error, transport_error
 from ._models import (
@@ -22,7 +23,6 @@ from ._models import (
     UploadsPage,
 )
 
-DEFAULT_ENDPOINT = "https://storage.vigrise.com"
 DEFAULT_PART_SIZE = ops.DEFAULT_PART_SIZE
 
 _FAILURES = Failures(signing_error, transport_error, error_from_response)
@@ -114,13 +114,13 @@ class StorageClient:
 
     def __init__(
         self,
-        endpoint: str = DEFAULT_ENDPOINT,
+        endpoint: Optional[str] = None,
         credentials: Optional[CredentialsSource] = None,
         *,
         timeout: Optional[float] = 60.0,
         transport: Optional[httpx.BaseTransport] = None,
     ):
-        self._sender = SyncSender("storage", endpoint, credentials, timeout, _FAILURES, transport)
+        self._sender = SyncSender("storage", resolve_endpoint("storage", endpoint), credentials, timeout, _FAILURES, transport)
 
     def close(self) -> None:
         self._sender.close()
@@ -270,13 +270,13 @@ class AsyncStorageClient:
 
     def __init__(
         self,
-        endpoint: str = DEFAULT_ENDPOINT,
+        endpoint: Optional[str] = None,
         credentials: Optional[CredentialsSource] = None,
         *,
         timeout: Optional[float] = 60.0,
         transport: Optional[httpx.AsyncBaseTransport] = None,
     ):
-        self._sender = AsyncSender("storage", endpoint, credentials, timeout, _FAILURES, transport)
+        self._sender = AsyncSender("storage", resolve_endpoint("storage", endpoint), credentials, timeout, _FAILURES, transport)
 
     async def aclose(self) -> None:
         await self._sender.aclose()

@@ -5,9 +5,9 @@ use http::{HeaderMap, HeaderName, HeaderValue, Method, Uri};
 use serde::Deserialize;
 use vigrise::auth::canonical::{canonical_request, hex_sha256};
 use vigrise::auth::signing::{
-  derive_signing_key, scope, signature, string_to_sign, TIMESTAMP_FORMAT,
+  TIMESTAMP_FORMAT, derive_signing_key, scope, signature, string_to_sign,
 };
-use vigrise::auth::{sign_request, Credentials};
+use vigrise::auth::{Credentials, sign_request};
 
 #[derive(Deserialize)]
 struct Vector {

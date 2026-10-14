@@ -4,8 +4,8 @@ use http::{HeaderMap, HeaderName, HeaderValue};
 use serde::Deserialize;
 use vigrise::auth::canonical::hex_sha256;
 use vigrise::auth::sigv4::{
-  self, chunk_signature, derive_signing_key, string_to_sign, trailer_signature,
-  HeaderAuthorization, Presigned, Scope,
+  self, HeaderAuthorization, Presigned, Scope, chunk_signature, derive_signing_key, string_to_sign,
+  trailer_signature,
 };
 
 #[derive(Deserialize)]

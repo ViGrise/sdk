@@ -275,3 +275,17 @@ describe("SpeechClient credentials", () => {
     expect(server.last().text()).toContain('filename="a%22%0D%0Ab.wav"');
   });
 });
+
+describe("SpeechClient endpoint", () => {
+  it("uses the endpoint the environment names when none is given", async () => {
+    const server = await fakeServer(() => jsonReply({ data: [] }));
+    servers.push(server);
+    process.env.VIGRISE_ENDPOINT_URL = server.url;
+    try {
+      await new SpeechClient({ credentials }).listVoices();
+    } finally {
+      delete process.env.VIGRISE_ENDPOINT_URL;
+    }
+    expect(server.requests).toHaveLength(1);
+  });
+});

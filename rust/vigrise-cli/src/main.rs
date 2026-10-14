@@ -2,7 +2,7 @@ use std::io::{BufRead, Write};
 use std::path::PathBuf;
 
 use clap::{Parser, Subcommand};
-use vigrise_cli::login::{login, logout, AssumableRole, LoginOptions, Ui, DEFAULT_ACCOUNTS_URL};
+use vigrise_cli::login::{AssumableRole, DEFAULT_ACCOUNTS_URL, LoginOptions, Ui, login, logout};
 use vigrise_cli::opener::browser_command;
 use vigrise_cli::profile::{describe_session, read_session};
 
@@ -39,12 +39,9 @@ enum Command {
     /// Accounts issuer URL.
     #[arg(long, env = "VIGRISE_ACCOUNTS_URL", default_value = DEFAULT_ACCOUNTS_URL)]
     accounts_url: String,
-    #[arg(
-      long,
-      env = "VIGRISE_PLATFORM_URL",
-      default_value = "https://platform.vigrise.com"
-    )]
-    platform_url: String,
+    /// STS endpoint; `VIGRISE_ENDPOINT_URL_STS` or `VIGRISE_ENDPOINT_URL` when omitted.
+    #[arg(long)]
+    sts_url: Option<String>,
     #[arg(long, env = "VIGRISE_CLI_CLIENT_ID", default_value = "vigrise-cli")]
     client_id: String,
   },
@@ -124,12 +121,12 @@ async fn main() {
       device,
       select_account,
       accounts_url,
-      platform_url,
+      sts_url,
       client_id,
     } => {
       let options = LoginOptions {
         accounts_url,
-        platform_url,
+        sts_url: vigrise::auth::endpoint::sts_base_url(sts_url.as_deref()),
         client_id,
         profile: profile.clone(),
         role_vrn: role,

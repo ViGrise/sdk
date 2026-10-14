@@ -1,3 +1,4 @@
+import { resolveEndpoint } from "../auth/endpoint.js";
 import { resolveCredentials } from "../auth/credentials.js";
 import { signRequest, UNSIGNED_PAYLOAD } from "../auth/signer.js";
 import type { Credentials, CredentialsProvider } from "../auth/types.js";
@@ -7,14 +8,11 @@ import type {
   PutOptions, PutResult, ReadOptions, StorageObject, StorageObjectStream, UploadedPart, UploadStreamOptions, UploadsPage,
 } from "./types.js";
 
-/** Endpoint of the hosted Storage API. */
-export const DEFAULT_ENDPOINT = "https://storage.vigrise.com";
-
 /** Smallest part of a multipart upload, and the default part size of `uploadStream`. */
 export const DEFAULT_PART_SIZE = 5 * 1024 * 1024;
 
 export interface StorageClientOptions {
-  /** Base URL of the Storage API; `https://storage.vigrise.com` by default. */
+  /** Base URL of the Storage API; `VIGRISE_ENDPOINT_URL_STORAGE`, `VIGRISE_ENDPOINT_URL` or `https://storage-api.vigrise.com` when omitted. */
   endpoint?: string;
   /** Fixed credentials or a provider called before each request; resolved from the environment when omitted. */
   credentials?: Credentials | CredentialsProvider;
@@ -103,7 +101,7 @@ export class StorageClient {
   private readonly credentials?: Credentials | CredentialsProvider;
 
   constructor(options: StorageClientOptions = {}) {
-    this.endpoint = (options.endpoint ?? DEFAULT_ENDPOINT).replace(/\/+$/, "");
+    this.endpoint = resolveEndpoint("storage", options.endpoint);
     this.credentials = options.credentials;
   }
 

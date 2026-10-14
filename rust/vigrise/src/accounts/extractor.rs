@@ -1,14 +1,14 @@
 use std::sync::Arc;
 
 use axum::{
-  extract::{FromRef, FromRequestParts},
-  http::{request::Parts, StatusCode},
-  response::{IntoResponse, Response},
   Json,
+  extract::{FromRef, FromRequestParts},
+  http::{StatusCode, request::Parts},
+  response::{IntoResponse, Response},
 };
 
 use crate::accounts::{
-  sso_token_hash, AccountsError, SsoAccount, SsoIdentity, SsoIntrospector, SsoSession,
+  AccountsError, SsoAccount, SsoIdentity, SsoIntrospector, SsoSession, sso_token_hash,
 };
 
 /// Header an app's frontend server uses to pass the `vigrise_sso` value to its

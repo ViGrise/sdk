@@ -16,7 +16,7 @@ use http_body::{Body, Frame};
 use crate::auth::canonical::hex_sha256;
 use crate::auth::checksum::{Checksum, ChecksumAlgorithm};
 use crate::auth::signing::verify_signature;
-use crate::auth::sigv4::{chunk_string_to_sign, trailer_string_to_sign, Scope};
+use crate::auth::sigv4::{Scope, chunk_string_to_sign, trailer_string_to_sign};
 
 /// Longest chunk a signed body may carry; every signed chunk is held in memory
 /// until its signature is checked.
@@ -218,7 +218,7 @@ impl<B> AwsChunkedBody<B> {
       (Some(_), None) => {
         return Err(ChunkedError::Malformed(
           "A signed chunk is missing its signature".into(),
-        ))
+        ));
       }
       (None, _) => None,
     };

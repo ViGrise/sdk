@@ -1,8 +1,8 @@
 //! Role sessions from the ViGrise Security Token Service.
 
 use std::fmt;
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
 use chrono::{DateTime, Utc};
@@ -17,8 +17,6 @@ use crate::auth::reqwest_signer::sign_reqwest;
 const SIGNING_SERVICE: &str = "sts";
 /// Environment variable naming the role a service assumes.
 pub const ENV_ROLE_VRN: &str = "VIGRISE_ROLE_VRN";
-/// Environment variable holding the endpoint of the role session service.
-pub const ENV_STS_URL: &str = "VIGRISE_STS_URL";
 /// Sessions at least this long are refreshed `REFRESH_BEFORE_EXPIRY` before
 /// they expire; shorter ones after 80 percent of their lifetime.
 const LONG_SESSION: chrono::Duration = chrono::Duration::minutes(25);
@@ -160,7 +158,7 @@ impl fmt::Debug for StsClient {
 
 impl StsClient {
   /// `endpoint` is the full URL, for example
-  /// `https://platform.vigrise.com/api/v1/sts/assume-role`.
+  /// `https://sts-api.vigrise.com/v1/assume-role`.
   pub fn new(endpoint: impl Into<String>, credentials: impl CredentialsProvider + 'static) -> Self {
     let http = reqwest::Client::builder()
       .timeout(Duration::from_secs(5))
@@ -171,6 +169,12 @@ impl StsClient {
       endpoint: endpoint.into(),
       credentials: Arc::new(credentials),
     }
+  }
+
+  /// A client of the STS endpoint that `VIGRISE_ENDPOINT_URL_STS` or
+  /// `VIGRISE_ENDPOINT_URL` names, `https://sts-api.vigrise.com` by default.
+  pub fn resolved(credentials: impl CredentialsProvider + 'static) -> Self {
+    Self::new(crate::auth::endpoint::sts_url(None), credentials)
   }
 
   /// Asks the service for a role session, signing the call with the client's
@@ -318,7 +322,7 @@ impl CredentialsProvider for AssumeRoleProvider {
 }
 
 /// The credentials a ViGrise service signs with: a session of `VIGRISE_ROLE_VRN`
-/// obtained through `VIGRISE_STS_URL` with `bootstrap`, or `bootstrap` itself
+/// obtained through the STS endpoint (`VIGRISE_ENDPOINT_URL_STS`) with `bootstrap`, or `bootstrap` itself
 /// when no role is configured.
 pub fn service_credentials(
   bootstrap: Credentials,
@@ -338,11 +342,7 @@ pub fn service_credentials_with(
   let Some(role_vrn) = present(ENV_ROLE_VRN) else {
     return Ok(Arc::new(bootstrap));
   };
-  let endpoint = present(ENV_STS_URL).ok_or_else(|| {
-    CredentialsError::Incomplete(format!(
-      "{ENV_ROLE_VRN} is set; {ENV_STS_URL} is required too"
-    ))
-  })?;
+  let endpoint = crate::auth::endpoint::sts_url_with(None, &lookup);
   Ok(Arc::new(AssumeRoleProvider::new(
     StsClient::new(endpoint, bootstrap),
     role_vrn,

@@ -2,15 +2,15 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 use axum::extract::{Query, State};
-use axum::http::{header, StatusCode};
+use axum::http::{StatusCode, header};
 use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
 use axum::{Form, Json, Router};
-use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use base64::Engine;
-use serde_json::{json, Value};
+use base64::engine::general_purpose::URL_SAFE_NO_PAD;
+use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
-use vigrise_cli::login::{login, logout, AssumableRole, LoginOptions, Ui};
+use vigrise_cli::login::{AssumableRole, LoginOptions, Ui, login, logout};
 use vigrise_cli::profile::read_session;
 
 const CLIENT: &str = "vigrise-cli";
@@ -119,10 +119,12 @@ async fn assumable(
   State(platform): State<Arc<Mutex<Platform>>>,
   Json(body): Json<Value>,
 ) -> Json<Value> {
-  assert!(body["web_identity_token"]
-    .as_str()
-    .unwrap()
-    .starts_with("idt-"));
+  assert!(
+    body["web_identity_token"]
+      .as_str()
+      .unwrap()
+      .starts_with("idt-")
+  );
   let _ = platform;
   Json(json!([
     { "project_id": "p", "role_vrn": "vrn:vigrise:iam:p:role/dev", "name": "dev", "max_session_seconds": 3600 },
@@ -168,13 +170,13 @@ async fn serve() -> (String, String, Shared, Arc<Mutex<Platform>>) {
 
   let platform: Arc<Mutex<Platform>> = Arc::default();
   let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
-  let platform_url = format!("http://{}", listener.local_addr().unwrap());
+  let sts_url = format!("http://{}", listener.local_addr().unwrap());
   let app = Router::new()
-    .route("/api/v1/sts/assumable-roles", post(assumable))
-    .route("/api/v1/sts/assume-role-with-web-identity", post(assume))
+    .route("/v1/assumable-roles", post(assumable))
+    .route("/v1/assume-role-with-web-identity", post(assume))
     .with_state(platform.clone());
   tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
-  (accounts_url, platform_url, accounts, platform)
+  (accounts_url, sts_url, accounts, platform)
 }
 
 /// Plays the person at the terminal: follows the browser URL, remembers the
@@ -209,10 +211,10 @@ impl Ui for FakeUser {
   }
 }
 
-fn options(dir: &std::path::Path, accounts_url: &str, platform_url: &str) -> LoginOptions {
+fn options(dir: &std::path::Path, accounts_url: &str, sts_url: &str) -> LoginOptions {
   LoginOptions {
     accounts_url: accounts_url.into(),
-    platform_url: platform_url.into(),
+    sts_url: sts_url.into(),
     client_id: CLIENT.into(),
     profile: "dev".into(),
     role_vrn: Some("vrn:vigrise:iam:p:role/dev".into()),
@@ -227,11 +229,11 @@ fn options(dir: &std::path::Path, accounts_url: &str, platform_url: &str) -> Log
 
 #[tokio::test]
 async fn a_browser_login_writes_the_profile_and_the_next_login_is_silent() {
-  let (accounts_url, platform_url, _accounts, platform) = serve().await;
+  let (accounts_url, sts_url, _accounts, platform) = serve().await;
   let dir = tempfile::tempdir().unwrap();
   let user = FakeUser::default();
 
-  let first = login(&options(dir.path(), &accounts_url, &platform_url), &user)
+  let first = login(&options(dir.path(), &accounts_url, &sts_url), &user)
     .await
     .unwrap();
   assert_eq!(user.opened.lock().unwrap().len(), 1);
@@ -252,7 +254,7 @@ async fn a_browser_login_writes_the_profile_and_the_next_login_is_silent() {
     );
   }
 
-  let second = login(&options(dir.path(), &accounts_url, &platform_url), &user)
+  let second = login(&options(dir.path(), &accounts_url, &sts_url), &user)
     .await
     .unwrap();
   assert_eq!(
@@ -265,10 +267,10 @@ async fn a_browser_login_writes_the_profile_and_the_next_login_is_silent() {
 
 #[tokio::test]
 async fn select_account_skips_the_cached_sign_in_and_opens_the_account_chooser() {
-  let (accounts_url, platform_url, accounts, _) = serve().await;
+  let (accounts_url, sts_url, accounts, _) = serve().await;
   let dir = tempfile::tempdir().unwrap();
   let user = FakeUser::default();
-  let mut options = options(dir.path(), &accounts_url, &platform_url);
+  let mut options = options(dir.path(), &accounts_url, &sts_url);
 
   login(&options, &user).await.unwrap();
   login(&options, &user).await.unwrap();
@@ -299,10 +301,10 @@ async fn select_account_skips_the_cached_sign_in_and_opens_the_account_chooser()
 
 #[tokio::test]
 async fn select_account_needs_the_browser_sign_in() {
-  let (accounts_url, platform_url, _, _) = serve().await;
+  let (accounts_url, sts_url, _, _) = serve().await;
   let dir = tempfile::tempdir().unwrap();
   let user = FakeUser::default();
-  let mut options = options(dir.path(), &accounts_url, &platform_url);
+  let mut options = options(dir.path(), &accounts_url, &sts_url);
   options.device = true;
   options.select_account = true;
   assert!(login(&options, &user).await.is_err());
@@ -311,10 +313,10 @@ async fn select_account_needs_the_browser_sign_in() {
 
 #[tokio::test]
 async fn a_device_login_shows_the_code_and_waits_for_approval() {
-  let (accounts_url, platform_url, accounts, _) = serve().await;
+  let (accounts_url, sts_url, accounts, _) = serve().await;
   let dir = tempfile::tempdir().unwrap();
   let user = FakeUser::default();
-  let mut options = options(dir.path(), &accounts_url, &platform_url);
+  let mut options = options(dir.path(), &accounts_url, &sts_url);
   options.device = true;
   let session = login(&options, &user).await.unwrap();
   assert_eq!(
@@ -328,10 +330,10 @@ async fn a_device_login_shows_the_code_and_waits_for_approval() {
 
 #[tokio::test]
 async fn without_a_role_the_user_picks_one_the_platform_offers() {
-  let (accounts_url, platform_url, _, platform) = serve().await;
+  let (accounts_url, sts_url, _, platform) = serve().await;
   let dir = tempfile::tempdir().unwrap();
   let user = FakeUser::default();
-  let mut options = options(dir.path(), &accounts_url, &platform_url);
+  let mut options = options(dir.path(), &accounts_url, &sts_url);
   options.role_vrn = None;
   login(&options, &user).await.unwrap();
   assert_eq!(user.offered.lock().unwrap().len(), 2);
@@ -343,19 +345,21 @@ async fn without_a_role_the_user_picks_one_the_platform_offers() {
 
 #[tokio::test]
 async fn an_expired_sign_in_falls_back_to_the_browser_and_logout_forgets_it() {
-  let (accounts_url, platform_url, accounts, _) = serve().await;
+  let (accounts_url, sts_url, accounts, _) = serve().await;
   let dir = tempfile::tempdir().unwrap();
   let user = FakeUser::default();
-  let options = options(dir.path(), &accounts_url, &platform_url);
+  let options = options(dir.path(), &accounts_url, &sts_url);
   login(&options, &user).await.unwrap();
   accounts.lock().unwrap().refresh.clear();
   login(&options, &user).await.unwrap();
   assert_eq!(user.opened.lock().unwrap().len(), 2);
 
   logout(&options.credentials_file, &options.sso_dir, "dev").unwrap();
-  assert!(read_session(&options.credentials_file, "dev")
-    .unwrap()
-    .is_none());
+  assert!(
+    read_session(&options.credentials_file, "dev")
+      .unwrap()
+      .is_none()
+  );
   assert!(!dir.path().join("sso").join("dev.json").exists());
 }
 
@@ -373,12 +377,12 @@ fn the_default_accounts_url_is_the_production_issuer() {
 
 #[tokio::test]
 async fn a_profile_holding_long_term_keys_is_left_alone() {
-  let (accounts_url, platform_url, _, _) = serve().await;
+  let (accounts_url, sts_url, _, _) = serve().await;
   let dir = tempfile::tempdir().unwrap();
   let original = "[dev]\nvigrise_access_key_id = VGAKLONGTERM\nvigrise_secret_access_key = s\n";
   std::fs::write(dir.path().join("credentials"), original).unwrap();
   let user = FakeUser::default();
-  let error = login(&options(dir.path(), &accounts_url, &platform_url), &user)
+  let error = login(&options(dir.path(), &accounts_url, &sts_url), &user)
     .await
     .unwrap_err();
   assert!(error.to_string().contains("VGAKLONGTERM"), "{error}");
@@ -436,12 +440,12 @@ impl Ui for NoisyBrowser {
 
 #[tokio::test]
 async fn idle_connections_and_foreign_callbacks_do_not_stop_the_sign_in() {
-  let (accounts_url, platform_url, _, _) = serve().await;
+  let (accounts_url, sts_url, _, _) = serve().await;
   let dir = tempfile::tempdir().unwrap();
   let browser = NoisyBrowser::default();
   let session = tokio::time::timeout(
     std::time::Duration::from_secs(20),
-    login(&options(dir.path(), &accounts_url, &platform_url), &browser),
+    login(&options(dir.path(), &accounts_url, &sts_url), &browser),
   )
   .await
   .expect("sign-in completes")

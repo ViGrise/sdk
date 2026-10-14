@@ -18,7 +18,7 @@ async function serve(status: number, reply: unknown) {
   });
   await new Promise<void>((r) => server.listen(0, "127.0.0.1", r));
   const { port } = server.address() as AddressInfo;
-  return { endpoint: `http://127.0.0.1:${port}/api/v1/sts/assume-role`, seen, close: () => server.close() };
+  return { endpoint: `http://127.0.0.1:${port}/v1/assume-role`, seen, close: () => server.close() };
 }
 
 describe("assumeRole", () => {
@@ -77,5 +77,23 @@ describe("assumeRole", () => {
     });
     target.close();
     expect(target.seen[0].headers["x-vgr-security-token"]).toBe("t");
+  });
+});
+
+describe("assumeRole endpoint", () => {
+  it("calls the endpoint the environment names when none is given", async () => {
+    const sts = await serve(200, {
+      credentials: { access_key_id: "VGSTA", secret_access_key: "s", session_token: "t", expiration: "2026-09-26T10:30:00Z" },
+      assumed_role: { role_vrn: "vrn:r", session_vrn: "vrn:s" },
+    });
+    const base = sts.endpoint.replace("/v1/assume-role", "");
+    process.env.VIGRISE_ENDPOINT_URL_STS = base;
+    try {
+      await assumeRole({ roleVrn: "vrn:r", roleSessionName: "web" }, { credentials: { accessKeyId: "VGAK", secretAccessKey: "s" } });
+    } finally {
+      delete process.env.VIGRISE_ENDPOINT_URL_STS;
+      sts.close();
+    }
+    expect(sts.seen).toHaveLength(1);
   });
 });

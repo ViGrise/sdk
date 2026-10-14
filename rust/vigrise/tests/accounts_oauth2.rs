@@ -1,12 +1,12 @@
 mod common;
 
-use axum::{routing::post, Form, Json, Router};
-use serde_json::{json, Value};
+use axum::{Form, Json, Router, routing::post};
+use serde_json::{Value, json};
 use std::collections::HashMap;
-use vigrise::accounts::oauth2::{
-  end_session_url, random_state, AuthorizationRequest, IdTokenVerifier, OAuth2Client, Pkce,
-};
 use vigrise::accounts::Jwks;
+use vigrise::accounts::oauth2::{
+  AuthorizationRequest, IdTokenVerifier, OAuth2Client, Pkce, end_session_url, random_state,
+};
 
 const ISS: &str = "https://accounts.vigrise.com";
 
@@ -24,10 +24,11 @@ fn generated_verifiers_and_states_are_unique_and_url_safe() {
   let (a, b) = (Pkce::generate(), Pkce::generate());
   assert_ne!(a.verifier, b.verifier);
   assert_eq!(a.verifier.len(), 43);
-  assert!(a
-    .verifier
-    .chars()
-    .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_'));
+  assert!(
+    a.verifier
+      .chars()
+      .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
+  );
   assert_ne!(random_state(), random_state());
 }
 
@@ -132,38 +133,48 @@ async fn id_tokens_are_verified_for_issuer_audience_and_nonce() {
   assert_eq!(claims.sub, "u1");
   assert_eq!(claims.sid.as_deref(), Some("sid-1"));
 
-  assert!(id_verifier()
-    .verify(&common::sign(&id_claims()), Some("other"))
-    .await
-    .is_err());
+  assert!(
+    id_verifier()
+      .verify(&common::sign(&id_claims()), Some("other"))
+      .await
+      .is_err()
+  );
   let mut wrong_aud = id_claims();
   wrong_aud["aud"] = json!(["someone-else"]);
-  assert!(id_verifier()
-    .verify(&common::sign(&wrong_aud), None)
-    .await
-    .is_err());
+  assert!(
+    id_verifier()
+      .verify(&common::sign(&wrong_aud), None)
+      .await
+      .is_err()
+  );
   let mut expired = id_claims();
   expired["exp"] = json!(common::now() - 600);
-  assert!(id_verifier()
-    .verify(&common::sign(&expired), None)
-    .await
-    .is_err());
+  assert!(
+    id_verifier()
+      .verify(&common::sign(&expired), None)
+      .await
+      .is_err()
+  );
 }
 
 #[tokio::test]
 async fn id_tokens_tolerate_sixty_seconds_of_clock_skew() {
   let mut recent = id_claims();
   recent["exp"] = json!(common::now() - 10);
-  assert!(id_verifier()
-    .verify(&common::sign(&recent), None)
-    .await
-    .is_ok());
+  assert!(
+    id_verifier()
+      .verify(&common::sign(&recent), None)
+      .await
+      .is_ok()
+  );
   let mut stale = id_claims();
   stale["exp"] = json!(common::now() - 120);
-  assert!(id_verifier()
-    .verify(&common::sign(&stale), None)
-    .await
-    .is_err());
+  assert!(
+    id_verifier()
+      .verify(&common::sign(&stale), None)
+      .await
+      .is_err()
+  );
 }
 
 #[tokio::test]
@@ -227,8 +238,10 @@ async fn verify_id_token_checks_the_given_audience() {
     .await
     .unwrap();
   assert_eq!(verified.sub, "u1");
-  assert!(verifier
-    .verify_id_token(&token, "vigrise-drive")
-    .await
-    .is_err());
+  assert!(
+    verifier
+      .verify_id_token(&token, "vigrise-drive")
+      .await
+      .is_err()
+  );
 }

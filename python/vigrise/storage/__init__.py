@@ -18,7 +18,6 @@ from ._models import (
     UploadSummary,
 )
 from .client import (
-    DEFAULT_ENDPOINT,
     DEFAULT_PART_SIZE,
     AsyncStorageClient,
     AsyncStorageObjectStream,

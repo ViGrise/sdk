@@ -6,7 +6,7 @@ use std::time::Duration;
 use chrono::{TimeZone, Utc};
 use http::{HeaderMap, HeaderValue};
 use serde::Deserialize;
-use vigrise::speech::webhook::{verify_signature_at, verify_webhook_at, WebhookError};
+use vigrise::speech::webhook::{WebhookError, verify_signature_at, verify_webhook_at};
 
 #[derive(Deserialize)]
 struct Document {

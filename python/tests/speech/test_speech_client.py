@@ -372,3 +372,12 @@ async def test_line_breaks_cannot_break_the_multipart_framing(make_client):
     assert seen == []
     await call(client, "clone_voice", "Mine", VoiceReference(b"x", "audio/wav", 'a"\r\nb.wav'), consent)
     assert b'filename="a%22%0D%0Ab.wav"' in seen[-1].content
+
+
+async def test_the_endpoint_comes_from_the_environment_when_none_is_given(monkeypatch):
+    monkeypatch.setenv("VIGRISE_ENDPOINT_URL_SPEECH", "https://speech.env.test")
+    seen = []
+    transport = httpx.MockTransport(lambda r: seen.append(r) or json_response({"data": []}))
+    client = SpeechClient(credentials=CREDENTIALS, transport=transport)
+    await call(client, "list_voices")
+    assert str(seen[-1].url) == "https://speech.env.test/v1/voices"

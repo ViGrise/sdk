@@ -12,7 +12,7 @@
 //!
 //! # fn main() -> Result<(), vigrise::auth::AuthError> {
 //! let credentials = Credentials::new("VGAKEXAMPLE", "secret");
-//! let uri: Uri = "https://speech.vigrise.com/v1/voices".parse().unwrap();
+//! let uri: Uri = "https://speech-api.vigrise.com/v1/voices".parse().unwrap();
 //! let mut headers = HeaderMap::new();
 //! let signed = sign_request(
 //!   &Method::GET,
@@ -50,6 +50,8 @@ pub mod chunked;
 /// Access key and session token credentials, resolved from the environment or
 /// the credentials file.
 pub mod credentials;
+/// Where each ViGrise service lives.
+pub mod endpoint;
 /// Errors of VGR4 authentication and authorization.
 pub mod error;
 /// Sources of credentials to sign requests with.
@@ -76,5 +78,5 @@ pub use error::AuthError;
 pub use provider::{CredentialsFuture, CredentialsProvider};
 pub use quota::QuotaStatus;
 pub use signer::{
-  sign_request, sign_request_with_payload_hash, SignedRequestHeaders, UNSIGNED_PAYLOAD,
+  SignedRequestHeaders, UNSIGNED_PAYLOAD, sign_request, sign_request_with_payload_hash,
 };

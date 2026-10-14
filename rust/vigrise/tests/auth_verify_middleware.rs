@@ -11,15 +11,15 @@ use chrono::Utc;
 use http::request::Parts;
 use http::{Method, StatusCode, Uri};
 use http_body_util::BodyExt;
-use serde_json::{json, Map, Value};
+use serde_json::{Map, Value, json};
 use tower::ServiceExt;
 use uuid::Uuid;
 use vigrise::auth::signing::{derive_signing_key, parse_string_to_sign, verify_signature};
 use vigrise::auth::verify::{
-  verify, ActionResolver, AuthorizeRequest, AuthorizeResponse, Authorized, Authorizer, Decision,
-  ErrorBody, Principal, ResolvedAction, Verifier,
+  ActionResolver, AuthorizeRequest, AuthorizeResponse, Authorized, Authorizer, Decision, ErrorBody,
+  Principal, ResolvedAction, Verifier, verify,
 };
-use vigrise::auth::{sign_request, AuthError, Credentials};
+use vigrise::auth::{AuthError, Credentials, sign_request};
 
 const SECRET: &str = "test-secret";
 const KEY_ID: &str = "VGAKTESTKEY";
@@ -139,7 +139,7 @@ impl ActionResolver for RouteResolver {
           status: StatusCode::NOT_FOUND,
           code: "UnknownOperation".into(),
           message: "Unknown operation".into(),
-        })
+        });
       }
     };
     let voice = serde_json::from_slice::<Value>(body)
@@ -295,10 +295,12 @@ async fn wrong_secret_returns_string_to_sign() {
   let (status, json, _) = send(app(true, false), signed("/v1/audio/speech", BODY, "wrong")).await;
   assert_eq!(status, StatusCode::UNAUTHORIZED);
   assert_eq!(json["error"]["code"], "SignatureDoesNotMatch");
-  assert!(json["error"]["string_to_sign"]
-    .as_str()
-    .unwrap()
-    .starts_with("VGR4-HMAC-SHA256\n"));
+  assert!(
+    json["error"]["string_to_sign"]
+      .as_str()
+      .unwrap()
+      .starts_with("VGR4-HMAC-SHA256\n")
+  );
 }
 
 #[tokio::test]

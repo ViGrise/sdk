@@ -4,11 +4,11 @@ mod common;
 use std::sync::Arc;
 
 use axum::{
+  Json, Router,
   body::Body,
   extract::FromRef,
   http::{Request, StatusCode},
   routing::{get, post},
-  Json, Router,
 };
 use serde_json::json;
 use tower::ServiceExt;

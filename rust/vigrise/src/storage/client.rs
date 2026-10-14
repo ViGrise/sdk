@@ -2,18 +2,18 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use crate::auth::{
-  sign_request, sign_request_with_payload_hash, CredentialsProvider, UNSIGNED_PAYLOAD,
+  CredentialsProvider, UNSIGNED_PAYLOAD, sign_request, sign_request_with_payload_hash,
 };
 use bytes::{Bytes, BytesMut};
 use chrono::Utc;
 use futures_util::{Stream, StreamExt};
 use http::{HeaderMap, HeaderName, HeaderValue, Method};
-use percent_encoding::{utf8_percent_encode, AsciiSet, NON_ALPHANUMERIC};
-use serde::de::DeserializeOwned;
+use percent_encoding::{AsciiSet, NON_ALPHANUMERIC, utf8_percent_encode};
 use serde::Deserialize;
-use serde_json::{json, Value};
+use serde::de::DeserializeOwned;
+use serde_json::{Value, json};
 
-use crate::storage::error::{from_response, StorageError};
+use crate::storage::error::{StorageError, from_response};
 use crate::storage::types::*;
 
 /// Characters left as they are in a path segment or query value.
@@ -50,13 +50,22 @@ pub struct StorageClient {
 
 impl StorageClient {
   /// `endpoint` is the service's base URL, for example
-  /// `https://storage.vigrise.com`.
+  /// `https://storage-api.vigrise.com`.
   pub fn new(endpoint: impl Into<String>, credentials: Arc<dyn CredentialsProvider>) -> Self {
     Self {
       endpoint: endpoint.into().trim_end_matches('/').to_string(),
       credentials,
       http: reqwest::Client::new(),
     }
+  }
+
+  /// A client of the endpoint that `VIGRISE_ENDPOINT_URL_STORAGE` or
+  /// `VIGRISE_ENDPOINT_URL` names, `https://storage-api.vigrise.com` by default.
+  pub fn resolved(credentials: Arc<dyn CredentialsProvider>) -> Self {
+    Self::new(
+      crate::auth::endpoint::resolve_endpoint("storage", None),
+      credentials,
+    )
   }
 
   async fn send(

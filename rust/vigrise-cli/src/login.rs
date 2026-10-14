@@ -1,19 +1,19 @@
 //! `vigrise login`: sign in with a ViGrise account at Accounts, then exchange
-//! the Accounts ID token for a role session at the platform and write it to a
+//! the Accounts ID token for a role session at the STS endpoint and write it to a
 //! profile. The Accounts refresh token is kept so later logins need no browser.
 
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
-use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use base64::Engine;
+use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use rand::RngCore;
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
-use crate::profile::{access_key_id, remove_session, write_private, write_session, SessionProfile};
+use crate::profile::{SessionProfile, access_key_id, remove_session, write_private, write_session};
 
 const SCOPES: &str = "openid email offline_access";
 /// The Accounts issuer, where its OpenID configuration is published.
@@ -27,10 +27,10 @@ pub enum LoginError {
   /// ViGrise Accounts refused the sign-in or answered unexpectedly.
   #[error("{0}")]
   Accounts(String),
-  /// The platform refused to issue the role session.
+  /// STS refused to issue the role session.
   #[error("{code}: {message}")]
   Platform {
-    /// Error code of the platform.
+    /// Error code of STS.
     code: String,
     /// Human-readable message.
     message: String,
@@ -50,7 +50,9 @@ pub enum LoginError {
   #[error("no role was chosen")]
   NoRole,
   /// The profile holds a long-term access key that a session would replace.
-  #[error("profile {profile} holds the long-term access key {access_key_id}; choose another profile with --profile")]
+  #[error(
+    "profile {profile} holds the long-term access key {access_key_id}; choose another profile with --profile"
+  )]
   LongTermKeys {
     /// The profile that holds the key.
     profile: String,
@@ -64,8 +66,8 @@ pub enum LoginError {
 pub struct LoginOptions {
   /// Accounts issuer, for example `https://accounts.vigrise.com/o/oauth2`.
   pub accounts_url: String,
-  /// Platform base URL, for example `https://platform.vigrise.com`.
-  pub platform_url: String,
+  /// Base URL of the STS endpoint, for example `https://sts-api.vigrise.com`.
+  pub sts_url: String,
   /// OAuth client ID of the command line at Accounts.
   pub client_id: String,
   /// Profile of the credentials file that receives the session.
@@ -437,7 +439,7 @@ fn cached_refresh_token(sso_dir: &Path, profile: &str) -> Option<String> {
     .map(|cache| cache.refresh_token)
 }
 
-async fn platform_call<T: serde::de::DeserializeOwned>(
+async fn sts_call<T: serde::de::DeserializeOwned>(
   http: &reqwest::Client,
   url: &str,
   body: &Value,
@@ -536,13 +538,13 @@ pub async fn login(options: &LoginOptions, ui: &dyn Ui) -> Result<SessionProfile
     }
   }
 
-  let platform = options.platform_url.trim_end_matches('/');
+  let sts = options.sts_url.trim_end_matches('/');
   let role_vrn = match &options.role_vrn {
     Some(role_vrn) => role_vrn.clone(),
     None => {
-      let roles: Vec<AssumableRole> = platform_call(
+      let roles: Vec<AssumableRole> = sts_call(
         &http,
-        &format!("{platform}/api/v1/sts/assumable-roles"),
+        &format!("{sts}/v1/assumable-roles"),
         &json!({ "web_identity_token": id_token }),
       )
       .await?;
@@ -561,9 +563,9 @@ pub async fn login(options: &LoginOptions, ui: &dyn Ui) -> Result<SessionProfile
   if let Some(duration) = options.duration_seconds {
     request["duration_seconds"] = json!(duration);
   }
-  let assumed: Assumed = platform_call(
+  let assumed: Assumed = sts_call(
     &http,
-    &format!("{platform}/api/v1/sts/assume-role-with-web-identity"),
+    &format!("{sts}/v1/assume-role-with-web-identity"),
     &request,
   )
   .await?;

@@ -1,3 +1,4 @@
+import { stsUrl } from "./endpoint.js";
 import { signedFetch } from "./fetch.js";
 import type { Credentials, CredentialsProvider } from "./types.js";
 
@@ -11,8 +12,8 @@ export interface AssumeRoleInput {
 }
 
 export interface AssumeRoleOptions {
-  /** Full URL, for example `https://platform.vigrise.com/api/v1/sts/assume-role`. */
-  endpoint: string;
+  /** The STS endpoint, with or without the `/v1/assume-role` path; `VIGRISE_ENDPOINT_URL_STS`, `VIGRISE_ENDPOINT_URL` or `https://sts-api.vigrise.com` when omitted. */
+  endpoint?: string;
   /** Long-term credentials of the caller; resolved from the environment when omitted. */
   credentials?: Credentials | CredentialsProvider;
 }
@@ -34,7 +35,7 @@ export async function assumeRole(input: AssumeRoleInput, options: AssumeRoleOpti
     session_policy: input.sessionPolicy,
   });
   const response = await signedFetch(
-    options.endpoint,
+    stsUrl(options.endpoint),
     { method: "POST", headers: { "content-type": "application/json" }, body },
     { service: "sts", credentials: options.credentials },
   );

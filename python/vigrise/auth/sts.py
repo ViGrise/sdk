@@ -9,6 +9,7 @@ from datetime import datetime
 from typing import Any, Optional
 
 from .credentials import Credentials, CredentialsSource, credentials_from
+from .endpoint import sts_url
 from .signer import sign_request
 
 
@@ -41,16 +42,17 @@ def assume_role(
     role_vrn: str,
     role_session_name: str,
     *,
-    endpoint: str,
+    endpoint: Optional[str] = None,
     credentials: Optional[CredentialsSource] = None,
     duration_seconds: Optional[int] = None,
     source_identity: Optional[str] = None,
     session_policy: Optional[Any] = None,
     timeout: float = 5.0,
 ) -> RoleSession:
-    """`endpoint` is the full URL, for example
-    `https://platform.vigrise.com/api/v1/sts/assume-role`. Callers request a
-    new session before `expiration`."""
+    """`endpoint` is the STS endpoint, with or without the `/v1/assume-role` path; without it
+    `VIGRISE_ENDPOINT_URL_STS`, `VIGRISE_ENDPOINT_URL` or `https://sts-api.vigrise.com` is used.
+    Callers request a new session before `expiration`."""
+    endpoint = sts_url(endpoint)
     request = {"role_vrn": role_vrn, "role_session_name": role_session_name}
     optional = {
         "duration_seconds": duration_seconds,

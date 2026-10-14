@@ -1,3 +1,4 @@
+import { resolveEndpoint } from "../auth/endpoint.js";
 import { signRequest } from "../auth/webcrypto.js";
 import type { Credentials, CredentialsProvider } from "../auth/types.js";
 import { camelize } from "../internal/case.js";
@@ -8,11 +9,8 @@ import type {
   ListJobsOptions, Model, Page, Speech, SpeechStream, SynthesizeOptions, Voice, VoiceReference, WaitForJobOptions, WebhookSecret,
 } from "./types.js";
 
-/** Endpoint of the hosted Speech API. */
-export const DEFAULT_ENDPOINT = "https://speech.vigrise.com";
-
 export interface SpeechClientOptions {
-  /** Base URL of the Speech API; `https://speech.vigrise.com` by default. */
+  /** Base URL of the Speech API; `VIGRISE_ENDPOINT_URL_SPEECH`, `VIGRISE_ENDPOINT_URL` or `https://speech-api.vigrise.com` when omitted. */
   endpoint?: string;
   /** Fixed credentials or a provider called before each request. Omitted, Node reads VIGRISE_ACCESS_KEY_ID and VIGRISE_SECRET_ACCESS_KEY; other runtimes need them passed. */
   credentials?: Credentials | CredentialsProvider;
@@ -48,7 +46,7 @@ export class SpeechClient {
   private readonly credentials?: Credentials | CredentialsProvider;
 
   constructor(options: SpeechClientOptions = {}) {
-    this.endpoint = (options.endpoint ?? DEFAULT_ENDPOINT).replace(/\/+$/, "");
+    this.endpoint = resolveEndpoint("speech", options.endpoint);
     this.credentials = options.credentials;
   }
 

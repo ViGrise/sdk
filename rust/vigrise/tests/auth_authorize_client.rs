@@ -1,13 +1,13 @@
 #![cfg(feature = "verify")]
 
-use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 use axum::extract::State;
 use axum::http::{HeaderMap, StatusCode};
 use axum::routing::post;
 use axum::{Json, Router};
-use serde_json::{json, Map, Value};
+use serde_json::{Map, Value, json};
 use vigrise::auth::verify::{AuthorizeClient, AuthorizeRequest, Authorizer, Decision};
 use vigrise::auth::{AuthorizationHeader, Credentials};
 

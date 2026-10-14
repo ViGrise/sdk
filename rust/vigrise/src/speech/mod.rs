@@ -22,8 +22,8 @@ mod options;
 mod types;
 pub mod webhook;
 
-pub use client::{SpeechClient, SpeechStream, DEFAULT_ENDPOINT};
+pub use client::{SpeechClient, SpeechStream};
 pub use error::SpeechError;
 pub use options::*;
 pub use types::*;
-pub use webhook::{verify_webhook, verify_webhook_within, WebhookError};
+pub use webhook::{WebhookError, verify_webhook, verify_webhook_within};

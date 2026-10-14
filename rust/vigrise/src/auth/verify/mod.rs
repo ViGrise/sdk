@@ -8,7 +8,7 @@ mod types;
 
 pub use client::{AuthorizeClient, AuthorizeFuture, Authorizer};
 pub use middleware::{
-  headers_with_host, hold_leases, request_context, verify, verify_streaming, Verifier,
+  Verifier, headers_with_host, hold_leases, request_context, verify, verify_streaming,
 };
 pub use resolver::{ActionResolver, ResolvedAction};
 pub use types::{

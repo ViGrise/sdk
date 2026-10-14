@@ -3,14 +3,14 @@
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
+use axum::Router;
 use axum::body::Body;
 use axum::extract::{Request, State};
 use axum::http::HeaderMap;
 use axum::response::Response;
-use axum::Router;
 use bytes::Bytes;
 use futures_util::StreamExt;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use vigrise::auth::Credentials;
 use vigrise::speech::{
   AudioFormat, CloneOptions, Consent, GenerationSource, JobInput, JobOptions, JobStatus,

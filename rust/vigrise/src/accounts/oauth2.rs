@@ -2,8 +2,8 @@
 //! redirect flow: PKCE, `state`, code exchange, ID token verification and the
 //! end-session URL.
 
-use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
-use jsonwebtoken::{decode, decode_header, Algorithm, Validation};
+use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
+use jsonwebtoken::{Algorithm, Validation, decode, decode_header};
 use rand::RngCore;
 use serde::Deserialize;
 use sha2::{Digest, Sha256};

@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::sync::Mutex;
 
-use jsonwebtoken::{decode, decode_header, Algorithm, Validation};
+use jsonwebtoken::{Algorithm, Validation, decode, decode_header};
 use serde::Deserialize;
 use serde_json::Value;
 

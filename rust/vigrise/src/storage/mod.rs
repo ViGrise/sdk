@@ -8,7 +8,7 @@
 //!
 //! # async fn run() -> Result<(), Box<dyn std::error::Error>> {
 //! let credentials = Arc::new(Credentials::resolve()?);
-//! let storage = StorageClient::new("https://storage.vigrise.com", credentials);
+//! let storage = StorageClient::resolved(credentials);
 //! storage.create_bucket("photos").await?;
 //! storage
 //!     .put_object("photos", "2026/cat.jpg", &b"..."[..], &PutOptions::default())

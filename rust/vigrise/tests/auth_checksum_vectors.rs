@@ -5,7 +5,7 @@ use std::path::PathBuf;
 
 use serde::Deserialize;
 use vigrise::auth::checksum::{
-  checksum_of, combine_crc, composite, encode_base64, ChecksumAlgorithm,
+  ChecksumAlgorithm, checksum_of, combine_crc, composite, encode_base64,
 };
 
 #[derive(Deserialize)]

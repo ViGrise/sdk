@@ -1,12 +1,12 @@
 //! Helpers for testing back-channel logout and ID token verification in apps
 //! with a real signing key.
 
-use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
-use jsonwebtoken::{jwk::JwkSet, EncodingKey, Header};
+use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
+use jsonwebtoken::{EncodingKey, Header, jwk::JwkSet};
 use rsa::{
+  RsaPrivateKey,
   pkcs8::{EncodePrivateKey, LineEnding},
   traits::PublicKeyParts,
-  RsaPrivateKey,
 };
 
 use crate::accounts::Jwks;

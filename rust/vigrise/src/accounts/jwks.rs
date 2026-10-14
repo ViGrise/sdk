@@ -1,7 +1,7 @@
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
-use jsonwebtoken::{jwk::JwkSet, DecodingKey};
+use jsonwebtoken::{DecodingKey, jwk::JwkSet};
 
 use crate::accounts::AccountsError;
 

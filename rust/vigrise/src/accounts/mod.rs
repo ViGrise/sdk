@@ -38,7 +38,7 @@ pub use error::AccountsError;
 #[cfg_attr(docsrs, doc(cfg(feature = "accounts-axum")))]
 pub use extractor::{AccountsIdentity, AccountsRejection, SSO_HEADER};
 pub use introspect::{
-  sso_token_hash, Introspection, SsoAccount, SsoIdentity, SsoIntrospector, SsoIntrospectorConfig,
-  SsoSession,
+  Introspection, SsoAccount, SsoIdentity, SsoIntrospector, SsoIntrospectorConfig, SsoSession,
+  sso_token_hash,
 };
 pub use jwks::Jwks;

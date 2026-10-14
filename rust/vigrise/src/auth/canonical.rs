@@ -2,7 +2,7 @@
 //! identical to `test-vectors/generate.py`.
 
 use http::HeaderMap;
-use percent_encoding::{percent_decode_str, percent_encode, AsciiSet, NON_ALPHANUMERIC};
+use percent_encoding::{AsciiSet, NON_ALPHANUMERIC, percent_decode_str, percent_encode};
 use sha2::{Digest, Sha256};
 
 use crate::auth::error::AuthError;

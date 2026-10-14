@@ -1,6 +1,6 @@
 mod common;
 
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use vigrise::accounts::{AccountsError, BackchannelLogout, BackchannelOutcome, Jwks};
 
 const ISS: &str = "https://accounts.vigrise.com";
@@ -44,25 +44,33 @@ async fn a_valid_logout_token_yields_sid_and_subject() {
 
 #[tokio::test]
 async fn wrong_issuer_audience_or_missing_event_is_rejected() {
-  assert!(check(|c| c["iss"] = json!("https://evil.example"))
-    .await
-    .is_err());
-  assert!(check(|c| c["aud"] = json!(["vigrise-wallet"]))
-    .await
-    .is_err());
+  assert!(
+    check(|c| c["iss"] = json!("https://evil.example"))
+      .await
+      .is_err()
+  );
+  assert!(
+    check(|c| c["aud"] = json!(["vigrise-wallet"]))
+      .await
+      .is_err()
+  );
   assert!(check(|c| c["events"] = json!({})).await.is_err());
   assert!(check(|c| c["nonce"] = json!("n")).await.is_err());
-  assert!(check(|c| {
-    c.as_object_mut().unwrap().remove("sid");
-    c.as_object_mut().unwrap().remove("sub");
-  })
-  .await
-  .is_err());
-  assert!(check(|c| {
-    c.as_object_mut().unwrap().remove("jti");
-  })
-  .await
-  .is_err());
+  assert!(
+    check(|c| {
+      c.as_object_mut().unwrap().remove("sid");
+      c.as_object_mut().unwrap().remove("sub");
+    })
+    .await
+    .is_err()
+  );
+  assert!(
+    check(|c| {
+      c.as_object_mut().unwrap().remove("jti");
+    })
+    .await
+    .is_err()
+  );
 }
 
 #[tokio::test]
@@ -108,9 +116,11 @@ mod with_generated_keys {
     let outcome = verifier.verify(&token).await.unwrap();
     assert_eq!(outcome.into_token().sid.as_deref(), Some("sid-9"));
     let other = TestSigner::generate();
-    assert!(verifier
-      .verify(&other.logout_token(ISS, "vigrise-drive", "sid-9"))
-      .await
-      .is_err());
+    assert!(
+      verifier
+        .verify(&other.logout_token(ISS, "vigrise-drive", "sid-9"))
+        .await
+        .is_err()
+    );
   }
 }

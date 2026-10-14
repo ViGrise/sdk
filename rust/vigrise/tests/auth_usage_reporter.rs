@@ -8,9 +8,9 @@ use axum::http::{HeaderMap, StatusCode};
 use axum::routing::post;
 use axum::{Json, Router};
 use uuid::Uuid;
+use vigrise::auth::Credentials;
 use vigrise::auth::metering::{UsageBatch, UsageReport, UsageReporter, UsageReporterConfig};
 use vigrise::auth::verify::{Authorized, Principal};
-use vigrise::auth::Credentials;
 
 #[derive(Clone, Default)]
 struct Received {
@@ -187,9 +187,11 @@ async fn transient_failures_are_retried_until_the_batch_is_delivered() {
   reporter.shutdown().await;
   let batches = received.batches.lock().unwrap();
   assert_eq!(batches.len(), 9);
-  assert!(batches
-    .iter()
-    .all(|b| b.records[0].record_id == batches[0].records[0].record_id));
+  assert!(
+    batches
+      .iter()
+      .all(|b| b.records[0].record_id == batches[0].records[0].record_id)
+  );
 }
 
 #[tokio::test(flavor = "multi_thread")]

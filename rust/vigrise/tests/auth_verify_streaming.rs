@@ -15,11 +15,11 @@ use tower::ServiceExt;
 use uuid::Uuid;
 use vigrise::auth::signing::{derive_signing_key, parse_string_to_sign, verify_signature};
 use vigrise::auth::verify::{
-  verify, verify_streaming, ActionResolver, AuthorizeRequest, AuthorizeResponse, Authorized,
-  Authorizer, Decision, ErrorBody, Principal, ResolvedAction, Verifier,
+  ActionResolver, AuthorizeRequest, AuthorizeResponse, Authorized, Authorizer, Decision, ErrorBody,
+  Principal, ResolvedAction, Verifier, verify, verify_streaming,
 };
 use vigrise::auth::{
-  sign_request, sign_request_with_payload_hash, AuthError, Credentials, UNSIGNED_PAYLOAD,
+  AuthError, Credentials, UNSIGNED_PAYLOAD, sign_request, sign_request_with_payload_hash,
 };
 
 const SECRET: &str = "test-secret";

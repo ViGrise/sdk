@@ -1,7 +1,7 @@
 use std::fmt;
 
 use crate::auth::error::AuthError;
-use crate::auth::signing::{scope, ALGORITHM, TERMINATOR};
+use crate::auth::signing::{ALGORITHM, TERMINATOR, scope};
 
 /// Headers every VGR4 signature must cover.
 pub const REQUIRED_SIGNED_HEADERS: [&str; 3] = ["host", "x-vgr-content-sha256", "x-vgr-date"];

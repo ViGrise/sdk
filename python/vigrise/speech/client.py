@@ -7,6 +7,7 @@ import httpx
 from .. import _http
 from .._client import AsyncSender, Failures, SyncSender
 from ..auth.credentials import CredentialsSource
+from ..auth.endpoint import resolve_endpoint
 from . import _operations as ops
 from ._errors import SpeechSigningError, SpeechTransportError, SpeechWaitTimeoutError, error_from_response
 from ._models import (
@@ -27,7 +28,6 @@ from ._models import (
     WebhookSecret,
 )
 
-DEFAULT_ENDPOINT = "https://speech.vigrise.com"
 
 
 class SpeechStream:
@@ -85,13 +85,13 @@ class SpeechClient:
 
     def __init__(
         self,
-        endpoint: str = DEFAULT_ENDPOINT,
+        endpoint: Optional[str] = None,
         credentials: Optional[CredentialsSource] = None,
         *,
         timeout: Optional[float] = 60.0,
         transport: Optional[httpx.BaseTransport] = None,
     ):
-        self._sender = SyncSender("speech", endpoint, credentials, timeout, _FAILURES, transport)
+        self._sender = SyncSender("speech", resolve_endpoint("speech", endpoint), credentials, timeout, _FAILURES, transport)
 
     def close(self) -> None:
         self._sender.close()
@@ -199,13 +199,13 @@ class AsyncSpeechClient:
 
     def __init__(
         self,
-        endpoint: str = DEFAULT_ENDPOINT,
+        endpoint: Optional[str] = None,
         credentials: Optional[CredentialsSource] = None,
         *,
         timeout: Optional[float] = 60.0,
         transport: Optional[httpx.AsyncBaseTransport] = None,
     ):
-        self._sender = AsyncSender("speech", endpoint, credentials, timeout, _FAILURES, transport)
+        self._sender = AsyncSender("speech", resolve_endpoint("speech", endpoint), credentials, timeout, _FAILURES, transport)
 
     async def aclose(self) -> None:
         await self._sender.aclose()

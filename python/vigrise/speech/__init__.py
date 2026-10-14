@@ -35,7 +35,7 @@ from ._models import (
 )
 from .webhook import WebhookVerificationError, verify_webhook, verify_webhook_signature
 
-_CLIENT_NAMES = ("DEFAULT_ENDPOINT", "AsyncSpeechClient", "AsyncSpeechStream", "SpeechClient", "SpeechStream")
+_CLIENT_NAMES = ("AsyncSpeechClient", "AsyncSpeechStream", "SpeechClient", "SpeechStream")
 
 __all__ = [
     "AsyncSpeechClient",
@@ -45,7 +45,6 @@ __all__ = [
     "AudioUrl",
     "Consent",
     "ConsentStatement",
-    "DEFAULT_ENDPOINT",
     "Generation",
     "GenerationSource",
     "GenerationStatus",

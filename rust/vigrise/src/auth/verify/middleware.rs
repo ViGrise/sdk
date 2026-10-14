@@ -8,11 +8,12 @@ use axum::middleware::Next;
 use axum::response::{IntoResponse, Response};
 use bytes::Bytes;
 use http::request::Parts;
-use http::{header, HeaderMap, HeaderValue, Uri};
+use http::{HeaderMap, HeaderValue, Uri, header};
 use http_body_util::{BodyExt, LengthLimitError, Limited};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 
+use crate::auth::QuotaStatus;
 use crate::auth::authorization::AuthorizationHeader;
 use crate::auth::canonical::{canonical_request, hex_sha256};
 use crate::auth::error::AuthError;
@@ -23,7 +24,6 @@ use crate::auth::verify::resolver::{ActionResolver, ResolvedAction};
 use crate::auth::verify::types::{
   AuthorizeRequest, AuthorizeResponse, Authorized, Decision, Principal,
 };
-use crate::auth::QuotaStatus;
 
 /// Settings of the [`verify`] middleware.
 pub struct Verifier {
@@ -115,7 +115,7 @@ pub async fn verify_streaming(
         message: "x-vgr-content-sha256 must be UNSIGNED-PAYLOAD or a hex SHA-256".into(),
         string_to_sign: None,
       }
-      .into_response()
+      .into_response();
     }
   };
   let signed_hash = payload_hash.as_deref().unwrap_or(UNSIGNED_PAYLOAD);

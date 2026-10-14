@@ -1,14 +1,14 @@
 mod common;
 
 use std::sync::{
-  atomic::{AtomicUsize, Ordering},
   Arc,
+  atomic::{AtomicUsize, Ordering},
 };
 use std::time::Duration;
 
-use axum::{extract::State, http::HeaderMap, http::StatusCode, routing::post, Json, Router};
-use serde_json::{json, Value};
-use vigrise::accounts::{sso_token_hash, AccountsError, SsoIntrospector, SsoIntrospectorConfig};
+use axum::{Json, Router, extract::State, http::HeaderMap, http::StatusCode, routing::post};
+use serde_json::{Value, json};
+use vigrise::accounts::{AccountsError, SsoIntrospector, SsoIntrospectorConfig, sso_token_hash};
 
 #[derive(Clone)]
 struct Fake {

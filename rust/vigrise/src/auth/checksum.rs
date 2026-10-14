@@ -1,8 +1,8 @@
 //! The additional checksums of S3: CRC32, CRC32C, CRC64NVME, SHA-1 and
 //! SHA-256, computed while a body streams. Values travel base64-encoded.
 
-use base64::engine::general_purpose::STANDARD;
 use base64::Engine;
+use base64::engine::general_purpose::STANDARD;
 use crc_fast::CrcAlgorithm;
 use sha1::Sha1;
 use sha2::{Digest, Sha256};
