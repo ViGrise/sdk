@@ -7,6 +7,7 @@ assert.strictEqual(typeof cjs.signedFetch, "function", "require() exposes signed
 
 for (const [subpath, name] of [
   ["auth/browser", "signRequest"],
+  ["accounts/server", "BackchannelLogout"],
   ["speech", "SpeechClient"],
   ["storage", "StorageClient"],
 ]) {
@@ -17,6 +18,7 @@ Promise.all([
   import("@vigrise/sdk/auth"),
   import("@vigrise/sdk/accounts"),
   import("@vigrise/sdk/accounts/astro"),
+  import("@vigrise/sdk/accounts/server"),
   import("@vigrise/sdk/speech"),
   import("@vigrise/sdk/storage"),
 ]).then(([esm]) => {
