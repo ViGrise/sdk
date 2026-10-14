@@ -37,7 +37,8 @@ class BackchannelLogout:
         def invalid(message: str) -> InvalidTokenError:
             return InvalidTokenError(f"invalid logout token: {message}")
 
-        if (claims.get("events") or {}).get(EVENT) is None:
+        events = claims.get("events")
+        if not isinstance(events, dict) or events.get(EVENT) is None:
             raise invalid("missing backchannel-logout event")
         if "nonce" in claims:
             raise invalid("nonce is not allowed")

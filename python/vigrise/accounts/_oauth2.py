@@ -13,6 +13,8 @@ from ._models import IdTokenClaims, TokenResponse
 from ._verify import decode, unverified_header
 
 REQUEST_TIMEOUT = 5.0
+# Clock skew an ID token's expiry tolerates.
+ID_TOKEN_LEEWAY_SECONDS = 60
 
 
 def _random_urlsafe(size: int) -> str:
@@ -205,7 +207,7 @@ class IdTokenVerifier:
         return self._claims(id_token, await self._jwks.akey(header), audience)
 
     def _claims(self, id_token: str, key, audience: str) -> IdTokenClaims:
-        claims = decode(id_token, key, "ID token", self._issuer, audience, ["iss", "aud", "exp", "sub"])
+        claims = decode(id_token, key, "ID token", self._issuer, audience, ["iss", "aud", "exp", "sub"], ID_TOKEN_LEEWAY_SECONDS)
         return IdTokenClaims(claims["sub"], claims.get("sid"), claims.get("auth_time"), claims.get("nonce"))
 
     @staticmethod

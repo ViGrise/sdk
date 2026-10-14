@@ -71,3 +71,24 @@ def test_bytes_are_accepted():
 def test_a_tampered_body_is_refused():
     with pytest.raises(WebhookVerificationError):
         verify_webhook(SECRET, signed_headers(BODY), BODY.replace("job_1", "job_2"), now=NOW)
+
+
+def test_webhook_verification_needs_no_httpx():
+    import subprocess
+    import sys
+
+    code = (
+        "import sys; sys.modules['httpx'] = None\n"
+        "from vigrise.speech import verify_webhook, WebhookVerificationError\n"
+        "import vigrise.speech.webhook\n"
+    )
+    result = subprocess.run([sys.executable, "-I", "-c", code], capture_output=True, text=True, cwd=str(Path(__file__).parents[2]),
+                            env={"PYTHONPATH": str(Path(__file__).parents[2])})
+    assert result.returncode == 0, result.stderr
+
+
+def test_the_all_list_names_the_verifiers_and_the_clients():
+    import vigrise.speech as speech
+
+    assert {"verify_webhook", "verify_webhook_signature", "SpeechClient", "AsyncSpeechClient"} <= set(speech.__all__)
+    assert all(hasattr(speech, name) for name in speech.__all__)

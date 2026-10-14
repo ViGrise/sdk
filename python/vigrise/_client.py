@@ -19,6 +19,13 @@ class Failures:
 
 
 class _Sender:
+    def _refused(self, status: int) -> None:
+        """Tells a credentials provider that the service refused its credentials, for example a revoked session."""
+        if status in (401, 403):
+            invalidate = getattr(self.credentials, "invalidate", None)
+            if callable(invalidate):
+                invalidate()
+
     def __init__(self, service: str, endpoint: str, credentials: Optional[CredentialsSource], timeout: Optional[float], failures: Failures):
         self.service = service
         self.endpoint = endpoint.rstrip("/")
@@ -29,7 +36,7 @@ class _Sender:
     def _build(self, http, request: _http.Request) -> httpx.Request:
         try:
             url, headers = _http.prepare(request, self.endpoint, self.service, self.credentials)
-        except (ValueError, LookupError) as error:
+        except Exception as error:
             raise self.failures.signing(str(error)) from error
         content = request.stream if request.stream is not None else request.content
         return http.build_request(request.method, url, headers=headers, content=content, timeout=self.timeout)
@@ -53,6 +60,7 @@ class SyncSender(_Sender):
         if not response.is_success:
             body = response.read()
             response.close()
+            self._refused(response.status_code)
             raise self.failures.response(response.status_code, body)
         return response
 
@@ -75,5 +83,6 @@ class AsyncSender(_Sender):
         if not response.is_success:
             body = await response.aread()
             await response.aclose()
+            self._refused(response.status_code)
             raise self.failures.response(response.status_code, body)
         return response

@@ -163,3 +163,10 @@ async def test_verify_for_audience_checks_the_audience_it_is_given():
     assert (await verifier.averify_for_audience(token, "desktop")).sub == "user-1"
     with pytest.raises(InvalidTokenError):
         verifier.verify(token)
+
+
+def test_id_tokens_tolerate_sixty_seconds_of_clock_skew():
+    verifier = id_verifier()
+    assert verifier.verify(SIGNER.sign(id_claims(exp=int(time.time()) - 10))).sub == "user-1"
+    with pytest.raises(InvalidTokenError):
+        verifier.verify(SIGNER.sign(id_claims(exp=int(time.time()) - 120)))

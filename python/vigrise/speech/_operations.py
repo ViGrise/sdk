@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Optional
 import httpx
 
 from .._http import Request, query_pairs, segment
-from ._errors import SpeechTransportError, error_from_response
+from ._errors import SpeechSigningError, SpeechTransportError, error_from_response
 from ._models import (
     AudioFormat,
     AudioUrl,
@@ -104,11 +104,14 @@ def delete_voice_request(voice_id: str) -> Request:
 
 
 def clone_voice_request(name: str, reference: VoiceReference, consent: Consent, idempotency_key: Optional[str]) -> Request:
-    content_type, body = encode_multipart([
-        ("name", name.encode(), None, None),
-        ("reference", reference.bytes, reference.file_name, reference.content_type),
-        ("consent", json.dumps(consent.to_dict(), separators=(",", ":")).encode(), None, None),
-    ])
+    try:
+        content_type, body = encode_multipart([
+            ("name", name.encode(), None, None),
+            ("reference", reference.bytes, reference.file_name, reference.content_type),
+            ("consent", json.dumps(consent.to_dict(), separators=(",", ":")).encode(), None, None),
+        ])
+    except ValueError as error:
+        raise SpeechSigningError(str(error)) from error
     headers = {"content-type": content_type}
     if idempotency_key is not None:
         headers["idempotency-key"] = idempotency_key

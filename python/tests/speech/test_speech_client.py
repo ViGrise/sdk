@@ -17,6 +17,7 @@ from vigrise.speech import (
     Relationship,
     SpeechClient,
     SpeechServiceError,
+    SpeechSigningError,
     SpeechTransportError,
     SpeechWaitTimeoutError,
     Turn,
@@ -331,3 +332,43 @@ async def test_transport_failures_are_transport_errors(make_client):
     client, _ = make_client(refuse)
     with pytest.raises(SpeechTransportError):
         await call(client, "list_voices")
+
+
+async def test_a_failing_credentials_provider_is_a_signing_error_and_nothing_is_sent():
+    def broken():
+        raise RuntimeError("sts down")
+
+    for cls in (SpeechClient, AsyncSpeechClient):
+        seen = []
+        client = cls("https://speech.test", broken, transport=httpx.MockTransport(lambda r: seen.append(r) or httpx.Response(200)))
+        with pytest.raises(SpeechSigningError):
+            await call(client, "list_voices")
+        assert seen == []
+
+
+async def test_the_provider_is_invalidated_when_the_service_refuses_its_credentials(make_client):
+    class Provider:
+        invalidated = 0
+
+        def __call__(self):
+            return CREDENTIALS
+
+        def invalidate(self):
+            self.invalidated += 1
+
+    provider = Provider()
+    client, _ = make_client(lambda r: json_response({"error": {"code": "InvalidClientTokenId", "message": "revoked"}}, 403))
+    client._sender.credentials = provider
+    with pytest.raises(SpeechServiceError):
+        await call(client, "list_voices")
+    assert provider.invalidated == 1
+
+
+async def test_line_breaks_cannot_break_the_multipart_framing(make_client):
+    client, seen = make_client(lambda r: json_response(VOICE, 201))
+    consent = Consent(statement_version=1, speaker_name="An", relationship=Relationship.SELF, agreed=True)
+    with pytest.raises(SpeechSigningError):
+        await call(client, "clone_voice", "Mine", VoiceReference(b"x", "audio/wav\r\nX: y", "a.wav"), consent)
+    assert seen == []
+    await call(client, "clone_voice", "Mine", VoiceReference(b"x", "audio/wav", 'a"\r\nb.wav'), consent)
+    assert b'filename="a%22%0D%0Ab.wav"' in seen[-1].content

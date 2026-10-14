@@ -1,6 +1,7 @@
 import base64
 import threading
 import time
+from dataclasses import replace
 from typing import Dict, Optional, Tuple
 
 import httpx
@@ -35,15 +36,20 @@ class _Introspector:
         with self._lock:
             entry = self._cache.get(key)
         if entry is not None and time.monotonic() - entry[0] < self._cache_ttl:
-            return entry[1]
+            return self._copy(entry[1])
         return None
+
+    @staticmethod
+    def _copy(answer: Introspection) -> Introspection:
+        """A copy, so callers cannot change the cached answer through its list."""
+        return replace(answer, accounts=list(answer.accounts))
 
     def _store(self, key: str, answer: Introspection) -> None:
         with self._lock:
             if len(self._cache) >= MAX_CACHE_ENTRIES:
                 now = time.monotonic()
                 self._cache = {k: v for k, v in self._cache.items() if now - v[0] < self._cache_ttl}
-            self._cache[key] = (time.monotonic(), answer)
+            self._cache[key] = (time.monotonic(), self._copy(answer))
 
     def invalidate_session(self, session_id: str) -> None:
         """Drops every cached answer of an Accounts session. The cache lives in this process, so other instances keep answering from their own cache until the entries expire."""

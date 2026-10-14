@@ -33,7 +33,55 @@ from ._models import (
     WebhookEvent,
     WebhookSecret,
 )
-from .client import DEFAULT_ENDPOINT, AsyncSpeechClient, AsyncSpeechStream, SpeechClient, SpeechStream
 from .webhook import WebhookVerificationError, verify_webhook, verify_webhook_signature
 
-__all__ = [name for name in dir() if name[:1].isupper()]
+_CLIENT_NAMES = ("DEFAULT_ENDPOINT", "AsyncSpeechClient", "AsyncSpeechStream", "SpeechClient", "SpeechStream")
+
+__all__ = [
+    "AsyncSpeechClient",
+    "AsyncSpeechStream",
+    "AudioFormat",
+    "AudioInfo",
+    "AudioUrl",
+    "Consent",
+    "ConsentStatement",
+    "DEFAULT_ENDPOINT",
+    "Generation",
+    "GenerationSource",
+    "GenerationStatus",
+    "Job",
+    "JobInput",
+    "JobScript",
+    "JobStatus",
+    "JobText",
+    "Model",
+    "Page",
+    "Progress",
+    "Relationship",
+    "Speech",
+    "SpeechClient",
+    "SpeechError",
+    "SpeechServiceError",
+    "SpeechSigningError",
+    "SpeechStream",
+    "SpeechTransportError",
+    "SpeechWaitTimeoutError",
+    "Turn",
+    "Voice",
+    "VoiceKind",
+    "VoiceReference",
+    "WebhookEvent",
+    "WebhookSecret",
+    "WebhookVerificationError",
+    "verify_webhook",
+    "verify_webhook_signature",
+]
+
+
+def __getattr__(name):
+    # The clients import httpx; webhook verification works without it.
+    if name in _CLIENT_NAMES:
+        from . import client
+
+        return getattr(client, name)
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

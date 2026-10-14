@@ -349,3 +349,33 @@ async def test_presign(make_client):
     }
     await call(client, "presign", "photos", PresignRequest("a.txt", "GET", 60, response_content_disposition="attachment"))
     assert json.loads(seen[-1].content) == {"key": "a.txt", "method": "GET", "expires_in": 60, "response_content_disposition": "attachment"}
+
+
+async def test_a_failing_credentials_provider_is_a_signing_error(make_client):
+    def broken():
+        raise RuntimeError("sts down")
+
+    client, seen = make_client(lambda r: json_response({"buckets": []}))
+    client._sender.credentials = broken
+    with pytest.raises(StorageError) as raised:
+        await call(client, "list_buckets")
+    assert (raised.value.status, raised.value.code) == (0, "SigningError")
+    assert seen == []
+
+
+async def test_the_provider_is_invalidated_when_the_service_refuses_its_credentials(make_client):
+    class Provider:
+        invalidated = 0
+
+        def __call__(self):
+            return CREDENTIALS
+
+        def invalidate(self):
+            self.invalidated += 1
+
+    provider = Provider()
+    client, _ = make_client(lambda r: json_response({"error": {"code": "AccessDenied", "message": "no"}}, 403))
+    client._sender.credentials = provider
+    with pytest.raises(StorageError):
+        await call(client, "list_buckets")
+    assert provider.invalidated == 1

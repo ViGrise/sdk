@@ -144,3 +144,11 @@ async def test_an_unreadable_answer_is_misconfiguration(start):
     introspector, _ = start(lambda r: httpx.Response(200, content=b"<html>"))
     with pytest.raises(AccountsMisconfiguredError):
         await call(introspector, "introspect", "t")
+
+
+async def test_callers_cannot_change_what_is_cached(start):
+    introspector, _ = start(good)
+    first = await call(introspector, "introspect", "good-token")
+    first.accounts.clear()
+    second = await call(introspector, "introspect", "good-token")
+    assert len(second.accounts) == 1

@@ -88,3 +88,9 @@ async def test_a_repeated_jti_is_replayed(verify):
     assert (await verify(instance, token)).outcome == "fresh"
     second = await verify(instance, token)
     assert (second.outcome, second.sid) == ("replayed", "sid-1")
+
+
+async def test_events_that_are_not_an_object_are_invalid(verify):
+    for events in ("logout", ["x"], 7):
+        with pytest.raises(InvalidTokenError):
+            await check(verify, lambda c, events=events: c.update(events=events))
