@@ -84,17 +84,17 @@ jobs:
         with:
           node-version: "24"
           registry-url: "https://registry.npmjs.org"
-      - name: npm with trusted publishing support
-        run: npm install -g "npm@>=11.5.1"
+      - name: npm with staged publishing support
+        run: npm install -g "npm@>=11.15.0"
       - run: npm ci
-      - name: Publish when npm lacks this version
+      - name: Stage the package when npm lacks this version
         env:
           VERSION: ${{ needs.version.outputs.version }}
         run: |
           if npm view "@vigrise/sdk@$VERSION" version >/dev/null 2>&1; then
             echo "@vigrise/sdk $VERSION is already on npm"
           else
-            npm publish
+            npm stage publish
           fi
 
   pypi:
