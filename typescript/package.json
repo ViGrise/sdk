@@ -10,6 +10,9 @@
     "directory": "typescript"
   },
   "bugs": "https://github.com/ViGrise/sdk/issues",
+  "publishConfig": {
+    "access": "public"
+  },
   "type": "module",
   "engines": {
     "node": ">=24"
