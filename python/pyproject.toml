@@ -11,6 +11,11 @@ readme = "README.md"
 requires-python = ">=3.9"
 dependencies = []
 
+[project.urls]
+Homepage = "https://platform.vigrise.com"
+Repository = "https://github.com/ViGrise/sdk"
+Issues = "https://github.com/ViGrise/sdk/issues"
+
 [project.optional-dependencies]
 requests = ["requests>=2.28"]
 httpx = ["httpx>=0.24"]

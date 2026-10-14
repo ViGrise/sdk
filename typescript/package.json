@@ -3,6 +3,13 @@
   "version": "0.1.0",
   "description": "Official ViGrise SDK for TypeScript and JavaScript: request signing, credentials and clients for ViGrise services",
   "license": "Apache-2.0",
+  "homepage": "https://platform.vigrise.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ViGrise/sdk.git",
+    "directory": "typescript"
+  },
+  "bugs": "https://github.com/ViGrise/sdk/issues",
   "type": "module",
   "engines": {
     "node": ">=24"

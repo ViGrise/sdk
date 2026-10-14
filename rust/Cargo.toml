@@ -8,5 +8,5 @@ edition = "2024"
 rust-version = "1.85"
 license = "Apache-2.0"
 repository = "https://github.com/vigrise/sdk"
-homepage = "https://vigrise.com"
+homepage = "https://platform.vigrise.com"
 authors = ["ViGrise"]
