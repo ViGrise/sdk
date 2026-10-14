@@ -1,9 +1,9 @@
 # @vigrise/sdk
 
-The ViGrise SDK for TypeScript: VGR4 request signing, ViGrise Accounts,
-ViGrise Storage and the Speech API. Requires Node 24; `/speech`, `/auth/browser`
-and the browser parts of `/accounts` also run in browsers. There is no root
-export; import a subpath.
+The ViGrise SDK for TypeScript: request signing, credentials and clients for
+ViGrise services, each service under its own subpath. Requires Node 24; the
+table notes which subpaths also run in browsers. There is no root export;
+import a subpath.
 
 ```sh
 npm install @vigrise/sdk
@@ -22,10 +22,8 @@ npm install @vigrise/sdk
 
 ## Guides
 
-[Auth](../docs/auth/README.md), [Speech](../docs/speech/README.md),
-[Storage](../docs/storage/README.md) and [Accounts](../docs/accounts/README.md).
-Examples: `examples/speech.mjs`, `examples/speech-tour.mjs`,
-`examples/browser-speech.mjs`.
+Each service has a guide with examples in [`docs/`](https://github.com/ViGrise/sdk/tree/main/docs), and runnable
+examples live in [`typescript/examples/`](https://github.com/ViGrise/sdk/tree/main/typescript/examples).
 
 ## Development
 

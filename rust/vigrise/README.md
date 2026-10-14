@@ -1,7 +1,7 @@
 # vigrise
 
-The ViGrise SDK for Rust: VGR4 request signing, ViGrise Accounts, ViGrise
-Storage and the Speech API in one crate. Requires Rust 1.85 (edition 2024) and,
+The ViGrise SDK for Rust: request signing, credentials and clients for ViGrise
+services in one crate, each service behind a Cargo feature. Requires Rust 1.85 (edition 2024) and,
 for the clients, Tokio.
 
 ```sh
@@ -28,11 +28,10 @@ No feature is on by default. `vigrise::auth` is always available.
 
 ## Guides
 
-[Auth](../../docs/auth/README.md), [Speech](../../docs/speech/README.md),
-[Storage](../../docs/storage/README.md) and
-[Accounts](../../docs/accounts/README.md). API reference:
-<https://docs.rs/vigrise>. Examples: `examples/speech.rs`,
-`examples/speech_tour.rs`.
+Each service has a guide with examples in
+[`docs/`](https://github.com/ViGrise/sdk/tree/main/docs), and runnable examples live in
+[`rust/vigrise/examples/`](https://github.com/ViGrise/sdk/tree/main/rust/vigrise/examples). API reference:
+<https://docs.rs/vigrise>.
 
 ## License
 

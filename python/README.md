@@ -1,7 +1,7 @@
 # vigrise
 
-The ViGrise SDK for Python: VGR4 request signing, ViGrise Accounts, ViGrise
-Storage and the Speech API. Requires Python 3.9; the core has no dependencies.
+The ViGrise SDK for Python: request signing, credentials and clients for
+ViGrise services, each service in its own subpackage. Requires Python 3.9; the core has no dependencies.
 
 ```sh
 pip install "vigrise[speech,storage]"
@@ -20,9 +20,9 @@ Each client has a sync class and an async class (`SpeechClient` and
 
 ## Guides
 
-[Auth](../docs/auth/README.md), [Speech](../docs/speech/README.md),
-[Storage](../docs/storage/README.md) and [Accounts](../docs/accounts/README.md).
-Examples: `examples/speech.py`, `examples/speech_tour.py`.
+Each service has a guide with examples in
+[`docs/`](https://github.com/ViGrise/sdk/tree/main/docs), and runnable examples live in
+[`python/examples/`](https://github.com/ViGrise/sdk/tree/main/python/examples).
 
 ## Development
 

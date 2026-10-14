@@ -4,13 +4,13 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
-description = "ViGrise SDK: VGR4 request signing, ViGrise Accounts, ViGrise Storage and the Speech API"
+description = "Official ViGrise SDK for Rust: request signing, credentials and clients for ViGrise services"
 repository.workspace = true
 homepage.workspace = true
 authors.workspace = true
 documentation = "https://docs.rs/vigrise"
 readme = "README.md"
-keywords = ["vigrise", "authentication", "signing", "sdk", "speech"]
+keywords = ["vigrise", "sdk", "api", "client", "signing"]
 categories = ["authentication", "api-bindings"]
 include = ["src/**", "examples/**", "README.md", "LICENSE"]
 

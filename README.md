@@ -1,8 +1,8 @@
 # ViGrise SDK
 
 Libraries and a command line for calling ViGrise from Rust, TypeScript and
-Python. Every language covers the same services with the same operations:
-request signing (VGR4), Speech, Storage and ViGrise Accounts.
+Python. Every language signs requests the same way (VGR4) and offers the same
+clients and operations for each ViGrise service.
 
 ## Layout
 

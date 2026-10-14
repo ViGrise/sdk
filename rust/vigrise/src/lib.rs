@@ -1,5 +1,5 @@
-//! ViGrise SDK: VGR4 request signing, ViGrise Accounts, ViGrise Storage and the
-//! Speech API in one crate.
+//! ViGrise SDK for Rust: request signing, credentials and clients for ViGrise
+//! services in one crate.
 //!
 //! [`auth`] is always available. The other modules are enabled by Cargo
 //! features of the same name.
