@@ -26,7 +26,7 @@ accounts = ["reqwest", "chrono/serde", "dep:base64", "dep:jsonwebtoken", "dep:ra
 accounts-axum = ["accounts", "dep:axum"]
 accounts-testing = ["accounts", "dep:rsa", "dep:rand_core"]
 storage = ["reqwest", "dep:bytes", "dep:futures-util"]
-speech = ["reqwest", "dep:base64", "dep:bytes", "dep:futures-util", "dep:subtle", "chrono/serde"]
+speech = ["reqwest", "dep:base64", "dep:bytes", "dep:futures-util", "dep:subtle", "dep:tokio", "chrono/serde"]
 
 [dependencies]
 chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }

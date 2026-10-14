@@ -1,6 +1,9 @@
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
+use crate::auth::{
+  sign_request, sign_request_with_payload_hash, CredentialsProvider, UNSIGNED_PAYLOAD,
+};
 use bytes::{Bytes, BytesMut};
 use chrono::Utc;
 use futures_util::{Stream, StreamExt};
@@ -9,9 +12,6 @@ use percent_encoding::{utf8_percent_encode, AsciiSet, NON_ALPHANUMERIC};
 use serde::de::DeserializeOwned;
 use serde::Deserialize;
 use serde_json::{json, Value};
-use crate::auth::{
-  sign_request, sign_request_with_payload_hash, CredentialsProvider, UNSIGNED_PAYLOAD,
-};
 
 use crate::storage::error::{from_response, StorageError};
 use crate::storage::types::*;
