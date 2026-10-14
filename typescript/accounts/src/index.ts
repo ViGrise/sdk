@@ -1,3 +1,11 @@
+export {
+  accountMenuModel,
+  displayName,
+  secondaryLine,
+  type AccountMenuModel,
+  type AccountMenuModelInput,
+  type AccountMenuRow,
+} from "./account-menu-model.js"
 export { ssoTokenHash } from "./hash.js"
 export {
   addAccountUrl,

@@ -21,7 +21,7 @@ export function manageAccountUrl(accountsUrl: string): string {
 
 export interface SignOutUrlOptions {
   accountsUrl: string
-  /** The `end_session_endpoint` of the discovery document, when the app has it. */
+  /** Overrides the Accounts `/signout` route, for example with the `end_session_endpoint` of the discovery document. */
   endSessionEndpoint?: string
   clientId: string
   /** Registered post logout redirect URI of the client. */
@@ -34,7 +34,7 @@ export interface SignOutUrlOptions {
 
 /** RP-initiated logout URL: signs the active account out of ViGrise and returns to the app. */
 export function signOutUrl(options: SignOutUrlOptions): string {
-  const endpoint = options.endSessionEndpoint ?? `${base(options.accountsUrl)}/o/oauth2/sessions/logout`
+  const endpoint = options.endSessionEndpoint ?? `${base(options.accountsUrl)}/signout`
   const query = new URLSearchParams({
     client_id: options.clientId,
     post_logout_redirect_uri: options.postLogoutRedirectUri,

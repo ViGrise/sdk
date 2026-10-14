@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server"
 import { describe, expect, it } from "vitest"
-import { AccountMenuList } from "../src/react.js"
+import { AccountMenu, AccountMenuList } from "../src/react.js"
 
 const accounts = [
   { session_id: "s1", identity_id: "i1", name: "Ada", email: "ada@example.com", picture: null, active: true, expired: false },
@@ -32,8 +32,8 @@ describe("AccountMenuList", () => {
   it("offers add account, account settings and sign-out", () => {
     expect(html).toContain("add_account=1")
     expect(html).toContain("https://accounts.vigrise.com/settings")
-    expect(html).toContain("/o/oauth2/sessions/logout")
-    expect(html).toContain("Add account")
+    expect(html).toContain("https://accounts.vigrise.com/signout?")
+    expect(html).toContain("Add another account")
     expect(html).toContain("Manage your ViGrise Account")
   })
 
@@ -59,5 +59,57 @@ describe("AccountMenuList", () => {
     expect(vi).toContain("Them tai khoan")
     expect(vi).toContain("Dang xuat")
     expect(vi).toContain("Manage your ViGrise Account")
+  })
+
+  it("keeps the addAccount label working", () => {
+    const html = renderToStaticMarkup(<AccountMenuList {...props} labels={{ addAccount: "Add account" }} />)
+    expect(html).toContain("Add account")
+  })
+
+  it("prefers addAnotherAccount over addAccount", () => {
+    const html = renderToStaticMarkup(
+      <AccountMenuList {...props} labels={{ addAccount: "A", addAnotherAccount: "B" }} />,
+    )
+    expect(html).toContain(">B<")
+  })
+
+  it("shows the current account once, with the name and the email on separate lines", () => {
+    expect(html.match(/ada@example\.com/g)).toHaveLength(1)
+    expect(html).toContain('data-slot="primary"')
+    expect(html).toContain('data-slot="secondary"')
+  })
+
+  it("carries a data-slot on every part and no inline colours", () => {
+    for (const slot of ["list", "header", "avatar", "primary", "secondary", "manage", "accountRow", "addAccount", "signOut", "divider"]) {
+      expect(html).toContain(`data-slot="${slot}"`)
+    }
+    expect(html).not.toMatch(/background|color:/)
+  })
+
+  it("applies classNames per slot", () => {
+    const styled = renderToStaticMarkup(
+      <AccountMenuList {...props} classNames={{ list: "menu-list", signOut: "menu-out" }} />,
+    )
+    expect(styled).toMatch(/data-slot="list"[^>]*class="menu-list"/)
+    expect(styled).toContain("menu-out")
+  })
+
+  it("renders the email as primary line for an account without a name", () => {
+    const html = renderToStaticMarkup(<AccountMenuList {...props} accounts={[{ ...accounts[0], name: null }]} />)
+    expect(html).not.toContain("undefined")
+    expect(html.match(/ada@example\.com/g)).toHaveLength(1)
+  })
+})
+
+describe("AccountMenu", () => {
+  it("renders the root and the trigger slots with the avatar of the current account", () => {
+    const html = renderToStaticMarkup(
+      <AccountMenu {...props} className="legacy" classNames={{ root: "menu-root", trigger: "menu-trigger" }} />,
+    )
+    expect(html).toContain('data-slot="root"')
+    expect(html).toContain("legacy menu-root")
+    expect(html).toContain("menu-trigger")
+    expect(html).toContain('aria-label="ada@example.com"')
+    expect(html).not.toContain('role="menu"')
   })
 })

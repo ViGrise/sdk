@@ -34,7 +34,7 @@ describe("URL builders", () => {
     const url = new URL(
       signOutUrl({ accountsUrl, clientId: "vigrise-drive", postLogoutRedirectUri: "https://drive.vigrise.com/" }),
     )
-    expect(url.pathname).toBe("/o/oauth2/sessions/logout")
+    expect(url.pathname).toBe("/signout")
     expect(url.searchParams.get("client_id")).toBe("vigrise-drive")
     expect(url.searchParams.get("post_logout_redirect_uri")).toBe("https://drive.vigrise.com/")
     expect(url.searchParams.has("id_token_hint")).toBe(false)
