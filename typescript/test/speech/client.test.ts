@@ -1,6 +1,12 @@
 import { afterEach, describe, expect, it } from "vitest";
 
-import { SpeechClient, SpeechServiceError, SpeechSigningError, SpeechTransportError, SpeechWaitTimeoutError } from "../../src/services/speech/index.js";
+import {
+  SpeechClient,
+  SpeechServiceError,
+  SpeechSigningError,
+  SpeechTransportError,
+  SpeechWaitTimeoutError,
+} from "../../src/services/speech/index.js";
 import { fakeServer, jsonReply, type FakeServer } from "../helpers/fake-server.js";
 
 const credentials = { accessKeyId: "VGAKTEST", secretAccessKey: "secret" };
@@ -17,17 +23,36 @@ async function speechClient(respond: Parameters<typeof fakeServer>[0]) {
 }
 
 const job = (status: string) => ({
-  id: "job_1", object: "job", status,
+  id: "job_1",
+  object: "job",
+  status,
   progress: { pieces_done: 1, pieces_total: 2, characters_done: 5, characters: 10 },
-  characters_used: 5, format: "wav", webhook_url: null, error: null, generation_id: null,
-  created_by: "me", created_at: "2026-10-01T12:00:00Z", finished_at: null,
+  characters_used: 5,
+  format: "wav",
+  webhook_url: null,
+  error: null,
+  generation_id: null,
+  created_by: "me",
+  created_at: "2026-10-01T12:00:00Z",
+  finished_at: null,
 });
 
 const generation = {
-  id: "gen_1", object: "generation", source: "sync", job_id: null, voice: "haley-f1", model: "fp16",
-  format: "wav", text: "Xin", characters: 3, characters_used: 3, duration_ms: 900, status: "complete",
+  id: "gen_1",
+  object: "generation",
+  source: "sync",
+  job_id: null,
+  voice: "haley-f1",
+  model: "fp16",
+  format: "wav",
+  text: "Xin",
+  characters: 3,
+  characters_used: 3,
+  duration_ms: 900,
+  status: "complete",
   audio: { available: true, bytes: 44, expires_at: "2026-10-02T12:00:00Z" },
-  created_by: "me", created_at: "2026-10-01T12:00:00Z",
+  created_by: "me",
+  created_at: "2026-10-01T12:00:00Z",
 };
 
 describe("SpeechClient", () => {
@@ -46,7 +71,10 @@ describe("SpeechClient", () => {
       body: "RIFFaudio",
     }));
     const speech = await client.synthesize("Xin chào", "haley-f1", {
-      model: "fp16", format: "mp3", storeAudio: false, idempotencyKey: "key-1",
+      model: "fp16",
+      format: "mp3",
+      storeAudio: false,
+      idempotencyKey: "key-1",
     });
     expect(Buffer.from(speech.audio).toString()).toBe("RIFFaudio");
     expect(speech).toMatchObject({ contentType: "audio/wav", generationId: "gen_9", sampleRate: 24000 });
@@ -54,11 +82,20 @@ describe("SpeechClient", () => {
     expect([seen.method, seen.target]).toEqual(["POST", "/v1/audio/speech"]);
     expect(seen.headers["idempotency-key"]).toBe("key-1");
     expect(seen.headers["content-type"]).toBe("application/json");
-    expect(seen.json()).toEqual({ input: "Xin chào", voice: "haley-f1", model: "fp16", response_format: "mp3", store_audio: false });
+    expect(seen.json()).toEqual({
+      input: "Xin chào",
+      voice: "haley-f1",
+      model: "fp16",
+      response_format: "mp3",
+      store_audio: false,
+    });
   });
 
   it("leaves out what is not set", async () => {
-    const { server, client } = await speechClient(() => ({ headers: { "content-type": "audio/wav", "x-vgr-generation-id": "g" }, body: "a" }));
+    const { server, client } = await speechClient(() => ({
+      headers: { "content-type": "audio/wav", "x-vgr-generation-id": "g" },
+      body: "a",
+    }));
     const speech = await client.synthesize("hi", "haley-f1");
     expect(speech.sampleRate).toBeUndefined();
     expect(server.last().json()).toEqual({ input: "hi", voice: "haley-f1" });
@@ -82,12 +119,31 @@ describe("SpeechClient", () => {
     const { server, client } = await speechClient((request) => {
       if (request.method === "DELETE") return { status: 204 };
       if (request.target === "/v1/voices") {
-        return jsonReply({ object: "list", data: [
-          { id: "haley-f1", object: "voice", type: "system" },
-          { id: "voice_1", object: "voice", type: "cloned", name: "Mine", duration_ms: 8000, created_by: "me", created_at: "2026-10-01T12:00:00Z" },
-        ] });
+        return jsonReply({
+          object: "list",
+          data: [
+            { id: "haley-f1", object: "voice", type: "system" },
+            {
+              id: "voice_1",
+              object: "voice",
+              type: "cloned",
+              name: "Mine",
+              duration_ms: 8000,
+              created_by: "me",
+              created_at: "2026-10-01T12:00:00Z",
+            },
+          ],
+        });
       }
-      return jsonReply({ id: "voice_1", object: "voice", type: "cloned", name: "Mine", duration_ms: 8000, created_by: "me", created_at: "2026-10-01T12:00:00Z" });
+      return jsonReply({
+        id: "voice_1",
+        object: "voice",
+        type: "cloned",
+        name: "Mine",
+        duration_ms: 8000,
+        created_by: "me",
+        created_at: "2026-10-01T12:00:00Z",
+      });
     });
     const voices = await client.listVoices();
     expect(voices.map((voice) => voice.type)).toEqual(["system", "cloned"]);
@@ -98,7 +154,20 @@ describe("SpeechClient", () => {
   });
 
   it("clones a voice with a multipart body", async () => {
-    const { server, client } = await speechClient(() => jsonReply({ id: "voice_2", object: "voice", type: "cloned", name: "Mine", duration_ms: 8000, created_by: "me", created_at: "2026-10-01T12:00:00Z" }, 201));
+    const { server, client } = await speechClient(() =>
+      jsonReply(
+        {
+          id: "voice_2",
+          object: "voice",
+          type: "cloned",
+          name: "Mine",
+          duration_ms: 8000,
+          created_by: "me",
+          created_at: "2026-10-01T12:00:00Z",
+        },
+        201,
+      ),
+    );
     const voice = await client.cloneVoice(
       "Mine",
       { bytes: new Uint8Array([0x52, 0x49, 0x46, 0x46, 0, 1]), contentType: "audio/wav", fileName: "me.wav" },
@@ -114,9 +183,16 @@ describe("SpeechClient", () => {
     expect(body.startsWith(`--${boundary}\r\n`)).toBe(true);
     expect(body.endsWith(`--${boundary}--\r\n`)).toBe(true);
     expect(body).toContain('Content-Disposition: form-data; name="name"\r\n\r\nMine\r\n');
-    expect(body).toContain('Content-Disposition: form-data; name="reference"; filename="me.wav"\r\nContent-Type: audio/wav\r\n\r\nRIFF\u0000\u0001\r\n');
+    expect(body).toContain(
+      'Content-Disposition: form-data; name="reference"; filename="me.wav"\r\nContent-Type: audio/wav\r\n\r\nRIFF\u0000\u0001\r\n',
+    );
     const consent = /name="consent"\r\n\r\n(.*?)\r\n--/s.exec(body)![1]!;
-    expect(JSON.parse(consent)).toEqual({ statement_version: 1, speaker_name: "An", relationship: "self", agreed: true });
+    expect(JSON.parse(consent)).toEqual({
+      statement_version: 1,
+      speaker_name: "An",
+      relationship: "self",
+      agreed: true,
+    });
   });
 
   it("reads the consent statement", async () => {
@@ -128,7 +204,8 @@ describe("SpeechClient", () => {
   it("lists, reads and deletes generations", async () => {
     const { server, client } = await speechClient((request) => {
       if (request.method === "DELETE") return { status: 204 };
-      if (request.target.startsWith("/v1/generations?")) return jsonReply({ object: "list", data: [generation], next_cursor: "c2" });
+      if (request.target.startsWith("/v1/generations?"))
+        return jsonReply({ object: "list", data: [generation], next_cursor: "c2" });
       return jsonReply(generation);
     });
     const page = await client.listGenerations({ cursor: "c1", limit: 5, source: "job", voice: "haley f1" });
@@ -164,23 +241,55 @@ describe("SpeechClient", () => {
     const { server, client } = await speechClient(() => jsonReply(job("queued"), 202));
     const created = await client.createJob(
       { text: "Xin", voice: "haley-f1" },
-      { model: "fp16", format: "opus", webhookUrl: "https://example.com/hook", storeAudio: true, idempotencyKey: "job-1" },
+      {
+        model: "fp16",
+        format: "opus",
+        webhookUrl: "https://example.com/hook",
+        storeAudio: true,
+        idempotencyKey: "job-1",
+      },
     );
     expect(created.status).toBe("queued");
     expect(created.createdAt).toBeInstanceOf(Date);
     const seen = server.last();
     expect([seen.method, seen.target]).toEqual(["POST", "/v1/jobs"]);
     expect(seen.headers["idempotency-key"]).toBe("job-1");
-    expect(seen.json()).toEqual({ text: "Xin", voice: "haley-f1", model: "fp16", response_format: "opus", webhook_url: "https://example.com/hook", store_audio: true });
-    await client.createJob({ turns: [{ voice: "a", text: "one" }, { voice: "b", text: "two" }], gapMs: 250 });
-    expect(server.last().json()).toEqual({ turns: [{ voice: "a", text: "one" }, { voice: "b", text: "two" }], gap_ms: 250 });
+    expect(seen.json()).toEqual({
+      text: "Xin",
+      voice: "haley-f1",
+      model: "fp16",
+      response_format: "opus",
+      webhook_url: "https://example.com/hook",
+      store_audio: true,
+    });
+    await client.createJob({
+      turns: [
+        { voice: "a", text: "one" },
+        { voice: "b", text: "two" },
+      ],
+      gapMs: 250,
+    });
+    expect(server.last().json()).toEqual({
+      turns: [
+        { voice: "a", text: "one" },
+        { voice: "b", text: "two" },
+      ],
+      gap_ms: 250,
+    });
   });
 
   it("reads, lists and cancels jobs", async () => {
     const { server, client } = await speechClient((request) =>
-      request.target.startsWith("/v1/jobs?") ? jsonReply({ object: "list", data: [job("running")], next_cursor: null }) : jsonReply(job("cancelled")),
+      request.target.startsWith("/v1/jobs?")
+        ? jsonReply({ object: "list", data: [job("running")], next_cursor: null })
+        : jsonReply(job("cancelled")),
     );
-    expect((await client.getJob("job_1")).progress).toEqual({ piecesDone: 1, piecesTotal: 2, charactersDone: 5, characters: 10 });
+    expect((await client.getJob("job_1")).progress).toEqual({
+      piecesDone: 1,
+      piecesTotal: 2,
+      charactersDone: 5,
+      characters: 10,
+    });
     const page = await client.listJobs({ status: "running", limit: 2 });
     expect(page.data[0]!.status).toBe("running");
     expect(page.nextCursor).toBeUndefined();
@@ -223,7 +332,12 @@ describe("SpeechClient", () => {
     );
     const error = await client.synthesize("hi", "haley-f1").catch((e) => e);
     expect(error).toBeInstanceOf(SpeechServiceError);
-    expect(error).toMatchObject({ status: 409, code: "IdempotencyReplayed", resourceId: "gen_5", message: "already ran" });
+    expect(error).toMatchObject({
+      status: 409,
+      code: "IdempotencyReplayed",
+      resourceId: "gen_5",
+      message: "already ran",
+    });
   });
 
   it("raises transport errors when the endpoint is unreachable", async () => {
@@ -242,7 +356,9 @@ describe("SpeechClient credentials", () => {
   });
 
   it("invalidates the provider when the service refuses the credentials", async () => {
-    const server = await fakeServer(() => jsonReply({ error: { code: "InvalidClientTokenId", message: "revoked" } }, 403));
+    const server = await fakeServer(() =>
+      jsonReply({ error: { code: "InvalidClientTokenId", message: "revoked" } }, 403),
+    );
     servers.push(server);
     let invalidated = 0;
     const provider = Object.assign(() => credentials, { invalidate: () => void (invalidated += 1) });
@@ -270,8 +386,16 @@ describe("SpeechClient credentials", () => {
     servers.push(server);
     const client = new SpeechClient({ endpoint: server.url, credentials });
     const consent = { statementVersion: 1, speakerName: "An", relationship: "self" as const, agreed: true };
-    await expect(client.cloneVoice("n", { bytes: new Uint8Array(1), contentType: "audio/wav\r\nX: y", fileName: "a.wav" }, consent)).rejects.toBeInstanceOf(SpeechSigningError);
-    await client.cloneVoice("n", { bytes: new Uint8Array(1), contentType: "audio/wav", fileName: 'a"\r\nb.wav' }, consent).catch(() => undefined);
+    await expect(
+      client.cloneVoice(
+        "n",
+        { bytes: new Uint8Array(1), contentType: "audio/wav\r\nX: y", fileName: "a.wav" },
+        consent,
+      ),
+    ).rejects.toBeInstanceOf(SpeechSigningError);
+    await client
+      .cloneVoice("n", { bytes: new Uint8Array(1), contentType: "audio/wav", fileName: 'a"\r\nb.wav' }, consent)
+      .catch(() => undefined);
     expect(server.last().text()).toContain('filename="a%22%0D%0Ab.wav"');
   });
 });

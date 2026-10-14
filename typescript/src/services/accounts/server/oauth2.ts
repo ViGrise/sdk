@@ -115,7 +115,11 @@ export class OAuth2Client {
   constructor(private readonly options: OAuth2ClientOptions) {}
 
   /** Exchanges `code` with the PKCE `verifier` of the authorization request. */
-  async exchangeCode(code: string, verifier: string, redirectUri: string | undefined = this.options.redirectUri): Promise<TokenResponse> {
+  async exchangeCode(
+    code: string,
+    verifier: string,
+    redirectUri: string | undefined = this.options.redirectUri,
+  ): Promise<TokenResponse> {
     if (redirectUri === undefined) throw new TokenExchangeError("authorization code exchange failed: no redirect URI");
     const form = new URLSearchParams({
       grant_type: "authorization_code",
@@ -137,7 +141,9 @@ export class OAuth2Client {
       throw new TokenExchangeError(`authorization code exchange failed: ${(error as Error).message}`, { cause: error });
     }
     if (!response.ok) {
-      throw new TokenExchangeError(`authorization code exchange failed: status ${response.status}: ${await response.text().catch(() => "")}`);
+      throw new TokenExchangeError(
+        `authorization code exchange failed: status ${response.status}: ${await response.text().catch(() => "")}`,
+      );
     }
     let raw: any;
     try {
@@ -179,7 +185,8 @@ export class IdTokenVerifier {
   /** Verifies signature, `iss`, `aud`, expiry and, when given, the nonce. */
   async verify(idToken: string, options: { nonce?: string } = {}): Promise<IdTokenClaims> {
     const claims = await this.verifyForAudience(idToken, this.options.clientId);
-    if (options.nonce !== undefined && claims.nonce !== options.nonce) throw new InvalidTokenError("invalid ID token: nonce mismatch");
+    if (options.nonce !== undefined && claims.nonce !== options.nonce)
+      throw new InvalidTokenError("invalid ID token: nonce mismatch");
     return claims;
   }
 

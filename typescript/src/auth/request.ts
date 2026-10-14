@@ -64,11 +64,23 @@ export function plan(input: SignInput, payloadHash: string): SigningPlan {
     date,
     credentialScope: scope(date, input.service),
     signedHeaders,
-    canonicalRequest: canonicalRequest(input.method, url.pathname, url.search.replace(/^\?/, ""), all, signedHeaders, payloadHash),
+    canonicalRequest: canonicalRequest(
+      input.method,
+      url.pathname,
+      url.search.replace(/^\?/, ""),
+      all,
+      signedHeaders,
+      payloadHash,
+    ),
   };
 }
 
-export function signedHeaders(input: SignInput, signing: SigningPlan, payloadHash: string, signature: string): SignedHeaders {
+export function signedHeaders(
+  input: SignInput,
+  signing: SigningPlan,
+  payloadHash: string,
+  signature: string,
+): SignedHeaders {
   const result: SignedHeaders = {
     authorization: `${ALGORITHM} Credential=${input.credentials.accessKeyId}/${signing.credentialScope}, SignedHeaders=${signing.signedHeaders.join(";")}, Signature=${signature}`,
     "x-vgr-date": signing.timestamp,

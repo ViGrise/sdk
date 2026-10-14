@@ -7,5 +7,8 @@ export function scope(date: string, service: string): string {
 
 /** `YYYYMMDDTHHMMSSZ` in UTC. */
 export function formatTimestamp(date: Date): string {
-  return date.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
+  return date
+    .toISOString()
+    .replace(/[-:]/g, "")
+    .replace(/\.\d{3}Z$/, "Z");
 }

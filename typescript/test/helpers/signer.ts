@@ -19,6 +19,8 @@ export class TestSigner {
 
   /** Signs claims as an RS256 JWT; `header` overrides header fields. */
   sign(claims: Record<string, unknown>, header: Record<string, unknown> = {}): Promise<string> {
-    return new SignJWT(claims as any).setProtectedHeader({ alg: "RS256", kid: this.kid, ...header }).sign(this.privateKey);
+    return new SignJWT(claims as any)
+      .setProtectedHeader({ alg: "RS256", kid: this.kid, ...header })
+      .sign(this.privateKey);
   }
 }

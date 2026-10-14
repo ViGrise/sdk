@@ -1,17 +1,17 @@
-import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react"
-import { accountMenuModel } from "./account-menu-model.js"
-import type { SsoAccount } from "./types.js"
+import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
+import { accountMenuModel } from "./account-menu-model.js";
+import type { SsoAccount } from "./types.js";
 
 export interface AccountMenuLabels {
   /** Label of the add-account entry; `addAnotherAccount` takes precedence. */
-  addAccount: string
-  addAnotherAccount: string
-  manageAccount: string
-  signOut: string
-  signInAgain: string
-  accounts: string
+  addAccount: string;
+  addAnotherAccount: string;
+  manageAccount: string;
+  signOut: string;
+  signInAgain: string;
+  accounts: string;
   /** Accessible name of the trigger when the current account has no email or name. */
-  openMenu: string
+  openMenu: string;
 }
 
 const DEFAULT_LABELS: AccountMenuLabels = {
@@ -22,7 +22,7 @@ const DEFAULT_LABELS: AccountMenuLabels = {
   signInAgain: "Sign in again",
   accounts: "Accounts",
   openMenu: "Account menu",
-}
+};
 
 /** The parts of the account menu; each carries `data-slot` with its name and the class from `classNames`. */
 export const ACCOUNT_MENU_SLOTS = [
@@ -40,74 +40,77 @@ export const ACCOUNT_MENU_SLOTS = [
   "addAccount",
   "signOut",
   "divider",
-] as const
+] as const;
 
-export type AccountMenuSlot = (typeof ACCOUNT_MENU_SLOTS)[number]
-export type AccountMenuClassNames = Partial<Record<AccountMenuSlot, string>>
+export type AccountMenuSlot = (typeof ACCOUNT_MENU_SLOTS)[number];
+export type AccountMenuClassNames = Partial<Record<AccountMenuSlot, string>>;
 
 export interface AccountMenuProps {
-  accounts: SsoAccount[]
+  accounts: SsoAccount[];
   /** Public URL of ViGrise Accounts. */
-  accountsUrl: string
+  accountsUrl: string;
   /** URL of the current app page Accounts returns to. */
-  returnTo: string
+  returnTo: string;
   /** OAuth2 client id of the app, for sign-out. */
-  clientId: string
+  clientId: string;
   /** Where sign-out returns; defaults to `returnTo`. */
-  postLogoutRedirectUri?: string
+  postLogoutRedirectUri?: string;
   /** The `sso_sid` of the app session, so sign-out ends that Accounts session. */
-  ssoSid?: string
-  labels?: Partial<AccountMenuLabels>
+  ssoSid?: string;
+  labels?: Partial<AccountMenuLabels>;
   /** Class of the `root` slot of `AccountMenu`. */
-  className?: string
+  className?: string;
   /** Classes per slot; the component carries no styling of its own. */
-  classNames?: AccountMenuClassNames
+  classNames?: AccountMenuClassNames;
   /** Runs when the person chooses sign-out, before the browser leaves for Accounts. */
-  onSignOut?: () => void
+  onSignOut?: () => void;
 }
 
 function resolveLabels(labels: Partial<AccountMenuLabels> | undefined): AccountMenuLabels {
-  const merged = { ...DEFAULT_LABELS, ...labels }
+  const merged = { ...DEFAULT_LABELS, ...labels };
   // A custom `addAccount` label applies unless `addAnotherAccount` is also given.
-  if (labels?.addAccount && !labels.addAnotherAccount) merged.addAnotherAccount = labels.addAccount
-  return merged
+  if (labels?.addAccount && !labels.addAnotherAccount) merged.addAnotherAccount = labels.addAccount;
+  return merged;
 }
 
 function slot(classNames: AccountMenuClassNames | undefined, name: AccountMenuSlot) {
-  return { "data-slot": name, className: classNames?.[name] }
+  return { "data-slot": name, className: classNames?.[name] };
 }
 
 function Avatar({ account, classNames }: { account: SsoAccount; classNames?: AccountMenuClassNames }) {
-  if (account.picture) return <img src={account.picture} alt="" {...slot(classNames, "avatar")} />
-  const initial = (account.name?.trim() || account.email?.trim() || "?").slice(0, 1).toUpperCase()
+  if (account.picture) return <img src={account.picture} alt="" {...slot(classNames, "avatar")} />;
+  const initial = (account.name?.trim() || account.email?.trim() || "?").slice(0, 1).toUpperCase();
   return (
     <span aria-hidden="true" {...slot(classNames, "avatar")}>
       {initial}
     </span>
-  )
+  );
 }
 
 function moveFocus(event: KeyboardEvent<HTMLElement>) {
-  const keys = ["ArrowDown", "ArrowUp", "Home", "End"]
-  if (!keys.includes(event.key)) return
-  const items = Array.from(event.currentTarget.querySelectorAll<HTMLElement>('[role="menuitem"]'))
-  if (items.length === 0) return
-  event.preventDefault()
-  const index = items.indexOf(document.activeElement as HTMLElement)
+  const keys = ["ArrowDown", "ArrowUp", "Home", "End"];
+  if (!keys.includes(event.key)) return;
+  const items = Array.from(event.currentTarget.querySelectorAll<HTMLElement>('[role="menuitem"]'));
+  if (items.length === 0) return;
+  event.preventDefault();
+  const index = items.indexOf(document.activeElement as HTMLElement);
   const next =
-    event.key === "Home" ? 0
-    : event.key === "End" ? items.length - 1
-    : event.key === "ArrowDown" ? (index + 1) % items.length
-    : (index <= 0 ? items.length : index) - 1
-  items[next]?.focus()
+    event.key === "Home"
+      ? 0
+      : event.key === "End"
+        ? items.length - 1
+        : event.key === "ArrowDown"
+          ? (index + 1) % items.length
+          : (index <= 0 ? items.length : index) - 1;
+  items[next]?.focus();
 }
 
 /** The Google style account list: current account, other accounts, add account and sign-out. */
 export function AccountMenuList(props: AccountMenuProps) {
-  const labels = resolveLabels(props.labels)
-  const classNames = props.classNames
-  const model = accountMenuModel({ ...props, signInAgainLabel: labels.signInAgain })
-  const headerTextId = useId()
+  const labels = resolveLabels(props.labels);
+  const classNames = props.classNames;
+  const model = accountMenuModel({ ...props, signInAgainLabel: labels.signInAgain });
+  const headerTextId = useId();
   return (
     <ul role="menu" aria-label={labels.accounts} onKeyDown={moveFocus} {...slot(classNames, "list")}>
       {model.current && (
@@ -148,40 +151,44 @@ export function AccountMenuList(props: AccountMenuProps) {
         </a>
       </li>
     </ul>
-  )
+  );
 }
 
 /** Header control that opens the account list. */
 export function AccountMenu(props: AccountMenuProps) {
-  const [open, setOpen] = useState(false)
-  const root = useRef<HTMLDivElement>(null)
-  const trigger = useRef<HTMLButtonElement>(null)
-  const labels = resolveLabels(props.labels)
-  const classNames = props.classNames
-  const active = props.accounts.find((account) => account.active) ?? props.accounts[0]
+  const [open, setOpen] = useState(false);
+  const root = useRef<HTMLDivElement>(null);
+  const trigger = useRef<HTMLButtonElement>(null);
+  const labels = resolveLabels(props.labels);
+  const classNames = props.classNames;
+  const active = props.accounts.find((account) => account.active) ?? props.accounts[0];
 
   useEffect(() => {
-    if (!open) return
-    root.current?.querySelector<HTMLElement>('[role="menuitem"]')?.focus()
+    if (!open) return;
+    root.current?.querySelector<HTMLElement>('[role="menuitem"]')?.focus();
     const onPointer = (event: MouseEvent) => {
-      if (root.current && !root.current.contains(event.target as Node)) setOpen(false)
-    }
+      if (root.current && !root.current.contains(event.target as Node)) setOpen(false);
+    };
     const onKey = (event: globalThis.KeyboardEvent) => {
-      if (event.key !== "Escape") return
-      setOpen(false)
-      trigger.current?.focus()
-    }
-    document.addEventListener("mousedown", onPointer)
-    document.addEventListener("keydown", onKey)
+      if (event.key !== "Escape") return;
+      setOpen(false);
+      trigger.current?.focus();
+    };
+    document.addEventListener("mousedown", onPointer);
+    document.addEventListener("keydown", onKey);
     return () => {
-      document.removeEventListener("mousedown", onPointer)
-      document.removeEventListener("keydown", onKey)
-    }
-  }, [open])
+      document.removeEventListener("mousedown", onPointer);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
 
-  if (!active) return null
+  if (!active) return null;
   return (
-    <div ref={root} data-slot="root" className={[props.className, classNames?.root].filter(Boolean).join(" ") || undefined}>
+    <div
+      ref={root}
+      data-slot="root"
+      className={[props.className, classNames?.root].filter(Boolean).join(" ") || undefined}
+    >
       <button
         ref={trigger}
         type="button"
@@ -199,5 +206,5 @@ export function AccountMenu(props: AccountMenuProps) {
         </div>
       )}
     </div>
-  )
+  );
 }

@@ -12,11 +12,15 @@ const credentials = {
   sessionToken: process.env.VIGRISE_SESSION_TOKEN,
 };
 const response = voice
-  ? await signedFetch(`${base}/v1/audio/speech`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ input: "Xin chào", voice, response_format: "wav" }),
-    }, { service: "speech", credentials })
+  ? await signedFetch(
+      `${base}/v1/audio/speech`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ input: "Xin chào", voice, response_format: "wav" }),
+      },
+      { service: "speech", credentials },
+    )
   : await signedFetch(`${base}/v1/voices`, {}, { service: "speech", credentials });
 const body = new Uint8Array(await response.arrayBuffer());
 console.log(`${response.status} ${body.length}`);

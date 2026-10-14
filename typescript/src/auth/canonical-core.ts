@@ -10,7 +10,7 @@ export type HeaderList = [string, string][];
 function decodeToBytes(raw: string): number[] {
   const bytes: number[] = [];
   const encoder = new TextEncoder();
-  for (let i = 0; i < raw.length; ) {
+  for (let i = 0; i < raw.length;) {
     const pair = raw.slice(i + 1, i + 3);
     if (raw[i] === "%" && HEX.test(pair)) {
       bytes.push(parseInt(pair, 16));

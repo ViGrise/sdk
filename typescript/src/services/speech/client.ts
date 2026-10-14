@@ -4,8 +4,24 @@ import { camelize } from "../../common/case.js";
 import { errorFromResponse, SpeechSigningError, SpeechTransportError, SpeechWaitTimeoutError } from "./error.js";
 import { encodeMultipart } from "../../common/multipart.js";
 import type {
-  AudioUrl, CloneVoiceOptions, Consent, ConsentStatement, Generation, Job, JobInput, JobOptions, ListGenerationsOptions,
-  ListJobsOptions, Model, Speech, SpeechStream, SynthesizeOptions, Voice, VoiceReference, WaitForJobOptions, WebhookSecret,
+  AudioUrl,
+  CloneVoiceOptions,
+  Consent,
+  ConsentStatement,
+  Generation,
+  Job,
+  JobInput,
+  JobOptions,
+  ListGenerationsOptions,
+  ListJobsOptions,
+  Model,
+  Speech,
+  SpeechStream,
+  SynthesizeOptions,
+  Voice,
+  VoiceReference,
+  WaitForJobOptions,
+  WebhookSecret,
 } from "./dto.js";
 import type { Page } from "../../common/pagination.js";
 
@@ -44,7 +60,11 @@ function defined(fields: Record<string, unknown>): Record<string, unknown> {
 function environmentCredentials(): Credentials {
   const env = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env;
   if (env?.VIGRISE_ACCESS_KEY_ID && env.VIGRISE_SECRET_ACCESS_KEY) {
-    return { accessKeyId: env.VIGRISE_ACCESS_KEY_ID, secretAccessKey: env.VIGRISE_SECRET_ACCESS_KEY, sessionToken: env.VIGRISE_SESSION_TOKEN };
+    return {
+      accessKeyId: env.VIGRISE_ACCESS_KEY_ID,
+      secretAccessKey: env.VIGRISE_SECRET_ACCESS_KEY,
+      sessionToken: env.VIGRISE_SESSION_TOKEN,
+    };
   }
   throw new Error("no credentials: pass `credentials`, or set VIGRISE_ACCESS_KEY_ID and VIGRISE_SECRET_ACCESS_KEY");
 }
@@ -129,7 +149,10 @@ export class SpeechClient {
       json: SpeechClient.speechBody(text, voice, options, true),
       idempotencyKey: options.idempotencyKey,
     });
-    return { ...SpeechClient.audioMetadata(response), audio: response.body ?? new ReadableStream({ start: (controller) => controller.close() }) };
+    return {
+      ...SpeechClient.audioMetadata(response),
+      audio: response.body ?? new ReadableStream({ start: (controller) => controller.close() }),
+    };
   }
 
   /** The built-in voices of the project and its cloned voices. */
@@ -146,7 +169,12 @@ export class SpeechClient {
   }
 
   /** Clones a voice from a recording of its speaker, who has given `consent`. */
-  async cloneVoice(name: string, reference: VoiceReference, consent: Consent, options: CloneVoiceOptions = {}): Promise<Voice> {
+  async cloneVoice(
+    name: string,
+    reference: VoiceReference,
+    consent: Consent,
+    options: CloneVoiceOptions = {},
+  ): Promise<Voice> {
     const encoder = new TextEncoder();
     let encoded: ReturnType<typeof encodeMultipart>;
     try {
@@ -155,19 +183,27 @@ export class SpeechClient {
         { name: "reference", body: reference.bytes, fileName: reference.fileName, contentType: reference.contentType },
         {
           name: "consent",
-          body: encoder.encode(JSON.stringify({
-            statement_version: consent.statementVersion,
-            speaker_name: consent.speakerName,
-            relationship: consent.relationship,
-            agreed: consent.agreed,
-          })),
+          body: encoder.encode(
+            JSON.stringify({
+              statement_version: consent.statementVersion,
+              speaker_name: consent.speakerName,
+              relationship: consent.relationship,
+              agreed: consent.agreed,
+            }),
+          ),
         },
       ]);
     } catch (error) {
       throw new SpeechSigningError((error as Error).message, { cause: error });
     }
     const { contentType, body } = encoded;
-    return await this.json({ method: "POST", path: "/v1/voices", body, contentType, idempotencyKey: options.idempotencyKey });
+    return await this.json({
+      method: "POST",
+      path: "/v1/voices",
+      body,
+      contentType,
+      idempotencyKey: options.idempotencyKey,
+    });
   }
 
   /** The statement a speaker agrees to before a voice is cloned. */
@@ -188,7 +224,11 @@ export class SpeechClient {
 
   /** Deletes a generation; with `all`, also the other generations of its job. */
   async deleteGeneration(id: string, options: { all?: boolean } = {}): Promise<void> {
-    await this.send({ method: "DELETE", path: `/v1/generations/${segment(id)}`, query: { all: options.all ? true : undefined } });
+    await this.send({
+      method: "DELETE",
+      path: `/v1/generations/${segment(id)}`,
+      query: { all: options.all ? true : undefined },
+    });
   }
 
   /** A temporary URL to download the audio of a generation from; with `download`, browsers save it as a file. */
@@ -209,7 +249,8 @@ export class SpeechClient {
 
   /** Starts a synthesis that runs in the background. */
   createJob(input: JobInput, options: JobOptions = {}): Promise<Job> {
-    const content = "turns" in input ? { turns: input.turns, gap_ms: input.gapMs } : { text: input.text, voice: input.voice };
+    const content =
+      "turns" in input ? { turns: input.turns, gap_ms: input.gapMs } : { text: input.text, voice: input.voice };
     return this.json({
       method: "POST",
       path: "/v1/jobs",
@@ -229,7 +270,10 @@ export class SpeechClient {
   }
 
   listJobs(options: ListJobsOptions = {}): Promise<Page<Job>> {
-    return this.json({ path: "/v1/jobs", query: { cursor: options.cursor, limit: options.limit, status: options.status } });
+    return this.json({
+      path: "/v1/jobs",
+      query: { cursor: options.cursor, limit: options.limit, status: options.status },
+    });
   }
 
   /** Cancels a job that has not finished. */
@@ -244,7 +288,8 @@ export class SpeechClient {
     for (;;) {
       const job = await this.getJob(id);
       if (job.status === "succeeded" || job.status === "failed" || job.status === "cancelled") return job;
-      if (options.timeoutMs !== undefined && Date.now() - started + interval > options.timeoutMs) throw new SpeechWaitTimeoutError(job);
+      if (options.timeoutMs !== undefined && Date.now() - started + interval > options.timeoutMs)
+        throw new SpeechWaitTimeoutError(job);
       await new Promise((resolve) => setTimeout(resolve, interval));
     }
   }

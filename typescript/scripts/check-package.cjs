@@ -11,7 +11,11 @@ for (const [subpath, name] of [
   ["speech", "SpeechClient"],
   ["storage", "StorageClient"],
 ]) {
-  assert.strictEqual(typeof require(`@vigrise/sdk/${subpath}`)[name], "function", `require() exposes ${subpath} ${name}`);
+  assert.strictEqual(
+    typeof require(`@vigrise/sdk/${subpath}`)[name],
+    "function",
+    `require() exposes ${subpath} ${name}`,
+  );
 }
 
 Promise.all([

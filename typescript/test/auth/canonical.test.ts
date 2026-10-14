@@ -17,7 +17,15 @@ describe("canonicalization", () => {
   });
 
   it("joins repeated headers in order and rejects missing signed headers", () => {
-    expect(canonicalHeaders([["X-Vgr-Meta", " a  b "], ["x-vgr-meta", "c"]], ["x-vgr-meta"])).toBe("x-vgr-meta:a b,c\n");
+    expect(
+      canonicalHeaders(
+        [
+          ["X-Vgr-Meta", " a  b "],
+          ["x-vgr-meta", "c"],
+        ],
+        ["x-vgr-meta"],
+      ),
+    ).toBe("x-vgr-meta:a b,c\n");
     expect(() => canonicalHeaders([], ["host"])).toThrow(/host/);
   });
 });

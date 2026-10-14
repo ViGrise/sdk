@@ -20,7 +20,13 @@ export class SpeechServiceError extends SpeechError {
   /** The other fields of the envelope, such as `quota` on limit refusals. */
   readonly details: Record<string, unknown>;
 
-  constructor(status: number, code: string, message: string, resourceId: string | undefined, details: Record<string, unknown>) {
+  constructor(
+    status: number,
+    code: string,
+    message: string,
+    resourceId: string | undefined,
+    details: Record<string, unknown>,
+  ) {
     super(message);
     this.status = status;
     this.code = code;
@@ -49,6 +55,13 @@ export class SpeechWaitTimeoutError extends SpeechError {
 /** The error an error response carries: `{"error": {"code", "message", ...}}`, or the status when the body is not that envelope. */
 export function errorFromResponse(status: number, body: string): SpeechServiceError {
   const envelope = parseErrorEnvelope(body);
-  if (envelope) return new SpeechServiceError(status, envelope.code ?? "UnknownError", envelope.message, envelope.resourceId, envelope.details);
+  if (envelope)
+    return new SpeechServiceError(
+      status,
+      envelope.code ?? "UnknownError",
+      envelope.message,
+      envelope.resourceId,
+      envelope.details,
+    );
   return new SpeechServiceError(status, "UnknownError", body, undefined, {});
 }

@@ -18,7 +18,11 @@ export interface BrowserSignedFetchOptions {
 }
 
 /** `fetch` with a VGR4 signature. Bodies must be strings or bytes: the signature covers their hash. */
-export async function signedFetch(input: string | URL, init: RequestInit, options: BrowserSignedFetchOptions): Promise<Response> {
+export async function signedFetch(
+  input: string | URL,
+  init: RequestInit,
+  options: BrowserSignedFetchOptions,
+): Promise<Response> {
   const body = init.body;
   if (body !== undefined && body !== null && typeof body !== "string" && !(body instanceof Uint8Array)) {
     throw new Error("Streaming or form request bodies cannot be signed; pass a string or Uint8Array");

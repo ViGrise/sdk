@@ -57,7 +57,9 @@ export class Jwks {
     try {
       return await createLocalJWKSet(set)(header);
     } catch (error) {
-      throw new JwksError(`no signing key for kid ${JSON.stringify(header.kid)}: ${(error as Error).message}`, { cause: error });
+      throw new JwksError(`no signing key for kid ${JSON.stringify(header.kid)}: ${(error as Error).message}`, {
+        cause: error,
+      });
     }
   }
 

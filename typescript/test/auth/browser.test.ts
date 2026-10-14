@@ -7,7 +7,14 @@ import { describe, expect, it } from "vitest";
 import { signRequest, signedFetch } from "../../src/auth/browser.js";
 
 interface Vector {
-  request: { method: string; path: string; query: string; headers: [string, string][]; body: string; payload_hash?: string };
+  request: {
+    method: string;
+    path: string;
+    query: string;
+    headers: [string, string][];
+    body: string;
+    payload_hash?: string;
+  };
   credentials: { access_key_id: string; secret_access_key: string; session_token?: string };
   service: string;
   time: string;
@@ -21,7 +28,9 @@ const vectors: [string, Vector][] = readdirSync(dir)
   .map((f) => [f, JSON.parse(readFileSync(join(dir, f), "utf8")) as Vector]);
 
 function parseTime(t: string): Date {
-  return new Date(`${t.slice(0, 4)}-${t.slice(4, 6)}-${t.slice(6, 8)}T${t.slice(9, 11)}:${t.slice(11, 13)}:${t.slice(13, 15)}Z`);
+  return new Date(
+    `${t.slice(0, 4)}-${t.slice(4, 6)}-${t.slice(6, 8)}T${t.slice(9, 11)}:${t.slice(11, 13)}:${t.slice(13, 15)}Z`,
+  );
 }
 
 /** Every module the browser entry loads, following relative imports. */
@@ -76,13 +85,17 @@ describe("browser entry", () => {
     await new Promise<void>((r) => server.listen(0, "127.0.0.1", r));
     const { port } = server.address() as AddressInfo;
     let calls = 0;
-    const response = await signedFetch(`http://127.0.0.1:${port}/v1/voices`, {}, {
-      service: "speech",
-      credentials: async () => {
-        calls += 1;
-        return { accessKeyId: "VGSTABCDEFGHIJKLMNOP", secretAccessKey: "session", sessionToken: "sealed" };
+    const response = await signedFetch(
+      `http://127.0.0.1:${port}/v1/voices`,
+      {},
+      {
+        service: "speech",
+        credentials: async () => {
+          calls += 1;
+          return { accessKeyId: "VGSTABCDEFGHIJKLMNOP", secretAccessKey: "session", sessionToken: "sealed" };
+        },
       },
-    });
+    );
     server.close();
     expect(await response.text()).toBe("ok");
     expect(calls).toBe(1);

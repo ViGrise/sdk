@@ -7,10 +7,5 @@
     "declaration": false,
     "rootDir": "src"
   },
-  "include": [
-    "src/auth",
-    "src/services/accounts/server",
-    "src/services/speech",
-    "src/services/storage"
-  ]
+  "include": ["src/auth", "src/services/accounts/server", "src/services/speech", "src/services/storage"]
 }

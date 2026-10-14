@@ -30,14 +30,20 @@ describe("assumeRole", () => {
         session_token: "v1.sealed",
         expiration: "2026-09-26T10:30:00Z",
       },
-      assumed_role: { role_vrn: "vrn:vigrise:iam:p:role/speech-client", session_vrn: "vrn:vigrise:sts:p:assumed-role/speech-client/web" },
+      assumed_role: {
+        role_vrn: "vrn:vigrise:iam:p:role/speech-client",
+        session_vrn: "vrn:vigrise:sts:p:assumed-role/speech-client/web",
+      },
     });
     const session = await assumeRole(
       {
         roleVrn: "vrn:vigrise:iam:p:role/speech-client",
         roleSessionName: "web",
         durationSeconds: 900,
-        sessionPolicy: { Version: "2026-10-01", Statement: { Effect: "Allow", Action: "speech:ListVoices", Resource: "*" } },
+        sessionPolicy: {
+          Version: "2026-10-01",
+          Statement: { Effect: "Allow", Action: "speech:ListVoices", Resource: "*" },
+        },
       },
       { endpoint: sts.endpoint, credentials: { accessKeyId: "VGAKBACKEND", secretAccessKey: "secret" } },
     );
@@ -54,7 +60,10 @@ describe("assumeRole", () => {
       role_vrn: "vrn:vigrise:iam:p:role/speech-client",
       role_session_name: "web",
       duration_seconds: 900,
-      session_policy: { Version: "2026-10-01", Statement: { Effect: "Allow", Action: "speech:ListVoices", Resource: "*" } },
+      session_policy: {
+        Version: "2026-10-01",
+        Statement: { Effect: "Allow", Action: "speech:ListVoices", Resource: "*" },
+      },
     });
   });
 
@@ -71,10 +80,14 @@ describe("assumeRole", () => {
 
   it("signedFetch accepts a credentials provider", async () => {
     const target = await serve(200, {});
-    await signedFetch(target.endpoint, {}, {
-      service: "speech",
-      credentials: () => ({ accessKeyId: "VGSTABCDEFGHIJKLMNOP", secretAccessKey: "s", sessionToken: "t" }),
-    });
+    await signedFetch(
+      target.endpoint,
+      {},
+      {
+        service: "speech",
+        credentials: () => ({ accessKeyId: "VGSTABCDEFGHIJKLMNOP", secretAccessKey: "s", sessionToken: "t" }),
+      },
+    );
     target.close();
     expect(target.seen[0].headers["x-vgr-security-token"]).toBe("t");
   });
@@ -83,13 +96,21 @@ describe("assumeRole", () => {
 describe("assumeRole endpoint", () => {
   it("calls the endpoint the environment names when none is given", async () => {
     const sts = await serve(200, {
-      credentials: { access_key_id: "VGSTA", secret_access_key: "s", session_token: "t", expiration: "2026-09-26T10:30:00Z" },
+      credentials: {
+        access_key_id: "VGSTA",
+        secret_access_key: "s",
+        session_token: "t",
+        expiration: "2026-09-26T10:30:00Z",
+      },
       assumed_role: { role_vrn: "vrn:r", session_vrn: "vrn:s" },
     });
     const base = sts.endpoint.replace("/v1/assume-role", "");
     process.env.VIGRISE_ENDPOINT_URL_STS = base;
     try {
-      await assumeRole({ roleVrn: "vrn:r", roleSessionName: "web" }, { credentials: { accessKeyId: "VGAK", secretAccessKey: "s" } });
+      await assumeRole(
+        { roleVrn: "vrn:r", roleSessionName: "web" },
+        { credentials: { accessKeyId: "VGAK", secretAccessKey: "s" } },
+      );
     } finally {
       delete process.env.VIGRISE_ENDPOINT_URL_STS;
       sts.close();

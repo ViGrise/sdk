@@ -5,21 +5,15 @@ export {
   type AccountMenuModel,
   type AccountMenuModelInput,
   type AccountMenuRow,
-} from "./account-menu-model.js"
-export { ssoTokenHash } from "./hash.js"
-export {
-  addAccountUrl,
-  manageAccountUrl,
-  signOutUrl,
-  switchAccountUrl,
-  type SignOutUrlOptions,
-} from "./urls.js"
+} from "./account-menu-model.js";
+export { ssoTokenHash } from "./hash.js";
+export { addAccountUrl, manageAccountUrl, signOutUrl, switchAccountUrl, type SignOutUrlOptions } from "./urls.js";
 export {
   createSessionChannel,
   reloadOnSessionChange,
   type SessionChannel,
   type SessionMessage,
-} from "./session-channel.js"
+} from "./session-channel.js";
 export {
   applySsoState,
   fetchSsoExchange,
@@ -34,6 +28,6 @@ export {
   type SsoStateHandlers,
   watchSsoState,
   type WatchSsoStateOptions,
-} from "./state.js"
+} from "./state.js";
 
-export type { SsoAccount } from "./types.js"
+export type { SsoAccount } from "./types.js";

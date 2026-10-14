@@ -9,7 +9,8 @@ function reachable(entry: string): string[] {
     if (seen.has(file)) return;
     seen.add(file);
     const source = readFileSync(file, "utf8");
-    for (const [, target] of source.matchAll(/(?:from\s+|import\(\s*)"(\.{1,2}\/[^"]+)\.js"/g)) visit(resolve(dirname(file), `${target}.ts`));
+    for (const [, target] of source.matchAll(/(?:from\s+|import\(\s*)"(\.{1,2}\/[^"]+)\.js"/g))
+      visit(resolve(dirname(file), `${target}.ts`));
   };
   visit(entry);
   return [...seen];

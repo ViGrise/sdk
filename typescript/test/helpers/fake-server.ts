@@ -25,7 +25,9 @@ export interface FakeServer {
 }
 
 /** Starts a local HTTP server that records every request and answers with `respond`. */
-export async function fakeServer(respond: (request: SeenRequest) => FakeReply | Promise<FakeReply>): Promise<FakeServer> {
+export async function fakeServer(
+  respond: (request: SeenRequest) => FakeReply | Promise<FakeReply>,
+): Promise<FakeServer> {
   const requests: SeenRequest[] = [];
   const server: Server = createServer((req, res) => {
     const chunks: Buffer[] = [];
@@ -43,7 +45,8 @@ export async function fakeServer(respond: (request: SeenRequest) => FakeReply | 
       requests.push(seen);
       const reply = await respond(seen);
       res.writeHead(reply.status ?? 200, reply.headers ?? {});
-      const parts = typeof reply.body === "string" || reply.body instanceof Uint8Array ? [reply.body] : [...(reply.body ?? [])];
+      const parts =
+        typeof reply.body === "string" || reply.body instanceof Uint8Array ? [reply.body] : [...(reply.body ?? [])];
       for (const part of parts) {
         res.write(part);
         await new Promise((resolve) => setTimeout(resolve, 2));
@@ -57,10 +60,11 @@ export async function fakeServer(respond: (request: SeenRequest) => FakeReply | 
     url: `http://127.0.0.1:${port}`,
     requests,
     last: () => requests[requests.length - 1]!,
-    close: () => new Promise<void>((resolve) => {
-      server.closeAllConnections();
-      server.close(() => resolve());
-    }),
+    close: () =>
+      new Promise<void>((resolve) => {
+        server.closeAllConnections();
+        server.close(() => resolve());
+      }),
   };
 }
 

@@ -13,9 +13,25 @@ import { fakeServer, jsonReply, type FakeServer, type FakeReply, type SeenReques
 
 const active = {
   active: true,
-  identity: { id: "11111111-1111-1111-1111-111111111111", email: "a@example.com", name: "Ada", picture: null, email_verified: true },
+  identity: {
+    id: "11111111-1111-1111-1111-111111111111",
+    email: "a@example.com",
+    name: "Ada",
+    picture: null,
+    email_verified: true,
+  },
   session: { id: "sid-1", authenticated_at: "2026-10-11T10:00:00Z", aal: "aal1", expires_at: "2026-10-12T10:00:00Z" },
-  accounts: [{ session_id: "sid-1", identity_id: "11111111-1111-1111-1111-111111111111", name: "Ada", email: "a@example.com", picture: null, active: true, expired: false }],
+  accounts: [
+    {
+      session_id: "sid-1",
+      identity_id: "11111111-1111-1111-1111-111111111111",
+      name: "Ada",
+      email: "a@example.com",
+      picture: null,
+      active: true,
+      expired: false,
+    },
+  ],
 };
 
 const servers: FakeServer[] = [];
@@ -26,7 +42,12 @@ afterEach(async () => {
 async function start(respond: (request: SeenRequest) => FakeReply, options: { cacheTtlMs?: number } = {}) {
   const server = await fakeServer(respond);
   servers.push(server);
-  const introspector = new SsoIntrospector({ internalUrl: server.url, clientId: "drive", clientSecret: "secret", ...options });
+  const introspector = new SsoIntrospector({
+    internalUrl: server.url,
+    clientId: "drive",
+    clientSecret: "secret",
+    ...options,
+  });
   return { server, introspector };
 }
 
@@ -42,13 +63,36 @@ describe("SsoIntrospector", () => {
     const { server, introspector } = await start(good);
     const answer = await introspector.introspect("good-token");
     expect(answer.active).toBe(true);
-    expect(answer.identity).toEqual({ id: "11111111-1111-1111-1111-111111111111", email: "a@example.com", name: "Ada", emailVerified: true });
-    expect(answer.session).toEqual({ id: "sid-1", authenticatedAt: new Date("2026-10-11T10:00:00Z"), aal: "aal1", expiresAt: new Date("2026-10-12T10:00:00Z") });
+    expect(answer.identity).toEqual({
+      id: "11111111-1111-1111-1111-111111111111",
+      email: "a@example.com",
+      name: "Ada",
+      emailVerified: true,
+    });
+    expect(answer.session).toEqual({
+      id: "sid-1",
+      authenticatedAt: new Date("2026-10-11T10:00:00Z"),
+      aal: "aal1",
+      expiresAt: new Date("2026-10-12T10:00:00Z"),
+    });
     expect(answer.accounts).toEqual([
-      { sessionId: "sid-1", identityId: "11111111-1111-1111-1111-111111111111", name: "Ada", email: "a@example.com", active: true, expired: false },
+      {
+        sessionId: "sid-1",
+        identityId: "11111111-1111-1111-1111-111111111111",
+        name: "Ada",
+        email: "a@example.com",
+        active: true,
+        expired: false,
+      },
     ]);
     expect(toMenuAccount(answer.accounts[0]!)).toEqual({
-      session_id: "sid-1", identity_id: "11111111-1111-1111-1111-111111111111", name: "Ada", email: "a@example.com", picture: undefined, active: true, expired: false,
+      session_id: "sid-1",
+      identity_id: "11111111-1111-1111-1111-111111111111",
+      name: "Ada",
+      email: "a@example.com",
+      picture: undefined,
+      active: true,
+      expired: false,
     });
     const seen = server.last();
     expect([seen.method, seen.target]).toEqual(["POST", "/sessions/sso/introspect"]);
@@ -120,7 +164,11 @@ describe("SsoIntrospector", () => {
   });
 
   it("counts unreachable Accounts as unavailable", async () => {
-    const introspector = new SsoIntrospector({ internalUrl: "http://127.0.0.1:1", clientId: "drive", clientSecret: "secret" });
+    const introspector = new SsoIntrospector({
+      internalUrl: "http://127.0.0.1:1",
+      clientId: "drive",
+      clientSecret: "secret",
+    });
     await expect(introspector.introspect("t")).rejects.toBeInstanceOf(AccountsUnavailableError);
     expect(introspector.unavailableCount).toBe(1);
   });

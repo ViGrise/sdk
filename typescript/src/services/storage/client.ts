@@ -3,8 +3,24 @@ import { SignedHttp } from "../../common/signed.js";
 import type { Credentials, CredentialsProvider } from "../../auth/types.js";
 import { errorFromResponse, StorageError } from "./error.js";
 import type {
-  Bucket, CompletedPart, CopyOptions, LifecycleRule, ListOptions, ListPage, ListUploadsOptions, ObjectHead, PresignRequest, Presigned,
-  PutOptions, PutResult, ReadOptions, StorageObject, StorageObjectStream, UploadedPart, UploadStreamOptions, UploadsPage,
+  Bucket,
+  CompletedPart,
+  CopyOptions,
+  LifecycleRule,
+  ListOptions,
+  ListPage,
+  ListUploadsOptions,
+  ObjectHead,
+  PresignRequest,
+  Presigned,
+  PutOptions,
+  PutResult,
+  ReadOptions,
+  StorageObject,
+  StorageObjectStream,
+  UploadedPart,
+  UploadStreamOptions,
+  UploadsPage,
 } from "./dto.js";
 
 /** Smallest part of a multipart upload, and the default part size of `uploadStream`. */
@@ -32,7 +48,8 @@ interface Call {
 
 const segment = (value: string) => encodeURIComponent(value);
 const keyPath = (key: string) => key.split("/").map(segment).join("/");
-const compact = <T extends object>(fields: T) => Object.fromEntries(Object.entries(fields).filter(([, value]) => value !== undefined));
+const compact = <T extends object>(fields: T) =>
+  Object.fromEntries(Object.entries(fields).filter(([, value]) => value !== undefined));
 
 function withQuery(path: string, query: Call["query"]): string {
   const pairs = Object.entries(query ?? {})
@@ -46,7 +63,8 @@ function objectHeaders(options: PutOptions): Record<string, string> {
   if (options.contentType !== undefined) headers["content-type"] = options.contentType;
   for (const [name, value] of Object.entries(options.metadata ?? {})) headers[`x-vgr-meta-${name}`] = value;
   const tags = Object.entries(options.tags ?? {}).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
-  if (tags.length) headers["x-vgr-tagging"] = tags.map(([name, value]) => `${segment(name)}=${segment(value)}`).join("&");
+  if (tags.length)
+    headers["x-vgr-tagging"] = tags.map(([name, value]) => `${segment(name)}=${segment(value)}`).join("&");
   return headers;
 }
 
@@ -89,7 +107,9 @@ function ruleOf(raw: any): LifecycleRule {
     prefix: raw.prefix ?? "",
     tags: raw.tags ?? {},
     ...(raw.expire_after_days !== undefined && { expireAfterDays: raw.expire_after_days }),
-    ...(raw.abort_incomplete_uploads_after_days !== undefined && { abortIncompleteUploadsAfterDays: raw.abort_incomplete_uploads_after_days }),
+    ...(raw.abort_incomplete_uploads_after_days !== undefined && {
+      abortIncompleteUploadsAfterDays: raw.abort_incomplete_uploads_after_days,
+    }),
     enabled: raw.enabled ?? true,
   };
 }
@@ -119,7 +139,13 @@ export class StorageClient {
       headers["content-type"] = "application/json";
       body = JSON.stringify(call.json);
     }
-    return this.http.send({ method: call.method, target: withQuery(call.path, call.query), headers, body, streamLength: call.streamLength });
+    return this.http.send({
+      method: call.method,
+      target: withQuery(call.path, call.query),
+      headers,
+      body,
+      streamLength: call.streamLength,
+    });
   }
 
   private async json<T = any>(call: Call): Promise<T> {
@@ -127,7 +153,9 @@ export class StorageClient {
     try {
       return (await response.json()) as T;
     } catch (error) {
-      throw new StorageError(0, "TransportError", `the answer is not JSON: ${(error as Error).message}`, { cause: error });
+      throw new StorageError(0, "TransportError", `the answer is not JSON: ${(error as Error).message}`, {
+        cause: error,
+      });
     }
   }
 
@@ -158,13 +186,30 @@ export class StorageClient {
   }
 
   /** Uploads `body` in one request, signed with its hash. */
-  async putObject(bucket: string, key: string, body: Uint8Array | string, options: PutOptions = {}): Promise<PutResult> {
+  async putObject(
+    bucket: string,
+    key: string,
+    body: Uint8Array | string,
+    options: PutOptions = {},
+  ): Promise<PutResult> {
     return this.json({ method: "PUT", path: this.objectPath(bucket, key), headers: objectHeaders(options), body });
   }
 
   /** Uploads `length` bytes from `body` in one streamed request, signed as UNSIGNED-PAYLOAD. */
-  async putObjectStream(bucket: string, key: string, body: ReadableStream<Uint8Array> | Blob, length: number, options: PutOptions = {}): Promise<PutResult> {
-    return this.json({ method: "PUT", path: this.objectPath(bucket, key), headers: objectHeaders(options), body, streamLength: length });
+  async putObjectStream(
+    bucket: string,
+    key: string,
+    body: ReadableStream<Uint8Array> | Blob,
+    length: number,
+    options: PutOptions = {},
+  ): Promise<PutResult> {
+    return this.json({
+      method: "PUT",
+      path: this.objectPath(bucket, key),
+      headers: objectHeaders(options),
+      body,
+      streamLength: length,
+    });
   }
 
   private read(method: string, bucket: string, key: string, options: ReadOptions): Promise<Response> {
@@ -181,7 +226,10 @@ export class StorageClient {
   /** Downloads an object, or the inclusive byte range of it, as a stream. */
   async getObjectStream(bucket: string, key: string, options: ReadOptions = {}): Promise<StorageObjectStream> {
     const response = await this.read("GET", bucket, key, options);
-    return { ...readHead(response), body: response.body ?? new ReadableStream({ start: (controller) => controller.close() }) };
+    return {
+      ...readHead(response),
+      body: response.body ?? new ReadableStream({ start: (controller) => controller.close() }),
+    };
   }
 
   /** An object's headers without its body. */
@@ -221,7 +269,13 @@ export class StorageClient {
   }
 
   /** Copies an object, in this or another bucket, without moving its bytes. */
-  async copyObject(sourceBucket: string, sourceKey: string, bucket: string, key: string, options: CopyOptions = {}): Promise<PutResult> {
+  async copyObject(
+    sourceBucket: string,
+    sourceKey: string,
+    bucket: string,
+    key: string,
+    options: CopyOptions = {},
+  ): Promise<PutResult> {
     const headers = options.replace ? { ...objectHeaders(options.replace), "x-vgr-metadata-directive": "REPLACE" } : {};
     return this.json({
       method: "PUT",
@@ -257,19 +311,33 @@ export class StorageClient {
     const raw = await this.json({
       method: "POST",
       path: `/v1/buckets/${segment(bucket)}/uploads`,
-      json: compact({ key, content_type: options.contentType, metadata: options.metadata ?? {}, tags: options.tags ?? {} }),
+      json: compact({
+        key,
+        content_type: options.contentType,
+        metadata: options.metadata ?? {},
+        tags: options.tags ?? {},
+      }),
     });
     return raw.upload_id;
   }
 
   /** Uploads part `number` of a multipart upload in one request. */
   async uploadPart(bucket: string, uploadId: string, number: number, body: Uint8Array): Promise<CompletedPart> {
-    return partOf(await this.json({ method: "PUT", path: `/v1/buckets/${segment(bucket)}/uploads/${segment(uploadId)}/parts/${number}`, body }));
+    return partOf(
+      await this.json({
+        method: "PUT",
+        path: `/v1/buckets/${segment(bucket)}/uploads/${segment(uploadId)}/parts/${number}`,
+        body,
+      }),
+    );
   }
 
   /** The parts stored so far in a multipart upload, by part number. */
   async listParts(bucket: string, uploadId: string): Promise<UploadedPart[]> {
-    const raw = await this.json({ method: "GET", path: `/v1/buckets/${segment(bucket)}/uploads/${segment(uploadId)}/parts` });
+    const raw = await this.json({
+      method: "GET",
+      path: `/v1/buckets/${segment(bucket)}/uploads/${segment(uploadId)}/parts`,
+    });
     return raw.parts.map((part: any) => ({ number: part.number, etag: part.etag, size: part.size }));
   }
 

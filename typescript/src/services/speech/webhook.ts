@@ -54,24 +54,37 @@ function sameBytes(a: Uint8Array, b: Uint8Array): boolean {
 }
 
 /** Checks the signature headers of a webhook against the raw body. Runs wherever Web Crypto does. */
-export async function verifyWebhookSignature(secret: string, headers: HeaderSource, rawBody: string | Uint8Array, options: VerifyWebhookOptions = {}): Promise<void> {
+export async function verifyWebhookSignature(
+  secret: string,
+  headers: HeaderSource,
+  rawBody: string | Uint8Array,
+  options: VerifyWebhookOptions = {},
+): Promise<void> {
   const id = header(headers, "webhook-id");
   const timestamp = header(headers, "webhook-timestamp");
   const signatures = header(headers, "webhook-signature");
   const seconds = Number(timestamp);
-  if (!Number.isInteger(seconds)) throw new WebhookVerificationError("timestamp", "the webhook timestamp is not a number");
+  if (!Number.isInteger(seconds))
+    throw new WebhookVerificationError("timestamp", "the webhook timestamp is not a number");
   const now = Math.floor((options.now ?? new Date()).getTime() / 1000);
   if (Math.abs(now - seconds) > (options.toleranceSeconds ?? 300)) {
     throw new WebhookVerificationError("timestamp", "the webhook timestamp is outside the tolerance");
   }
   const encodedKey = secret.startsWith(SECRET_PREFIX) ? secret.slice(SECRET_PREFIX.length) : secret;
-  if (!BASE64.test(encodedKey) || encodedKey.length % 4 !== 0) throw new WebhookVerificationError("secret", "the webhook secret is not base64");
+  if (!BASE64.test(encodedKey) || encodedKey.length % 4 !== 0)
+    throw new WebhookVerificationError("secret", "the webhook secret is not base64");
   const body = typeof rawBody === "string" ? encoder.encode(rawBody) : rawBody;
   const prefix = encoder.encode(`${id}.${timestamp}.`);
   const message = new Uint8Array(prefix.length + body.length);
   message.set(prefix);
   message.set(body, prefix.length);
-  const key = await crypto.subtle.importKey("raw", decodeBase64(encodedKey) as Uint8Array<ArrayBuffer>, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const key = await crypto.subtle.importKey(
+    "raw",
+    decodeBase64(encodedKey) as Uint8Array<ArrayBuffer>,
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
   const expected = new Uint8Array(await crypto.subtle.sign("HMAC", key, message));
   let matched = false;
   for (const entry of signatures.split(/\s+/)) {
@@ -82,7 +95,12 @@ export async function verifyWebhookSignature(secret: string, headers: HeaderSour
 }
 
 /** Verifies a webhook and parses its event. `rawBody` is the request body as received, before any JSON parsing. */
-export async function verifyWebhook(secret: string, headers: HeaderSource, rawBody: string | Uint8Array, options: VerifyWebhookOptions = {}): Promise<WebhookEvent> {
+export async function verifyWebhook(
+  secret: string,
+  headers: HeaderSource,
+  rawBody: string | Uint8Array,
+  options: VerifyWebhookOptions = {},
+): Promise<WebhookEvent> {
   await verifyWebhookSignature(secret, headers, rawBody, options);
   let body: any;
   try {

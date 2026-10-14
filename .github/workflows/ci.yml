@@ -62,6 +62,7 @@ jobs:
         with:
           node-version: "24"
       - run: npm ci
+      - run: npm run format:check
       - run: npm run typecheck
       - run: npm test
       - run: npm run build

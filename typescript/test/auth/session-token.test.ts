@@ -20,11 +20,13 @@ describe("session token signing", () => {
   });
 
   it("rejects a temporary key without a token", () => {
-    expect(() => signRequest({
-      method: "GET",
-      url: "https://example.test/",
-      credentials: { accessKeyId: "VGSTABCDEFGHIJKLMNOP", secretAccessKey: "secret" },
-      service: "speech",
-    })).toThrow(/session token/i);
+    expect(() =>
+      signRequest({
+        method: "GET",
+        url: "https://example.test/",
+        credentials: { accessKeyId: "VGSTABCDEFGHIJKLMNOP", secretAccessKey: "secret" },
+        service: "speech",
+      }),
+    ).toThrow(/session token/i);
   });
 });

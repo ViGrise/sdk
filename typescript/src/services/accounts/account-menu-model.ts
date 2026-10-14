@@ -1,9 +1,9 @@
-import type { SsoAccount } from "./types.js"
-import { addAccountUrl, manageAccountUrl, signOutUrl, switchAccountUrl } from "./urls.js"
+import type { SsoAccount } from "./types.js";
+import { addAccountUrl, manageAccountUrl, signOutUrl, switchAccountUrl } from "./urls.js";
 
 /** Primary line of an account: the name when it has one, else the email. */
 export function accountPrimaryLine(account: Pick<SsoAccount, "name" | "email">): string {
-  return account.name?.trim() || account.email?.trim() || ""
+  return account.name?.trim() || account.email?.trim() || "";
 }
 
 /**
@@ -14,51 +14,51 @@ export function accountSecondaryLine(
   account: Pick<SsoAccount, "name" | "email" | "expired">,
   signInAgainLabel: string,
 ): string | null {
-  if (account.expired) return signInAgainLabel
-  return account.name?.trim() ? account.email?.trim() || null : null
+  if (account.expired) return signInAgainLabel;
+  return account.name?.trim() ? account.email?.trim() || null : null;
 }
 
 export interface AccountMenuModelInput {
-  accounts: SsoAccount[]
+  accounts: SsoAccount[];
   /** Public URL of ViGrise Accounts. */
-  accountsUrl: string
+  accountsUrl: string;
   /** URL of the current app page Accounts returns to. */
-  returnTo: string
+  returnTo: string;
   /** OAuth2 client id of the app, for sign-out. */
-  clientId: string
+  clientId: string;
   /** Where sign-out returns; defaults to `returnTo`. */
-  postLogoutRedirectUri?: string
+  postLogoutRedirectUri?: string;
   /** The `sso_sid` of the app session, so sign-out ends that Accounts session. */
-  ssoSid?: string
+  ssoSid?: string;
   /** Text of the secondary line of an expired account. */
-  signInAgainLabel?: string
+  signInAgainLabel?: string;
 }
 
 export interface AccountMenuRow {
-  account: SsoAccount
-  primary: string
-  secondary: string | null
+  account: SsoAccount;
+  primary: string;
+  secondary: string | null;
   /** Switch link on Accounts. */
-  href: string
+  href: string;
 }
 
 export interface AccountMenuModel {
   /** The active account; the first account when none is active. */
-  current: SsoAccount | undefined
-  currentPrimary: string
-  currentSecondary: string | null
-  others: AccountMenuRow[]
-  manageHref: string
-  addAccountHref: string
-  signOutHref: string
+  current: SsoAccount | undefined;
+  currentPrimary: string;
+  currentSecondary: string | null;
+  others: AccountMenuRow[];
+  manageHref: string;
+  addAccountHref: string;
+  signOutHref: string;
 }
 
-const DEFAULT_SIGN_IN_AGAIN = "Sign in again"
+const DEFAULT_SIGN_IN_AGAIN = "Sign in again";
 
 /** Everything the account menu renders, without any markup. */
 export function accountMenuModel(input: AccountMenuModelInput): AccountMenuModel {
-  const signInAgain = input.signInAgainLabel ?? DEFAULT_SIGN_IN_AGAIN
-  const current = input.accounts.find((account) => account.active) ?? input.accounts[0]
+  const signInAgain = input.signInAgainLabel ?? DEFAULT_SIGN_IN_AGAIN;
+  const current = input.accounts.find((account) => account.active) ?? input.accounts[0];
   const others = input.accounts
     .filter((account) => account !== current)
     .map((account) => ({
@@ -66,7 +66,7 @@ export function accountMenuModel(input: AccountMenuModelInput): AccountMenuModel
       primary: accountPrimaryLine(account),
       secondary: accountSecondaryLine(account, signInAgain),
       href: switchAccountUrl(input.accountsUrl, account.session_id, input.returnTo),
-    }))
+    }));
   return {
     current,
     currentPrimary: current ? accountPrimaryLine(current) : "",
@@ -80,5 +80,5 @@ export function accountMenuModel(input: AccountMenuModelInput): AccountMenuModel
       postLogoutRedirectUri: input.postLogoutRedirectUri ?? input.returnTo,
       ssoSid: input.ssoSid,
     }),
-  }
+  };
 }

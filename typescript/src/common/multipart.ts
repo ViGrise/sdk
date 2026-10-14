@@ -25,7 +25,8 @@ function randomBoundary(): string {
 /** Encodes a `multipart/form-data` body with a random boundary that occurs in none of the parts. */
 export function encodeMultipart(parts: MultipartPart[]): { contentType: string; body: Uint8Array } {
   for (const part of parts) {
-    if (part.contentType !== undefined && /[\r\n]/.test(part.contentType)) throw new Error("a content type cannot contain line breaks");
+    if (part.contentType !== undefined && /[\r\n]/.test(part.contentType))
+      throw new Error("a content type cannot contain line breaks");
   }
   let boundary = randomBoundary();
   while (parts.some((part) => contains(part.body, encoder.encode(boundary)))) boundary = randomBoundary();

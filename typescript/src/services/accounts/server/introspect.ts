@@ -110,22 +110,31 @@ export class SsoIntrospector {
       });
     } catch (error) {
       this.unavailable += 1;
-      throw new AccountsUnavailableError(`ViGrise Accounts is unavailable: ${(error as Error).message}`, undefined, { cause: error });
+      throw new AccountsUnavailableError(`ViGrise Accounts is unavailable: ${(error as Error).message}`, undefined, {
+        cause: error,
+      });
     }
     const status = response.status;
-    if (status === 401) throw new AccountsMisconfiguredError("ViGrise Accounts rejected the client credentials", status);
-    if (status === 403) throw new AccountsMisconfiguredError("the client is not allowed to introspect SSO tokens", status);
+    if (status === 401)
+      throw new AccountsMisconfiguredError("ViGrise Accounts rejected the client credentials", status);
+    if (status === 403)
+      throw new AccountsMisconfiguredError("the client is not allowed to introspect SSO tokens", status);
     if (status === 429) throw new AccountsUnavailableError("the SSO introspection rate limit is exhausted", status);
     if (status >= 500) {
       this.unavailable += 1;
       throw new AccountsUnavailableError(`ViGrise Accounts is unavailable: status ${status}`, status);
     }
-    if (status !== 200) throw new AccountsMisconfiguredError(`unexpected answer from ViGrise Accounts: status ${status}`, status);
+    if (status !== 200)
+      throw new AccountsMisconfiguredError(`unexpected answer from ViGrise Accounts: status ${status}`, status);
     let raw: any;
     try {
       raw = camelize(await response.json());
     } catch (error) {
-      throw new AccountsMisconfiguredError(`unexpected answer from ViGrise Accounts: ${(error as Error).message}`, status, { cause: error });
+      throw new AccountsMisconfiguredError(
+        `unexpected answer from ViGrise Accounts: ${(error as Error).message}`,
+        status,
+        { cause: error },
+      );
     }
     const answer: Introspection = { ...raw, active: Boolean(raw?.active), accounts: raw?.accounts ?? [] };
     this.store(key, answer);

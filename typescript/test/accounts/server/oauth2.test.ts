@@ -22,7 +22,9 @@ afterEach(async () => {
 
 describe("PKCE and URLs", () => {
   it("derives the RFC 7636 challenge", () => {
-    expect(Pkce.fromVerifier("dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk").challenge).toBe("E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM");
+    expect(Pkce.fromVerifier("dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk").challenge).toBe(
+      "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM",
+    );
   });
 
   it("generates unique, URL-safe verifiers and states", () => {
@@ -46,14 +48,29 @@ describe("PKCE and URLs", () => {
       }).url(),
     );
     const q = url.searchParams;
-    expect([q.get("response_type"), q.get("code_challenge"), q.get("code_challenge_method"), q.get("state")]).toEqual(["code", "ch", "S256", "st"]);
+    expect([q.get("response_type"), q.get("code_challenge"), q.get("code_challenge_method"), q.get("state")]).toEqual([
+      "code",
+      "ch",
+      "S256",
+      "st",
+    ]);
     expect([q.get("prompt"), q.get("max_age"), q.get("scope")]).toEqual(["select_account", "43200", "openid email"]);
     expect(q.has("login_hint")).toBe(false);
   });
 
   it("builds the end-session URL", () => {
-    const url = new URL(endSessionUrl("https://accounts.vigrise.com/o/oauth2/sessions/logout", "app", "https://app.example/bye", { idTokenHint: "tok", state: "s" }));
-    expect(Object.fromEntries(url.searchParams)).toEqual({ client_id: "app", post_logout_redirect_uri: "https://app.example/bye", id_token_hint: "tok", state: "s" });
+    const url = new URL(
+      endSessionUrl("https://accounts.vigrise.com/o/oauth2/sessions/logout", "app", "https://app.example/bye", {
+        idTokenHint: "tok",
+        state: "s",
+      }),
+    );
+    expect(Object.fromEntries(url.searchParams)).toEqual({
+      client_id: "app",
+      post_logout_redirect_uri: "https://app.example/bye",
+      id_token_hint: "tok",
+      state: "s",
+    });
     const bare = new URL(endSessionUrl("https://accounts.vigrise.com/logout", "app", "https://app.example/bye"));
     expect(bare.searchParams.has("id_token_hint")).toBe(false);
   });
@@ -61,7 +78,9 @@ describe("PKCE and URLs", () => {
 
 describe("OAuth2Client", () => {
   it("posts the verifier and client credentials of a confidential client", async () => {
-    const server = await fakeServer(() => jsonReply({ access_token: "at", id_token: "it", refresh_token: "rt", expires_in: 3600 }));
+    const server = await fakeServer(() =>
+      jsonReply({ access_token: "at", id_token: "it", refresh_token: "rt", expires_in: 3600 }),
+    );
     servers.push(server);
     const client = new OAuth2Client({ tokenEndpoint: `${server.url}/token`, clientId: "app", clientSecret: "shh" });
     const tokens = await client.exchangeCode("code-1", "verifier-1", "https://app.example/cb");
@@ -70,7 +89,12 @@ describe("OAuth2Client", () => {
     expect([seen.method, seen.target]).toEqual(["POST", "/token"]);
     expect(seen.headers["content-type"]).toBe("application/x-www-form-urlencoded");
     expect(Object.fromEntries(new URLSearchParams(seen.text()))).toEqual({
-      grant_type: "authorization_code", code: "code-1", redirect_uri: "https://app.example/cb", client_id: "app", code_verifier: "verifier-1", client_secret: "shh",
+      grant_type: "authorization_code",
+      code: "code-1",
+      redirect_uri: "https://app.example/cb",
+      client_id: "app",
+      code_verifier: "verifier-1",
+      client_secret: "shh",
     });
   });
 
@@ -105,20 +129,38 @@ describe("IdTokenVerifier", () => {
   });
   const verifier = () => new IdTokenVerifier({ issuer: ISS, clientId: "app", jwks: Jwks.fromSet(signer.jwkSet) });
   const now = () => Math.floor(Date.now() / 1000);
-  const claims = (extra: Record<string, unknown> = {}) => ({ iss: ISS, aud: "app", sub: "user-1", sid: "sid-1", nonce: "n-1", iat: now(), exp: now() + 300, auth_time: now(), ...extra });
+  const claims = (extra: Record<string, unknown> = {}) => ({
+    iss: ISS,
+    aud: "app",
+    sub: "user-1",
+    sid: "sid-1",
+    nonce: "n-1",
+    iat: now(),
+    exp: now() + 300,
+    auth_time: now(),
+    ...extra,
+  });
 
   it("verifies signature, issuer, audience and nonce", async () => {
     const result = await verifier().verify(await signer.sign(claims()), { nonce: "n-1" });
     expect(result).toMatchObject({ sub: "user-1", sid: "sid-1", nonce: "n-1" });
     await expect(verifier().verify(await signer.sign(claims()), { nonce: "other" })).rejects.toThrow(/nonce/);
-    await expect(verifier().verify(await signer.sign(claims({ iss: "https://evil.example" })))).rejects.toBeInstanceOf(InvalidTokenError);
-    await expect(verifier().verify(await signer.sign(claims({ aud: "someone-else" })))).rejects.toBeInstanceOf(InvalidTokenError);
-    await expect(verifier().verify(await signer.sign(claims({ exp: now() - 600 })))).rejects.toBeInstanceOf(InvalidTokenError);
+    await expect(verifier().verify(await signer.sign(claims({ iss: "https://evil.example" })))).rejects.toBeInstanceOf(
+      InvalidTokenError,
+    );
+    await expect(verifier().verify(await signer.sign(claims({ aud: "someone-else" })))).rejects.toBeInstanceOf(
+      InvalidTokenError,
+    );
+    await expect(verifier().verify(await signer.sign(claims({ exp: now() - 600 })))).rejects.toBeInstanceOf(
+      InvalidTokenError,
+    );
   });
 
   it("tolerates 60 seconds of clock skew and no more", async () => {
     await expect(verifier().verify(await signer.sign(claims({ exp: now() - 10 })))).resolves.toBeDefined();
-    await expect(verifier().verify(await signer.sign(claims({ exp: now() - 120 })))).rejects.toBeInstanceOf(InvalidTokenError);
+    await expect(verifier().verify(await signer.sign(claims({ exp: now() - 120 })))).rejects.toBeInstanceOf(
+      InvalidTokenError,
+    );
   });
 
   it("skips the nonce check when none is expected", async () => {

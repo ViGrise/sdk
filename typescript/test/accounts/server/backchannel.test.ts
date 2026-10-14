@@ -13,10 +13,20 @@ beforeAll(async () => {
   signer = await TestSigner.generate();
 });
 
-const verifier = () => new BackchannelLogout({ issuer: ISS, clientId: "vigrise-drive", jwks: Jwks.fromSet(signer.jwkSet) });
+const verifier = () =>
+  new BackchannelLogout({ issuer: ISS, clientId: "vigrise-drive", jwks: Jwks.fromSet(signer.jwkSet) });
 
 function claims(): Record<string, unknown> {
-  return { iss: ISS, sub: "user-1", aud: ["vigrise-drive"], iat: now(), exp: now() + 300, jti: `jti-${counter++}`, sid: "sid-1", events: { [EVENT]: {} } };
+  return {
+    iss: ISS,
+    sub: "user-1",
+    aud: ["vigrise-drive"],
+    iat: now(),
+    exp: now() + 300,
+    jti: `jti-${counter++}`,
+    sid: "sid-1",
+    events: { [EVENT]: {} },
+  };
 }
 
 async function check(mutate: (claims: Record<string, unknown>) => void = () => {}) {
@@ -37,7 +47,12 @@ describe("BackchannelLogout", () => {
     await expect(check((c) => (c.aud = ["vigrise-wallet"]))).rejects.toBeInstanceOf(InvalidTokenError);
     await expect(check((c) => (c.events = {}))).rejects.toThrow(/event/);
     await expect(check((c) => (c.nonce = "n"))).rejects.toThrow(/nonce/);
-    await expect(check((c) => { delete c.sid; delete c.sub; })).rejects.toThrow(/sid nor sub/);
+    await expect(
+      check((c) => {
+        delete c.sid;
+        delete c.sub;
+      }),
+    ).rejects.toThrow(/sid nor sub/);
     await expect(check((c) => delete c.jti)).rejects.toThrow(/jti/);
   });
 

@@ -7,7 +7,14 @@ import { deriveSigningKey, scope, signature, stringToSign } from "../../src/auth
 import { signRequest } from "../../src/auth/signer.js";
 
 interface Vector {
-  request: { method: string; path: string; query: string; headers: [string, string][]; body: string; payload_hash?: string };
+  request: {
+    method: string;
+    path: string;
+    query: string;
+    headers: [string, string][];
+    body: string;
+    payload_hash?: string;
+  };
   credentials: { access_key_id: string; secret_access_key: string; session_token?: string };
   service: string;
   time: string;
@@ -28,7 +35,9 @@ const vectors: [string, Vector][] = readdirSync(dir)
   .map((f) => [f, JSON.parse(readFileSync(join(dir, f), "utf8")) as Vector]);
 
 function parseTime(t: string): Date {
-  return new Date(`${t.slice(0, 4)}-${t.slice(4, 6)}-${t.slice(6, 8)}T${t.slice(9, 11)}:${t.slice(11, 13)}:${t.slice(13, 15)}Z`);
+  return new Date(
+    `${t.slice(0, 4)}-${t.slice(4, 6)}-${t.slice(6, 8)}T${t.slice(9, 11)}:${t.slice(11, 13)}:${t.slice(13, 15)}Z`,
+  );
 }
 
 describe("VGR4 vectors", () => {
@@ -38,7 +47,11 @@ describe("VGR4 vectors", () => {
     it(`primitives match ${name}`, () => {
       const payloadHash = v.request.payload_hash ?? sha256Hex(new TextEncoder().encode(v.request.body));
       expect(payloadHash).toBe(v.expected.payload_hash);
-      const headers: [string, string][] = [...v.request.headers, ["x-vgr-date", v.time], ["x-vgr-content-sha256", payloadHash]];
+      const headers: [string, string][] = [
+        ...v.request.headers,
+        ["x-vgr-date", v.time],
+        ["x-vgr-content-sha256", payloadHash],
+      ];
       if (v.credentials.session_token) headers.push(["x-vgr-security-token", v.credentials.session_token]);
       const signed = v.expected.signed_headers.split(";");
       const creq = canonicalRequest(v.request.method, v.request.path, v.request.query, headers, signed, payloadHash);
