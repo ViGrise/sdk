@@ -87,3 +87,22 @@ language, the same operations under the names of each language's convention.
 - Rust: edition 2024.
 - Comments state what the code does and why, in the present tense.
 - Write "ViGrise" in prose.
+
+## Releasing
+
+Every package shares one version. To release `X.Y.Z`:
+
+1. Set `X.Y.Z` in `rust/Cargo.toml` (`[workspace.package]`), in the `vigrise`
+   dependency of `rust/vigrise-cli/Cargo.toml`, in `typescript/package.json`
+   and in `python/pyproject.toml`.
+2. Commit on `main` and push a `vX.Y.Z` tag.
+
+`.github/workflows/release.yml` runs CI, checks that every package carries the
+tag's version and publishes to crates.io, npm and PyPI through trusted
+publishing. A registry that already holds the version is skipped, so a failed
+release is retried by re-running the workflow.
+
+Trusted publishing is configured once per registry for the repository
+`ViGrise/sdk` and the workflow `release.yml`: on crates.io for `vigrise` and
+`vigrise-cli`, on npm for `@vigrise/sdk`, and on PyPI for `vigrise` with the
+environment `pypi`.
