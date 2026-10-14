@@ -20,9 +20,9 @@
 //! ```
 
 mod client;
+mod dto;
 mod error;
-mod types;
 
 pub use client::StorageClient;
+pub use dto::*;
 pub use error::StorageError;
-pub use types::*;

@@ -4,19 +4,19 @@ use std::task::{Context, Poll};
 use std::time::Instant;
 
 use bytes::Bytes;
-use chrono::Utc;
 use futures_util::{Stream, StreamExt};
 use http::{HeaderMap, HeaderValue, Method};
 use percent_encoding::{AsciiSet, NON_ALPHANUMERIC, utf8_percent_encode};
 use serde::de::DeserializeOwned;
 use serde_json::{Map, Value, json};
 
-use crate::auth::endpoint::resolve_endpoint;
-use crate::auth::{CredentialsProvider, sign_request};
+use crate::auth::CredentialsProvider;
+use crate::common::endpoint::resolve_endpoint;
+use crate::common::multipart::Multipart;
+use crate::common::pagination::Page;
+use crate::common::signed::{Payload, SignedHttp};
+use crate::speech::dto::*;
 use crate::speech::error::{SpeechError, from_response};
-use crate::speech::multipart::Multipart;
-use crate::speech::options::*;
-use crate::speech::types::*;
 
 /// Characters left as they are in a path segment or query value.
 const UNRESERVED: &AsciiSet = &NON_ALPHANUMERIC
@@ -70,9 +70,7 @@ impl Stream for SpeechStream {
 /// `speech` service. Clones share the credentials provider.
 #[derive(Clone)]
 pub struct SpeechClient {
-  endpoint: String,
-  credentials: Arc<dyn CredentialsProvider>,
-  http: reqwest::Client,
+  signed: SignedHttp,
 }
 
 impl SpeechClient {
@@ -80,15 +78,13 @@ impl SpeechClient {
   /// `VIGRISE_ENDPOINT_URL` names, `https://speech-api.vigrise.com` by default.
   pub fn new(credentials: Arc<dyn CredentialsProvider>) -> Self {
     Self {
-      endpoint: resolve_endpoint("speech", None),
-      credentials,
-      http: reqwest::Client::new(),
+      signed: SignedHttp::new("speech", resolve_endpoint("speech", None), credentials),
     }
   }
 
   /// Points the client at another endpoint, for example `http://localhost:8080`.
   pub fn with_endpoint(mut self, endpoint: impl AsRef<str>) -> Self {
-    self.endpoint = endpoint.as_ref().trim_end_matches('/').to_string();
+    self.signed = self.signed.with_endpoint(endpoint);
     self
   }
 
@@ -100,10 +96,6 @@ impl SpeechClient {
     body: Bytes,
     idempotency_key: Option<&str>,
   ) -> Result<reqwest::Response, SpeechError> {
-    let url = format!("{}{target}", self.endpoint);
-    let uri: http::Uri = url
-      .parse()
-      .map_err(|_| SpeechError::Transport(format!("{url} is not a valid URL")))?;
     if let Some(key) = idempotency_key {
       headers.insert(
         "idempotency-key",
@@ -111,40 +103,12 @@ impl SpeechClient {
           .map_err(|_| SpeechError::Signing("the idempotency key is not a header value".into()))?,
       );
     }
-    let credentials = self
-      .credentials
-      .credentials()
-      .await
-      .map_err(|e| SpeechError::Signing(e.to_string()))?;
-    sign_request(
-      &method,
-      &uri,
-      &headers,
-      &body,
-      &credentials,
-      "speech",
-      Utc::now(),
+    Ok(
+      self
+        .signed
+        .send(method, target, headers, Payload::Buffered(body))
+        .await?,
     )
-    .map_err(|e| SpeechError::Signing(e.to_string()))?
-    .apply(&mut headers)
-    .map_err(|e| SpeechError::Signing(e.to_string()))?;
-    let response = self
-      .http
-      .request(method, url)
-      .headers(headers)
-      .body(body)
-      .send()
-      .await
-      .map_err(SpeechError::from_transport)?;
-    if response.status().is_success() {
-      return Ok(response);
-    }
-    let status = response.status().as_u16();
-    let body = response.bytes().await.unwrap_or_default();
-    if status == 401 || status == 403 {
-      self.credentials.invalidate();
-    }
-    Err(from_response(status, &body))
   }
 
   async fn json_request<T: DeserializeOwned>(
@@ -434,7 +398,8 @@ impl SpeechClient {
   pub async fn download_generation_audio(&self, id: &str) -> Result<Bytes, SpeechError> {
     let location = self.generation_audio_url(id, false).await?;
     let response = self
-      .http
+      .signed
+      .http()
       .get(&location.url)
       .send()
       .await

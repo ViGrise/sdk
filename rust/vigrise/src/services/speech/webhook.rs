@@ -12,7 +12,7 @@ use http::HeaderMap;
 use sha2::Sha256;
 use subtle::ConstantTimeEq;
 
-use crate::speech::types::WebhookEvent;
+use crate::speech::dto::WebhookEvent;
 
 /// Prefix of a webhook secret as it is shown to the project.
 pub const SECRET_PREFIX: &str = "whsec_";
@@ -106,7 +106,7 @@ pub fn verify_webhook_at(
     #[serde(rename = "type")]
     kind: String,
     timestamp: DateTime<Utc>,
-    data: crate::speech::types::Job,
+    data: crate::speech::dto::Job,
   }
   let body: Body = serde_json::from_slice(raw_body)
     .map_err(|error| WebhookError::InvalidPayload(error.to_string()))?;

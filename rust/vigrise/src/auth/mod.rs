@@ -50,8 +50,6 @@ pub mod chunked;
 /// Access key and session token credentials, resolved from the environment or
 /// the credentials file.
 pub mod credentials;
-/// Where each ViGrise service lives.
-pub mod endpoint;
 /// Errors of VGR4 authentication and authorization.
 pub mod error;
 /// Sources of credentials to sign requests with.
@@ -72,6 +70,8 @@ pub mod sts;
 #[cfg(feature = "verify")]
 pub mod verify;
 
+/// Where each ViGrise service lives.
+pub use crate::common::endpoint;
 pub use authorization::AuthorizationHeader;
 pub use credentials::{Credentials, CredentialsError};
 pub use error::AuthError;

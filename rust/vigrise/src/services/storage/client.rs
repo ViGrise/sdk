@@ -1,11 +1,9 @@
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
-use crate::auth::{
-  CredentialsProvider, UNSIGNED_PAYLOAD, sign_request, sign_request_with_payload_hash,
-};
+use crate::auth::CredentialsProvider;
+use crate::common::signed::{Payload, SignedHttp};
 use bytes::{Bytes, BytesMut};
-use chrono::Utc;
 use futures_util::{Stream, StreamExt};
 use http::{HeaderMap, HeaderName, HeaderValue, Method};
 use percent_encoding::{AsciiSet, NON_ALPHANUMERIC, utf8_percent_encode};
@@ -13,8 +11,8 @@ use serde::Deserialize;
 use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
 
-use crate::storage::error::{StorageError, from_response};
-use crate::storage::types::*;
+use crate::storage::dto::*;
+use crate::storage::error::StorageError;
 
 /// Characters left as they are in a path segment or query value.
 const UNRESERVED: &AsciiSet = &NON_ALPHANUMERIC
@@ -32,20 +30,11 @@ fn key_path(key: &str) -> String {
   key.split('/').map(encode).collect::<Vec<_>>().join("/")
 }
 
-enum Payload {
-  /// Signed with its SHA-256.
-  Buffered(Bytes),
-  /// Streamed and signed as `UNSIGNED-PAYLOAD`; `u64` is its length.
-  Streamed(reqwest::Body, u64),
-}
-
 /// A client for one ViGrise Storage endpoint. Clones share the credentials
 /// provider.
 #[derive(Clone)]
 pub struct StorageClient {
-  endpoint: String,
-  credentials: Arc<dyn CredentialsProvider>,
-  http: reqwest::Client,
+  signed: SignedHttp,
 }
 
 impl StorageClient {
@@ -53,9 +42,7 @@ impl StorageClient {
   /// `https://storage-api.vigrise.com`.
   pub fn new(endpoint: impl Into<String>, credentials: Arc<dyn CredentialsProvider>) -> Self {
     Self {
-      endpoint: endpoint.into().trim_end_matches('/').to_string(),
-      credentials,
-      http: reqwest::Client::new(),
+      signed: SignedHttp::new("storage", endpoint.into(), credentials),
     }
   }
 
@@ -63,7 +50,7 @@ impl StorageClient {
   /// `VIGRISE_ENDPOINT_URL` names, `https://storage-api.vigrise.com` by default.
   pub fn resolved(credentials: Arc<dyn CredentialsProvider>) -> Self {
     Self::new(
-      crate::auth::endpoint::resolve_endpoint("storage", None),
+      crate::common::endpoint::resolve_endpoint("storage", None),
       credentials,
     )
   }
@@ -72,68 +59,10 @@ impl StorageClient {
     &self,
     method: Method,
     path: &str,
-    mut headers: HeaderMap,
+    headers: HeaderMap,
     payload: Payload,
   ) -> Result<reqwest::Response, StorageError> {
-    let url = format!("{}{path}", self.endpoint);
-    let uri: http::Uri = url
-      .parse()
-      .map_err(|_| StorageError::Transport(format!("{url} is not a valid URL")))?;
-    let credentials = self
-      .credentials
-      .credentials()
-      .await
-      .map_err(|e| StorageError::Signing(e.to_string()))?;
-    let (signed, body, length) = match payload {
-      Payload::Buffered(bytes) => (
-        sign_request(
-          &method,
-          &uri,
-          &headers,
-          &bytes,
-          &credentials,
-          "storage",
-          Utc::now(),
-        ),
-        reqwest::Body::from(bytes.clone()),
-        bytes.len() as u64,
-      ),
-      Payload::Streamed(body, length) => (
-        sign_request_with_payload_hash(
-          &method,
-          &uri,
-          &headers,
-          UNSIGNED_PAYLOAD,
-          &credentials,
-          "storage",
-          Utc::now(),
-        ),
-        body,
-        length,
-      ),
-    };
-    signed
-      .map_err(|e| StorageError::Signing(e.to_string()))?
-      .apply(&mut headers)
-      .map_err(|e| StorageError::Signing(e.to_string()))?;
-    headers.insert(http::header::CONTENT_LENGTH, HeaderValue::from(length));
-    let response = self
-      .http
-      .request(method, url)
-      .headers(headers)
-      .body(body)
-      .send()
-      .await
-      .map_err(|e| StorageError::Transport(e.to_string()))?;
-    if response.status().is_success() {
-      return Ok(response);
-    }
-    let status = response.status().as_u16();
-    let body = response.bytes().await.unwrap_or_default();
-    if status == 401 || status == 403 {
-      self.credentials.invalidate();
-    }
-    Err(from_response(status, &body))
+    Ok(self.signed.send(method, path, headers, payload).await?)
   }
 
   async fn json<T: DeserializeOwned>(

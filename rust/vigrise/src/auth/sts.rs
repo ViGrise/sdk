@@ -174,7 +174,7 @@ impl StsClient {
   /// A client of the STS endpoint that `VIGRISE_ENDPOINT_URL_STS` or
   /// `VIGRISE_ENDPOINT_URL` names, `https://sts-api.vigrise.com` by default.
   pub fn resolved(credentials: impl CredentialsProvider + 'static) -> Self {
-    Self::new(crate::auth::endpoint::sts_url(None), credentials)
+    Self::new(crate::common::endpoint::sts_url(None), credentials)
   }
 
   /// Asks the service for a role session, signing the call with the client's
@@ -342,7 +342,7 @@ pub fn service_credentials_with(
   let Some(role_vrn) = present(ENV_ROLE_VRN) else {
     return Ok(Arc::new(bootstrap));
   };
-  let endpoint = crate::auth::endpoint::sts_url_with(None, &lookup);
+  let endpoint = crate::common::endpoint::sts_url_with(None, &lookup);
   Ok(Arc::new(AssumeRoleProvider::new(
     StsClient::new(endpoint, bootstrap),
     role_vrn,

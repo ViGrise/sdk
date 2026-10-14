@@ -1,6 +1,9 @@
 use serde_json::{Map, Value};
 
-use crate::speech::types::Job;
+use crate::common::envelope::parse_error_envelope;
+use crate::common::signed::SendError;
+
+use crate::speech::dto::Job;
 
 /// Errors of Speech calls.
 #[derive(Debug, thiserror::Error)]
@@ -65,32 +68,14 @@ impl SpeechError {
 /// The error an error response carries: `{"error": {"code", "message", ...}}`,
 /// or the status when the body is not that envelope.
 pub(crate) fn from_response(status: u16, body: &[u8]) -> SpeechError {
-  let parsed = serde_json::from_slice::<Value>(body)
-    .ok()
-    .and_then(|value| match value {
-      Value::Object(mut root) => match root.remove("error") {
-        Some(Value::Object(error)) => Some(error),
-        _ => None,
-      },
-      _ => None,
-    });
-  match parsed {
-    Some(mut error) => {
-      let take = |error: &mut Map<String, Value>, name: &str| match error.remove(name) {
-        Some(Value::String(text)) => Some(text),
-        _ => None,
-      };
-      let code = take(&mut error, "code").unwrap_or_else(|| "UnknownError".into());
-      let message = take(&mut error, "message").unwrap_or_default();
-      let resource_id = take(&mut error, "resource_id");
-      SpeechError::Service {
-        status,
-        code,
-        message,
-        resource_id,
-        details: error,
-      }
-    }
+  match parse_error_envelope(body) {
+    Some(envelope) => SpeechError::Service {
+      status,
+      code: envelope.code.unwrap_or_else(|| "UnknownError".into()),
+      message: envelope.message,
+      resource_id: envelope.resource_id,
+      details: envelope.details,
+    },
     None => SpeechError::Service {
       status,
       code: "UnknownError".into(),
@@ -98,6 +83,17 @@ pub(crate) fn from_response(status: u16, body: &[u8]) -> SpeechError {
       resource_id: None,
       details: Map::new(),
     },
+  }
+}
+
+impl From<SendError> for SpeechError {
+  fn from(error: SendError) -> Self {
+    match error {
+      SendError::InvalidUrl(message) => Self::Transport(message),
+      SendError::Signing(message) => Self::Signing(message),
+      SendError::Transport(error) => Self::from_transport(error),
+      SendError::Refused { status, body } => from_response(status, &body),
+    }
   }
 }
 

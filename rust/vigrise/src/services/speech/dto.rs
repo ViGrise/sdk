@@ -3,135 +3,9 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 
-/// Defines an enumeration of the string values a service sends, with a
-/// variant that keeps values added later.
-macro_rules! open_enum {
-  ($(#[$meta:meta])* $name:ident { $($(#[$vmeta:meta])* $variant:ident => $text:literal),+ $(,)? }) => {
-    $(#[$meta])*
-    #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-    pub enum $name {
-      $($(#[$vmeta])* $variant,)+
-      /// A value this version of the SDK does not know.
-      Other(String),
-    }
+use std::time::Duration;
 
-    impl $name {
-      /// The value as the service spells it.
-      pub fn as_str(&self) -> &str {
-        match self {
-          $(Self::$variant => $text,)+
-          Self::Other(value) => value,
-        }
-      }
-    }
-
-    impl From<&str> for $name {
-      fn from(value: &str) -> Self {
-        match value {
-          $($text => Self::$variant,)+
-          other => Self::Other(other.to_string()),
-        }
-      }
-    }
-
-    impl std::fmt::Display for $name {
-      fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(self.as_str())
-      }
-    }
-
-    impl Serialize for $name {
-      fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        serializer.serialize_str(self.as_str())
-      }
-    }
-
-    impl<'de> Deserialize<'de> for $name {
-      fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        Ok(Self::from(String::deserialize(deserializer)?.as_str()))
-      }
-    }
-  };
-}
-
-open_enum! {
-  /// Audio formats a synthesis can be returned in.
-  AudioFormat {
-    /// WAV container.
-    Wav => "wav",
-    /// Raw signed 16-bit little-endian mono PCM.
-    Pcm => "pcm",
-    /// MP3.
-    Mp3 => "mp3",
-    /// Opus in an Ogg container.
-    Opus => "opus",
-  }
-}
-
-open_enum! {
-  /// How a generation was requested.
-  GenerationSource {
-    /// `synthesize`.
-    Sync => "sync",
-    /// `synthesize_stream`.
-    Stream => "stream",
-    /// A job.
-    Job => "job",
-  }
-}
-
-open_enum! {
-  /// Whether a generation holds all of its audio.
-  GenerationStatus {
-    /// The audio is complete.
-    Complete => "complete",
-    /// The audio stopped before the end.
-    Incomplete => "incomplete",
-  }
-}
-
-open_enum! {
-  /// Progress of a job.
-  JobStatus {
-    /// Waiting for a worker.
-    Queued => "queued",
-    /// Being synthesized.
-    Running => "running",
-    /// Finished with audio.
-    Succeeded => "succeeded",
-    /// Finished with an error.
-    Failed => "failed",
-    /// Cancelled before it finished.
-    Cancelled => "cancelled",
-  }
-}
-
-impl JobStatus {
-  /// Whether the job will not change any more.
-  pub fn is_finished(&self) -> bool {
-    matches!(self, Self::Succeeded | Self::Failed | Self::Cancelled)
-  }
-}
-
-open_enum! {
-  /// Where a voice comes from.
-  VoiceKind {
-    /// A built-in voice.
-    System => "system",
-    /// A voice cloned in the project.
-    Cloned => "cloned",
-  }
-}
-
-open_enum! {
-  /// How the speaker of a reference recording relates to the person cloning the voice.
-  Relationship {
-    /// The speaker is the person cloning the voice.
-    Own => "self",
-    /// The speaker authorized the cloning.
-    Authorized => "authorized",
-  }
-}
+use super::enums::*;
 
 /// A synthesized audio file.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -346,16 +220,6 @@ pub struct Job {
   pub finished_at: Option<DateTime<Utc>>,
 }
 
-/// A page of a list.
-#[derive(Debug, Clone, PartialEq, Deserialize)]
-pub struct Page<T> {
-  /// The items.
-  pub data: Vec<T>,
-  /// Pass to the next call to read the next page; `None` on the last page.
-  #[serde(default)]
-  pub next_cursor: Option<String>,
-}
-
 /// A speech model, as the engine describes it.
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 pub struct Model {
@@ -395,4 +259,81 @@ pub struct WebhookEvent {
   pub timestamp: DateTime<Utc>,
   /// The job as it was at the event.
   pub data: Job,
+}
+
+/// Options of a synthesis.
+#[derive(Debug, Clone, Default)]
+pub struct SynthesizeOptions {
+  /// Model to synthesize with; the service default when `None`.
+  pub model: Option<String>,
+  /// Audio format; the service default when `None`.
+  pub format: Option<AudioFormat>,
+  /// Whether the service keeps the audio as a generation; the service default when `None`.
+  pub store_audio: Option<bool>,
+  /// Makes the call safe to repeat: the service runs one request per key.
+  pub idempotency_key: Option<String>,
+}
+
+/// Options of cloning a voice.
+#[derive(Debug, Clone, Default)]
+pub struct CloneOptions {
+  /// Makes the call safe to repeat: the service runs one request per key.
+  pub idempotency_key: Option<String>,
+}
+
+/// Options of a job.
+#[derive(Debug, Clone, Default)]
+pub struct JobOptions {
+  /// Model to synthesize with; the service default when `None`.
+  pub model: Option<String>,
+  /// Audio format; the service default when `None`.
+  pub format: Option<AudioFormat>,
+  /// Where the outcome is sent; verify it with [`verify_webhook`](crate::speech::verify_webhook).
+  pub webhook_url: Option<String>,
+  /// Whether the service keeps the audio as a generation; the service default when `None`.
+  pub store_audio: Option<bool>,
+  /// Makes the call safe to repeat: the service creates one job per key.
+  pub idempotency_key: Option<String>,
+}
+
+/// Filters and paging of a list of generations.
+#[derive(Debug, Clone, Default)]
+pub struct ListGenerationsOptions {
+  /// The `next_cursor` of the previous page.
+  pub cursor: Option<String>,
+  /// Most items per page.
+  pub limit: Option<u64>,
+  /// Only generations requested this way.
+  pub source: Option<GenerationSource>,
+  /// Only generations spoken by this voice.
+  pub voice: Option<String>,
+}
+
+/// Filters and paging of a list of jobs.
+#[derive(Debug, Clone, Default)]
+pub struct ListJobsOptions {
+  /// The `next_cursor` of the previous page.
+  pub cursor: Option<String>,
+  /// Most items per page.
+  pub limit: Option<u64>,
+  /// Only jobs in this status.
+  pub status: Option<JobStatus>,
+}
+
+/// How `wait_for_job` polls.
+#[derive(Debug, Clone)]
+pub struct WaitOptions {
+  /// Pause between polls.
+  pub poll_interval: Duration,
+  /// Gives up after this long; waits without end when `None`.
+  pub timeout: Option<Duration>,
+}
+
+impl Default for WaitOptions {
+  fn default() -> Self {
+    Self {
+      poll_interval: Duration::from_secs(2),
+      timeout: None,
+    }
+  }
 }

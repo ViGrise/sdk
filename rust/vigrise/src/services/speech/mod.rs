@@ -16,14 +16,14 @@
 //! ```
 
 mod client;
+mod dto;
+mod enums;
 mod error;
-mod multipart;
-mod options;
-mod types;
 pub mod webhook;
 
+pub use crate::common::pagination::Page;
 pub use client::{SpeechClient, SpeechStream};
+pub use dto::*;
+pub use enums::*;
 pub use error::SpeechError;
-pub use options::*;
-pub use types::*;
 pub use webhook::{WebhookError, verify_webhook, verify_webhook_within};

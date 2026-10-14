@@ -1,4 +1,5 @@
-use serde::Deserialize;
+use crate::common::envelope::{ErrorEnvelope, parse_error_envelope};
+use crate::common::signed::SendError;
 
 /// Errors of Storage calls.
 #[derive(Debug, thiserror::Error)]
@@ -31,31 +32,35 @@ impl StorageError {
   }
 }
 
-#[derive(Deserialize)]
-struct Envelope {
-  error: Body,
-}
-
-#[derive(Deserialize)]
-struct Body {
-  code: String,
-  message: String,
-}
-
 /// The error an error response carries: `{"error": {"code", "message"}}`, or
 /// the status when the body is not that envelope.
 pub(crate) fn from_response(status: u16, body: &[u8]) -> StorageError {
-  match serde_json::from_slice::<Envelope>(body) {
-    Ok(envelope) => StorageError::Service {
+  match parse_error_envelope(body) {
+    Some(ErrorEnvelope {
+      code: Some(code),
+      message,
+      ..
+    }) => StorageError::Service {
       status,
-      code: envelope.error.code,
-      message: envelope.error.message,
+      code,
+      message,
     },
-    Err(_) => StorageError::Service {
+    _ => StorageError::Service {
       status,
       code: "UnknownError".into(),
       message: String::from_utf8_lossy(body).into_owned(),
     },
+  }
+}
+
+impl From<SendError> for StorageError {
+  fn from(error: SendError) -> Self {
+    match error {
+      SendError::InvalidUrl(message) => Self::Transport(message),
+      SendError::Signing(message) => Self::Signing(message),
+      SendError::Transport(error) => Self::Transport(error.to_string()),
+      SendError::Refused { status, body } => from_response(status, &body),
+    }
   }
 }
 
