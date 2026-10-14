@@ -97,12 +97,15 @@ Every package shares one version. To release `X.Y.Z`:
    and in `python/pyproject.toml`.
 2. Commit on `main` and push a `vX.Y.Z` tag.
 
-`.github/workflows/release.yml` runs CI, checks that every package carries the
-tag's version and publishes to crates.io, npm and PyPI through trusted
-publishing. A registry that already holds the version is skipped, so a failed
-release is retried by re-running the workflow.
+`.github/workflows/release.yml` runs CI, checks that the tagged commit is on
+`main` and that every package carries the tag's version, then publishes to
+crates.io, npm and PyPI through trusted publishing once a reviewer approves the
+`release` environment. A registry that already holds the version is skipped, so
+a failed release is retried by re-running the workflow.
 
-Trusted publishing is configured once per registry for the repository
-`ViGrise/sdk` and the workflow `release.yml`: on crates.io for `vigrise` and
-`vigrise-cli`, on npm for `@vigrise/sdk`, and on PyPI for `vigrise` with the
-environment `pypi`.
+Only repository admins create, move or delete `v*` tags (the "Release tags"
+ruleset), and the `release` environment accepts only `v*` tags. Trusted
+publishing is configured once per registry for the repository `ViGrise/sdk`,
+the workflow `release.yml` and the environment `release`: on crates.io for
+`vigrise` and `vigrise-cli`, on npm for `@vigrise/sdk`, and on PyPI for
+`vigrise`.
