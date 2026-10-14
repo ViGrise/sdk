@@ -50,11 +50,10 @@ rust/vigrise/src/            typescript/src/              python/vigrise/
 
 ## Adding a service
 
-A service named `<service>` (lower case, a catalog namespace) needs, in all
-three languages, the same operations under the names of each language's
-convention.
+A service named `<service>` (lower case, a catalog namespace) needs, in every
+language, the same operations under the names of each language's convention.
 
-- [ ] **Module in three languages**, laid out as above: `services/<service>` in
+- [ ] **Module in every language**, laid out as above: `services/<service>` in
       Rust behind the Cargo feature `<service>` and re-exported from `lib.rs`,
       `src/services/<service>` in `typescript` with the subpath `./<service>` in
       `package.json` `exports` (ESM and CommonJS builds, and `check:package`),
@@ -75,10 +74,10 @@ convention.
       `node:http`, Python `httpx.MockTransport`; Python runs sync and async).
 - [ ] **Shared vectors.** Behaviour that must match across languages (for
       example webhook verification) gets a vector file under `test-vectors/`
-      that all three languages read.
-- [ ] **Docs.** `docs/<service>/README.md` with an example in Rust, TypeScript
-      and Python; a row in the service table of `README.md`; a short section in
-      each language README; an example under each language's `examples/`.
+      that every language reads.
+- [ ] **Docs.** `docs/<service>/README.md` with an example in every language; a
+      row in the service table of `README.md`; an example under each
+      language's `examples/`.
 - [ ] **CI.** Clippy and tests cover the new Cargo feature; the TypeScript and
       Python jobs need no change unless the service adds a dependency.
 

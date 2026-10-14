@@ -1,8 +1,8 @@
 # ViGrise SDK
 
-Libraries and a command line for calling ViGrise from Rust, TypeScript and
-Python. Every language signs requests the same way (VGR4) and offers the same
-clients and operations for each ViGrise service.
+Libraries and a command line for calling ViGrise services. Every language
+signs requests the same way (VGR4) and offers the same clients and operations
+for each ViGrise service.
 
 ## Layout
 
