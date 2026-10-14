@@ -23,7 +23,7 @@ name = "vigrise"
 path = "src/main.rs"
 
 [dependencies]
-vigrise = { path = "../vigrise", version = "0.1.0" }
+vigrise = { path = "../vigrise", version = "0.1.1" }
 base64 = "0.22"
 chrono = { version = "0.4", default-features = false, features = ["clock", "std", "serde"] }
 clap = { version = "4.5", features = ["derive", "env"] }

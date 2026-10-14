@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "vigrise"
-version = "0.1.0"
+version = "0.1.1"
 description = "Official ViGrise SDK for Python: request signing, credentials and clients for ViGrise services"
 license = "Apache-2.0"
 readme = "README.md"
