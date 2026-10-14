@@ -138,3 +138,25 @@ fn a_verified_webhook_becomes_an_event() {
     Err(WebhookError::SignatureMismatch)
   ));
 }
+
+#[test]
+fn a_timestamp_at_the_edge_of_the_integer_range_is_out_of_tolerance() {
+  let mut headers = HeaderMap::new();
+  headers.insert("webhook-id", HeaderValue::from_static("evt_1"));
+  headers.insert(
+    "webhook-timestamp",
+    HeaderValue::from_static("-9223372036854775808"),
+  );
+  headers.insert("webhook-signature", HeaderValue::from_static("v1,AAAA"));
+  let outcome = verify_signature_at(
+    "whsec_MfKQ9r8GKYqrTwjUPD8ILPZIo2LaLaSw",
+    &headers,
+    b"{}",
+    Duration::from_secs(300),
+    Utc.timestamp_opt(1_614_265_330, 0).unwrap(),
+  );
+  assert!(matches!(
+    outcome,
+    Err(WebhookError::TimestampOutOfTolerance)
+  ));
+}

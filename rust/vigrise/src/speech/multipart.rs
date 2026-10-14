@@ -69,7 +69,7 @@ impl Multipart {
           format!(
             "Content-Disposition: form-data; name=\"{}\"; filename=\"{}\"\r\nContent-Type: {content_type}\r\n\r\n",
             part.name,
-            file_name.replace('"', "%22")
+            file_name.replace('"', "%22").replace('\r', "%0D").replace('\n', "%0A")
           )
           .as_bytes(),
         ),

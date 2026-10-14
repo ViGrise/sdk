@@ -64,7 +64,7 @@ pub fn verify_signature_at(
   let seconds: i64 = timestamp
     .parse()
     .map_err(|_| WebhookError::InvalidTimestamp)?;
-  if (now.timestamp() - seconds).unsigned_abs() > tolerance.as_secs() {
+  if now.timestamp().abs_diff(seconds) > tolerance.as_secs() {
     return Err(WebhookError::TimestampOutOfTolerance);
   }
   let key = STANDARD

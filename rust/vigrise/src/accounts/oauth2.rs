@@ -16,6 +16,9 @@ fn random_urlsafe(bytes: usize) -> String {
   URL_SAFE_NO_PAD.encode(buf)
 }
 
+/// Clock skew an ID token's expiry tolerates, in seconds.
+const ID_TOKEN_LEEWAY_SECS: u64 = 60;
+
 /// A PKCE verifier and its S256 challenge.
 #[derive(Debug, Clone)]
 pub struct Pkce {
@@ -288,6 +291,7 @@ impl IdTokenVerifier {
     validation.set_issuer(&[&self.issuer]);
     validation.set_audience(&[audience]);
     validation.set_required_spec_claims(&["iss", "aud", "exp", "sub"]);
+    validation.leeway = ID_TOKEN_LEEWAY_SECS;
     Ok(
       decode::<IdTokenClaims>(id_token, &key, &validation)
         .map_err(|e| invalid(e.to_string()))?

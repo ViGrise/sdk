@@ -622,3 +622,44 @@ async fn an_unreachable_endpoint_is_a_transport_error() {
   let error = client.list_voices().await.unwrap_err();
   assert!(matches!(error, SpeechError::Transport(_)), "{error:?}");
 }
+
+#[tokio::test]
+async fn clone_voice_keeps_line_breaks_out_of_the_multipart_framing() {
+  let fake = fake(|_| {
+    json_response(
+      201,
+      json!({"id": "voice_2", "object": "voice", "type": "cloned", "name": "Mine", "duration_ms": 8000,
+             "created_by": "me", "created_at": "2026-10-01T12:00:00Z"}),
+    )
+  })
+  .await;
+  let consent = Consent {
+    statement_version: 1,
+    speaker_name: "An".into(),
+    relationship: Relationship::Own,
+    agreed: true,
+  };
+  let client = client(&fake);
+  let refused = client
+    .clone_voice(
+      "Mine",
+      &Reference::new(&b"x"[..], "audio/wav\r\nX: y", "a.wav"),
+      &consent,
+      &CloneOptions::default(),
+    )
+    .await
+    .unwrap_err();
+  assert!(matches!(refused, SpeechError::Signing(_)), "{refused:?}");
+  assert_eq!(fake.count(), 0);
+  client
+    .clone_voice(
+      "Mine",
+      &Reference::new(&b"x"[..], "audio/wav", "a\"\r\nb.wav"),
+      &consent,
+      &CloneOptions::default(),
+    )
+    .await
+    .unwrap();
+  let body = String::from_utf8_lossy(&fake.last().body).into_owned();
+  assert!(body.contains("filename=\"a%22%0D%0Ab.wav\""), "{body}");
+}

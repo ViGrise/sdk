@@ -151,6 +151,22 @@ async fn id_tokens_are_verified_for_issuer_audience_and_nonce() {
 }
 
 #[tokio::test]
+async fn id_tokens_tolerate_sixty_seconds_of_clock_skew() {
+  let mut recent = id_claims();
+  recent["exp"] = json!(common::now() - 10);
+  assert!(id_verifier()
+    .verify(&common::sign(&recent), None)
+    .await
+    .is_ok());
+  let mut stale = id_claims();
+  stale["exp"] = json!(common::now() - 120);
+  assert!(id_verifier()
+    .verify(&common::sign(&stale), None)
+    .await
+    .is_err());
+}
+
+#[tokio::test]
 async fn a_public_client_exchanges_a_code_without_a_secret() {
   async fn token(
     Form(form): Form<HashMap<String, String>>,

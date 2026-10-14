@@ -330,6 +330,11 @@ impl SpeechClient {
     consent: &Consent,
     options: &CloneOptions,
   ) -> Result<Voice, SpeechError> {
+    if reference.content_type.contains(['\r', '\n']) {
+      return Err(SpeechError::Signing(
+        "a content type cannot contain line breaks".into(),
+      ));
+    }
     let (content_type, body) = Multipart::new()
       .text("name", Bytes::copy_from_slice(name.as_bytes()))
       .file(
