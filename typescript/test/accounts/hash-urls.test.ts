@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { addAccountUrl, manageAccountUrl, signOutUrl, ssoTokenHash, switchAccountUrl } from "../src/index.js"
+import { addAccountUrl, manageAccountUrl, signOutUrl, ssoTokenHash, switchAccountUrl } from "../../src/accounts/index.js"
 
 describe("ssoTokenHash", () => {
   it("is the lowercase SHA-256 hex digest that Accounts stores", async () => {

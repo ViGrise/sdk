@@ -2,8 +2,8 @@ import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
 import { describe, expect, it } from "vitest";
 
-import { assumeRole } from "../src/sts.js";
-import { signedFetch } from "../src/fetch.js";
+import { assumeRole } from "../../src/auth/sts.js";
+import { signedFetch } from "../../src/auth/fetch.js";
 
 async function serve(status: number, reply: unknown) {
   const seen: { headers: Record<string, unknown>; body: string }[] = [];

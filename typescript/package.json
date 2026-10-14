@@ -1,40 +1,79 @@
 {
-  "name": "@vigrise/auth",
+  "name": "@vigrise/sdk",
   "version": "0.1.0",
-  "description": "VGR4 request signing for calling ViGrise services",
+  "description": "ViGrise SDK: VGR4 request signing, ViGrise Accounts, ViGrise Storage and the Speech API",
   "license": "Apache-2.0",
   "type": "module",
   "engines": {
     "node": ">=18"
   },
-  "main": "./dist/cjs/index.js",
-  "types": "./dist/index.d.ts",
   "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/cjs/index.js"
+    "./auth": {
+      "types": "./dist/auth/index.d.ts",
+      "import": "./dist/auth/index.js",
+      "require": "./dist/cjs/auth/index.js"
     },
-    "./browser": {
-      "types": "./dist/browser.d.ts",
-      "import": "./dist/browser.js",
-      "require": "./dist/cjs/browser.js"
+    "./auth/browser": {
+      "types": "./dist/auth/browser.d.ts",
+      "import": "./dist/auth/browser.js",
+      "require": "./dist/cjs/auth/browser.js"
+    },
+    "./accounts": {
+      "types": "./dist/accounts/index.d.ts",
+      "import": "./dist/accounts/index.js"
+    },
+    "./accounts/astro": {
+      "types": "./dist/accounts/astro.d.ts",
+      "import": "./dist/accounts/astro.js"
+    },
+    "./accounts/react": {
+      "types": "./dist/accounts/react.d.ts",
+      "import": "./dist/accounts/react.js"
+    },
+    "./accounts/server": {
+      "types": "./dist/accounts/server/index.d.ts",
+      "import": "./dist/accounts/server/index.js",
+      "require": "./dist/cjs/accounts/server/index.js"
+    },
+    "./speech": {
+      "types": "./dist/speech/index.d.ts",
+      "import": "./dist/speech/index.js",
+      "require": "./dist/cjs/speech/index.js"
+    },
+    "./storage": {
+      "types": "./dist/storage/index.d.ts",
+      "import": "./dist/storage/index.js",
+      "require": "./dist/cjs/storage/index.js"
     }
   },
   "files": [
     "dist"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.build.json && tsc -p tsconfig.cjs.json && node -e \"require('fs').writeFileSync('dist/cjs/package.json', JSON.stringify({type: 'commonjs'}))\"",
+    "build": "rm -rf dist && tsc -p tsconfig.build.json && tsc -p tsconfig.cjs.json && node -e \"require('fs').writeFileSync('dist/cjs/package.json', JSON.stringify({type: 'commonjs'}))\"",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
     "check:package": "node scripts/check-package.cjs",
     "prepublishOnly": "npm run build && npm run check:package"
   },
+  "dependencies": {
+    "jose": "^5.10.0"
+  },
+  "peerDependencies": {
+    "react": ">=18"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    }
+  },
   "devDependencies": {
     "@types/node": "^22.20.4",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3",
     "typescript": "^5.9.3",
     "vitest": "^3.2.7"
-  },
-  "module": "./dist/index.js"
+  }
 }

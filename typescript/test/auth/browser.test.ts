@@ -4,7 +4,7 @@ import type { AddressInfo } from "node:net";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
-import { signRequest, signedFetch } from "../src/browser.js";
+import { signRequest, signedFetch } from "../../src/auth/browser.js";
 
 interface Vector {
   request: { method: string; path: string; query: string; headers: [string, string][]; body: string; payload_hash?: string };
@@ -14,7 +14,7 @@ interface Vector {
   expected: { authorization: string };
 }
 
-const dir = join(import.meta.dirname, "../../test-vectors/vgr4");
+const dir = join(import.meta.dirname, "../../../test-vectors/vgr4");
 const vectors: [string, Vector][] = readdirSync(dir)
   .filter((f) => f.endsWith(".json"))
   .sort()
@@ -30,7 +30,7 @@ function browserModules(entry: string): string[] {
   const visit = (file: string) => {
     if (seen.has(file)) return;
     seen.add(file);
-    const source = readFileSync(join(import.meta.dirname, "../src", file), "utf8");
+    const source = readFileSync(join(import.meta.dirname, "../../src/auth", file), "utf8");
     for (const [, target] of source.matchAll(/from\s+"\.\/([^"]+)\.js"/g)) visit(`${target}.ts`);
   };
   visit(entry);
@@ -40,7 +40,7 @@ function browserModules(entry: string): string[] {
 describe("browser entry", () => {
   it("loads no Node modules", () => {
     for (const file of browserModules("browser.ts")) {
-      const source = readFileSync(join(import.meta.dirname, "../src", file), "utf8");
+      const source = readFileSync(join(import.meta.dirname, "../../src/auth", file), "utf8");
       expect(source, file).not.toMatch(/from\s+"node:/);
     }
   });

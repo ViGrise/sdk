@@ -4,7 +4,13 @@
     "module": "CommonJS",
     "moduleResolution": "Node10",
     "outDir": "dist/cjs",
-    "declaration": false
+    "declaration": false,
+    "rootDir": "src"
   },
-  "include": ["src"]
+  "include": [
+    "src/auth",
+    "src/accounts/server",
+    "src/speech",
+    "src/storage"
+  ]
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { signRequest } from "../src/signer.js";
+import { signRequest } from "../../src/auth/signer.js";
 
 describe("session token signing", () => {
   it("signs and returns the token header", () => {

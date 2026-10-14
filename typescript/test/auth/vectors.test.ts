@@ -2,9 +2,9 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
-import { canonicalRequest, sha256Hex } from "../src/canonical.js";
-import { deriveSigningKey, scope, signature, stringToSign } from "../src/signing.js";
-import { signRequest } from "../src/signer.js";
+import { canonicalRequest, sha256Hex } from "../../src/auth/canonical.js";
+import { deriveSigningKey, scope, signature, stringToSign } from "../../src/auth/signing.js";
+import { signRequest } from "../../src/auth/signer.js";
 
 interface Vector {
   request: { method: string; path: string; query: string; headers: [string, string][]; body: string; payload_hash?: string };
@@ -21,7 +21,7 @@ interface Vector {
   };
 }
 
-const dir = join(import.meta.dirname, "../../test-vectors/vgr4");
+const dir = join(import.meta.dirname, "../../../test-vectors/vgr4");
 const vectors: [string, Vector][] = readdirSync(dir)
   .filter((f) => f.endsWith(".json"))
   .sort()

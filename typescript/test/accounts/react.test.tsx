@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server"
 import { describe, expect, it } from "vitest"
-import { AccountMenu, AccountMenuList } from "../src/react.js"
+import { AccountMenu, AccountMenuList } from "../../src/accounts/react.js"
 
 const accounts = [
   { session_id: "s1", identity_id: "i1", name: "Ada", email: "ada@example.com", picture: null, active: true, expired: false },

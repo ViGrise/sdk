@@ -2,7 +2,7 @@ import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
 import { describe, expect, it } from "vitest";
 
-import { signedFetch } from "../src/fetch.js";
+import { signedFetch } from "../../src/auth/fetch.js";
 
 describe("signedFetch", () => {
   it("sends the VGR4 headers and the body", async () => {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { canonicalHeaders, canonicalQuery, canonicalUri } from "../src/canonical.js";
+import { canonicalHeaders, canonicalQuery, canonicalUri } from "../../src/auth/canonical.js";
 
 describe("canonicalization", () => {
   it("never throws on escapes that are not UTF-8 or not escapes", () => {
