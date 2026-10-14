@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type KeyboardEvent } from "react"
+import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react"
 import { accountMenuModel } from "./account-menu-model.js"
 import type { SsoAccount } from "./index.js"
 
@@ -107,23 +107,24 @@ export function AccountMenuList(props: AccountMenuProps) {
   const labels = resolveLabels(props.labels)
   const classNames = props.classNames
   const model = accountMenuModel({ ...props, signInAgainLabel: labels.signInAgain })
+  const headerTextId = useId()
   return (
     <ul role="menu" aria-label={labels.accounts} onKeyDown={moveFocus} {...slot(classNames, "list")}>
       {model.current && (
         <li role="none">
           <div aria-current="true" {...slot(classNames, "header")}>
             <Avatar account={model.current} classNames={classNames} />
-            <span {...slot(classNames, "text")}>
+            <span id={headerTextId} {...slot(classNames, "text")}>
               <span {...slot(classNames, "primary")}>{model.currentPrimary}</span>
               {model.currentSecondary && <span {...slot(classNames, "secondary")}>{model.currentSecondary}</span>}
             </span>
-            <a role="menuitem" href={model.manageHref} {...slot(classNames, "manage")}>
+            <a role="menuitem" href={model.manageHref} aria-describedby={headerTextId} {...slot(classNames, "manage")}>
               {labels.manageAccount}
             </a>
           </div>
         </li>
       )}
-      {model.others.length > 0 && <li role="none" aria-hidden="true" {...slot(classNames, "divider")} />}
+      {model.others.length > 0 && <li role="separator" {...slot(classNames, "divider")} />}
       {model.others.map((row) => (
         <li key={row.account.session_id} role="none">
           <a role="menuitem" href={row.href} {...slot(classNames, "accountRow")}>
@@ -140,7 +141,7 @@ export function AccountMenuList(props: AccountMenuProps) {
           {labels.addAnotherAccount}
         </a>
       </li>
-      <li role="none" aria-hidden="true" {...slot(classNames, "divider")} />
+      <li role="separator" {...slot(classNames, "divider")} />
       <li role="none">
         <a role="menuitem" href={model.signOutHref} onClick={props.onSignOut} {...slot(classNames, "signOut")}>
           {labels.signOut}
@@ -193,7 +194,7 @@ export function AccountMenu(props: AccountMenuProps) {
         <Avatar account={active} classNames={classNames} />
       </button>
       {open && (
-        <div {...slot(classNames, "popover")}>
+        <div onKeyDown={(event) => event.key === "Tab" && setOpen(false)} {...slot(classNames, "popover")}>
           <AccountMenuList {...props} />
         </div>
       )}

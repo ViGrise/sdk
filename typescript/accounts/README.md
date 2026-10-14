@@ -10,7 +10,7 @@ Single sign-on, account switching and tab sync with ViGrise Accounts for Astro a
   - `createSessionChannel` and `reloadOnSessionChange` sync tabs over a `BroadcastChannel`.
   - `switchAccountUrl`, `addAccountUrl`, `manageAccountUrl` and `signOutUrl` build the Accounts links.
 - `@vigrise/accounts/react`: `AccountMenu` for the app header, with `AccountMenuList` as its presentational part. The component owns structure and behaviour (Google style layout, `role="menu"` with arrow, Home, End and Escape keys) and carries no colours or layout of its own; each app styles it through `classNames` and `data-slot` attributes. Labels take translations through `labels` (`addAnotherAccount`, `manageAccount`, `signOut`, `signInAgain`, `accounts`, `openMenu`; `addAccount` stays as an alias of `addAnotherAccount`).
-- `accountMenuModel`, `displayName` and `secondaryLine` (from `@vigrise/accounts`) are the pure model behind the menu, for app tests.
+- `accountMenuModel`, `accountPrimaryLine` and `accountSecondaryLine` (from `@vigrise/accounts`) are the pure model behind the menu, for app tests.
 
 ### Menu layout
 

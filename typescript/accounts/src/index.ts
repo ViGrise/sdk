@@ -1,7 +1,7 @@
 export {
   accountMenuModel,
-  displayName,
-  secondaryLine,
+  accountPrimaryLine,
+  accountSecondaryLine,
   type AccountMenuModel,
   type AccountMenuModelInput,
   type AccountMenuRow,

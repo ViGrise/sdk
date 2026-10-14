@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { accountMenuModel, displayName, secondaryLine } from "../src/index.js"
+import { accountMenuModel, accountPrimaryLine, accountSecondaryLine } from "../src/index.js"
 
 const base = { session_id: "s", identity_id: "i", picture: null, active: false, expired: false }
 const ada = { ...base, session_id: "s1", name: "Ada", email: "ada@example.com", active: true }
@@ -14,26 +14,26 @@ const props = {
 
 describe("display rule", () => {
   it("uses the name as primary line and the email as secondary line", () => {
-    expect(displayName(ada)).toBe("Ada")
-    expect(secondaryLine(ada, "Sign in again")).toBe("ada@example.com")
+    expect(accountPrimaryLine(ada)).toBe("Ada")
+    expect(accountSecondaryLine(ada, "Sign in again")).toBe("ada@example.com")
   })
 
   it("uses the email as primary line when the account has no name, with no secondary line", () => {
-    expect(displayName(cy)).toBe("cy@example.com")
-    expect(secondaryLine({ ...cy, expired: false }, "Sign in again")).toBeNull()
+    expect(accountPrimaryLine(cy)).toBe("cy@example.com")
+    expect(accountSecondaryLine({ ...cy, expired: false }, "Sign in again")).toBeNull()
   })
 
   it("treats a blank name as missing", () => {
-    expect(displayName({ ...bob, name: "  " })).toBe("bob@example.com")
+    expect(accountPrimaryLine({ ...bob, name: "  " })).toBe("bob@example.com")
   })
 
   it("shows the sign-in-again label for an expired account", () => {
-    expect(secondaryLine(cy, "Sign in again")).toBe("Sign in again")
-    expect(secondaryLine({ ...bob, expired: true }, "Sign in again")).toBe("Sign in again")
+    expect(accountSecondaryLine(cy, "Sign in again")).toBe("Sign in again")
+    expect(accountSecondaryLine({ ...bob, expired: true }, "Sign in again")).toBe("Sign in again")
   })
 
   it("falls back to an empty primary line without name and email", () => {
-    expect(displayName({ ...base, name: null, email: null })).toBe("")
+    expect(accountPrimaryLine({ ...base, name: null, email: null })).toBe("")
   })
 })
 

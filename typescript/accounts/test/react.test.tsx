@@ -79,6 +79,14 @@ describe("AccountMenuList", () => {
     expect(html).toContain('data-slot="secondary"')
   })
 
+  it("renders dividers as separators and describes the manage item with the current account", () => {
+    expect(html).toContain('role="separator"')
+    expect(html).not.toMatch(/role="none"[^>]*aria-hidden/)
+    const describedBy = html.match(/role="menuitem"[^>]*aria-describedby="([^"]+)"/)?.[1]
+    expect(describedBy).toBeTruthy()
+    expect(html).toMatch(new RegExp(`id="${describedBy}"[^>]*>[\\s\\S]*Ada`))
+  })
+
   it("carries a data-slot on every part and no inline colours", () => {
     for (const slot of ["list", "header", "avatar", "primary", "secondary", "manage", "accountRow", "addAccount", "signOut", "divider"]) {
       expect(html).toContain(`data-slot="${slot}"`)

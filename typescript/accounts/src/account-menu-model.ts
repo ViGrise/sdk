@@ -2,7 +2,7 @@ import type { SsoAccount } from "./index.js"
 import { addAccountUrl, manageAccountUrl, signOutUrl, switchAccountUrl } from "./urls.js"
 
 /** Primary line of an account: the name when it has one, else the email. */
-export function displayName(account: Pick<SsoAccount, "name" | "email">): string {
+export function accountPrimaryLine(account: Pick<SsoAccount, "name" | "email">): string {
   return account.name?.trim() || account.email?.trim() || ""
 }
 
@@ -10,7 +10,7 @@ export function displayName(account: Pick<SsoAccount, "name" | "email">): string
  * Secondary line of an account: "sign in again" for an expired account, else the
  * email when the primary line is the name, else nothing.
  */
-export function secondaryLine(
+export function accountSecondaryLine(
   account: Pick<SsoAccount, "name" | "email" | "expired">,
   signInAgainLabel: string,
 ): string | null {
@@ -63,14 +63,14 @@ export function accountMenuModel(input: AccountMenuModelInput): AccountMenuModel
     .filter((account) => account !== current)
     .map((account) => ({
       account,
-      primary: displayName(account),
-      secondary: secondaryLine(account, signInAgain),
+      primary: accountPrimaryLine(account),
+      secondary: accountSecondaryLine(account, signInAgain),
       href: switchAccountUrl(input.accountsUrl, account.session_id, input.returnTo),
     }))
   return {
     current,
-    currentPrimary: current ? displayName(current) : "",
-    currentSecondary: current ? secondaryLine(current, signInAgain) : null,
+    currentPrimary: current ? accountPrimaryLine(current) : "",
+    currentSecondary: current ? accountSecondaryLine(current, signInAgain) : null,
     others,
     manageHref: manageAccountUrl(input.accountsUrl),
     addAccountHref: addAccountUrl(input.accountsUrl, input.returnTo),
