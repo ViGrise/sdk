@@ -36,4 +36,4 @@ from ._models import (
 from .client import DEFAULT_ENDPOINT, AsyncSpeechClient, AsyncSpeechStream, SpeechClient, SpeechStream
 from .webhook import WebhookVerificationError, verify_webhook, verify_webhook_signature
 
-__all__ = [name for name in dir() if not name.startswith("_") and name not in ("annotations",)]
+__all__ = [name for name in dir() if name[:1].isupper()]

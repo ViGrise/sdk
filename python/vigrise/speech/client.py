@@ -5,6 +5,7 @@ from typing import AsyncIterator, Iterator, List, Optional
 import httpx
 
 from .. import _http
+from .._client import AsyncSender, Failures, SyncSender
 from ..auth.credentials import CredentialsSource
 from . import _operations as ops
 from ._errors import SpeechSigningError, SpeechTransportError, SpeechWaitTimeoutError, error_from_response
@@ -76,21 +77,10 @@ class AsyncSpeechStream:
         await self.aclose()
 
 
-class _Base:
-    def __init__(self, endpoint: str, credentials: Optional[CredentialsSource], timeout: Optional[float]):
-        self._endpoint = endpoint.rstrip("/")
-        self._credentials = credentials
-        self._timeout = timeout
-
-    def _build(self, http: "httpx.Client | httpx.AsyncClient", request: _http.Request) -> httpx.Request:
-        try:
-            url, headers = _http.prepare(request, self._endpoint, "speech", self._credentials)
-        except (ValueError, LookupError) as error:
-            raise SpeechSigningError(str(error)) from error
-        return http.build_request(request.method, url, headers=headers, content=request.content, timeout=self._timeout)
+_FAILURES = Failures(SpeechSigningError, SpeechTransportError, error_from_response)
 
 
-class SpeechClient(_Base):
+class SpeechClient:
     """A client for the Speech API. Every call is VGR4-signed for the `speech` service."""
 
     def __init__(
@@ -101,11 +91,10 @@ class SpeechClient(_Base):
         timeout: Optional[float] = 60.0,
         transport: Optional[httpx.BaseTransport] = None,
     ):
-        super().__init__(endpoint, credentials, timeout)
-        self._http = httpx.Client(transport=transport)
+        self._sender = SyncSender("speech", endpoint, credentials, timeout, _FAILURES, transport)
 
     def close(self) -> None:
-        self._http.close()
+        self._sender.close()
 
     def __enter__(self) -> "SpeechClient":
         return self
@@ -114,15 +103,7 @@ class SpeechClient(_Base):
         self.close()
 
     def _send(self, request: _http.Request, stream: bool = False) -> httpx.Response:
-        built = self._build(self._http, request)
-        try:
-            response = self._http.send(built, stream=stream)
-        except httpx.HTTPError as error:
-            raise SpeechTransportError(str(error)) from error
-        if stream and not response.is_success:
-            response.read()
-            response.close()
-        return ops.check(response)
+        return self._sender.send(request, stream)
 
     def synthesize(self, text: str, voice: str, *, model: Optional[str] = None, format: Optional[AudioFormat] = None,
                    store_audio: Optional[bool] = None, idempotency_key: Optional[str] = None) -> Speech:
@@ -171,7 +152,7 @@ class SpeechClient(_Base):
         """Downloads the audio of a generation."""
         location = self.generation_audio_url(generation_id)
         try:
-            response = self._http.get(location.url, timeout=self._timeout)
+            response = self._sender.http.get(location.url, timeout=self._sender.timeout)
         except httpx.HTTPError as error:
             raise SpeechTransportError(str(error)) from error
         return ops.check(response).content
@@ -213,7 +194,7 @@ class SpeechClient(_Base):
         return ops.parse_webhook_secret(self._send(ops.rotate_webhook_secret_request()))
 
 
-class AsyncSpeechClient(_Base):
+class AsyncSpeechClient:
     """The async counterpart of `SpeechClient`, with the same operations."""
 
     def __init__(
@@ -224,11 +205,10 @@ class AsyncSpeechClient(_Base):
         timeout: Optional[float] = 60.0,
         transport: Optional[httpx.AsyncBaseTransport] = None,
     ):
-        super().__init__(endpoint, credentials, timeout)
-        self._http = httpx.AsyncClient(transport=transport)
+        self._sender = AsyncSender("speech", endpoint, credentials, timeout, _FAILURES, transport)
 
     async def aclose(self) -> None:
-        await self._http.aclose()
+        await self._sender.aclose()
 
     async def __aenter__(self) -> "AsyncSpeechClient":
         return self
@@ -237,15 +217,7 @@ class AsyncSpeechClient(_Base):
         await self.aclose()
 
     async def _send(self, request: _http.Request, stream: bool = False) -> httpx.Response:
-        built = self._build(self._http, request)
-        try:
-            response = await self._http.send(built, stream=stream)
-        except httpx.HTTPError as error:
-            raise SpeechTransportError(str(error)) from error
-        if stream and not response.is_success:
-            await response.aread()
-            await response.aclose()
-        return ops.check(response)
+        return await self._sender.send(request, stream)
 
     async def synthesize(self, text: str, voice: str, *, model: Optional[str] = None, format: Optional[AudioFormat] = None,
                          store_audio: Optional[bool] = None, idempotency_key: Optional[str] = None) -> Speech:
@@ -296,7 +268,7 @@ class AsyncSpeechClient(_Base):
         """Downloads the audio of a generation."""
         location = await self.generation_audio_url(generation_id)
         try:
-            response = await self._http.get(location.url, timeout=self._timeout)
+            response = await self._sender.http.get(location.url, timeout=self._sender.timeout)
         except httpx.HTTPError as error:
             raise SpeechTransportError(str(error)) from error
         return ops.check(response).content

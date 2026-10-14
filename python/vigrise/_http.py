@@ -1,7 +1,7 @@
 """Request building shared by the service clients: the sync and async clients differ only in sending."""
 
 from dataclasses import dataclass, field
-from typing import Dict, Iterable, List, Optional, Tuple
+from typing import AsyncIterable, Dict, Iterable, List, Optional, Tuple, Union
 from urllib.parse import quote
 
 from .auth import UNSIGNED_PAYLOAD, sign_request
@@ -17,8 +17,8 @@ class Request:
     query: List[Tuple[str, str]] = field(default_factory=list)
     headers: Dict[str, str] = field(default_factory=dict)
     content: bytes = b""
-    # Signs the body as UNSIGNED_PAYLOAD, for bodies that stream.
-    unsigned_payload: bool = False
+    # A body that streams; it is signed as UNSIGNED_PAYLOAD and needs a content-length header.
+    stream: Optional[Union[Iterable[bytes], AsyncIterable[bytes]]] = None
 
 
 def segment(value: str) -> str:
@@ -54,7 +54,7 @@ def prepare(request: Request, endpoint: str, service: str, credentials: Optional
             request.content,
             credentials_from(credentials),
             service,
-            payload_hash=UNSIGNED_PAYLOAD if request.unsigned_payload else None,
+            payload_hash=UNSIGNED_PAYLOAD if request.stream is not None else None,
         )
     )
     return url, headers
