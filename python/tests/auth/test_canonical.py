@@ -1,6 +1,6 @@
 import pytest
 
-from vigrise_auth.canonical import canonical_headers, canonical_query, canonical_uri
+from vigrise.auth.canonical import canonical_headers, canonical_query, canonical_uri
 
 
 def test_escapes_never_raise():

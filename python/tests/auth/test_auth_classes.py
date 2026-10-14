@@ -6,9 +6,9 @@ import httpx
 import pytest
 import requests
 
-from vigrise_auth import Credentials
-from vigrise_auth.httpx_auth import ViGriseHttpxAuth
-from vigrise_auth.requests_auth import ViGriseAuth
+from vigrise.auth import Credentials
+from vigrise.auth.httpx_auth import ViGriseHttpxAuth
+from vigrise.auth.requests_auth import ViGriseAuth
 
 AUTH = re.compile(
     r"^VGR4-HMAC-SHA256 Credential=VGAKTEST/\d{8}/speech/vgr4_request, "
@@ -71,8 +71,8 @@ def test_httpx_signs_repeated_signed_headers_as_sent(server):
     response = httpx.post(f"{url}/v1/audio/speech", content=b"x", headers=headers, auth=ViGriseHttpxAuth("speech", CREDS))
     assert response.text == "ok"
     sent_headers, body = seen[0]
-    from vigrise_auth.canonical import canonical_request, sha256_hex
-    from vigrise_auth.signing import derive_signing_key, scope, signature, string_to_sign
+    from vigrise.auth.canonical import canonical_request, sha256_hex
+    from vigrise.auth.signing import derive_signing_key, scope, signature, string_to_sign
 
     auth = sent_headers.get("Authorization")
     signed = auth.split("SignedHeaders=")[1].split(",")[0].split(";")

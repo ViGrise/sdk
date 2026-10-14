@@ -1,4 +1,4 @@
-"""VGR4 request signing for calling ViGrise services."""
+"""VGR4 request signing and credentials."""
 
 from .credentials import Credentials, CredentialsProvider, resolve_credentials
 from .signer import UNSIGNED_PAYLOAD, sign_request

@@ -3,9 +3,9 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "vigrise-auth"
+name = "vigrise"
 version = "0.1.0"
-description = "VGR4 request signing for calling ViGrise services"
+description = "ViGrise SDK: VGR4 request signing, ViGrise Accounts, ViGrise Storage and the Speech API"
 license = "Apache-2.0"
 requires-python = ">=3.9"
 dependencies = []
@@ -13,10 +13,15 @@ dependencies = []
 [project.optional-dependencies]
 requests = ["requests>=2.28"]
 httpx = ["httpx>=0.24"]
-test = ["pytest>=7", "requests>=2.28", "httpx>=0.24"]
+speech = ["httpx>=0.24"]
+storage = ["httpx>=0.24"]
+accounts = ["httpx>=0.24", "PyJWT[crypto]>=2.8"]
+all = ["requests>=2.28", "httpx>=0.24", "PyJWT[crypto]>=2.8"]
+test = ["pytest>=7", "pytest-asyncio>=0.23", "requests>=2.28", "httpx>=0.24", "PyJWT[crypto]>=2.8"]
 
 [tool.hatch.build.targets.wheel]
-packages = ["vigrise_auth"]
+packages = ["vigrise"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+asyncio_mode = "auto"

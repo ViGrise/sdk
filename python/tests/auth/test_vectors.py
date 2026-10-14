@@ -4,11 +4,11 @@ from pathlib import Path
 
 import pytest
 
-from vigrise_auth import Credentials, sign_request
-from vigrise_auth.canonical import canonical_request, sha256_hex
-from vigrise_auth.signing import derive_signing_key, scope, signature, string_to_sign
+from vigrise.auth import Credentials, sign_request
+from vigrise.auth.canonical import canonical_request, sha256_hex
+from vigrise.auth.signing import derive_signing_key, scope, signature, string_to_sign
 
-VECTORS = sorted((Path(__file__).parent.parent.parent / "test-vectors" / "vgr4").glob("*.json"))
+VECTORS = sorted((Path(__file__).parents[3] / "test-vectors" / "vgr4").glob("*.json"))
 
 
 def test_vectors_exist():

@@ -1,7 +1,7 @@
 import pytest
 
-from vigrise_auth import Credentials, resolve_credentials
-from vigrise_auth.credentials import parse_profile
+from vigrise.auth import Credentials, resolve_credentials
+from vigrise.auth.credentials import parse_profile
 
 FILE = "# c\n[default]\nvigrise_access_key_id = VGAKDEFAULT\nvigrise_secret_access_key = s1\n\n[ci]\nvigrise_access_key_id=VGAKCI\nvigrise_secret_access_key=s2\n"
 

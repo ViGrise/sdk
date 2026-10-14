@@ -7,10 +7,10 @@ import httpx
 import pytest
 import requests
 
-from vigrise_auth import Credentials
-from vigrise_auth.httpx_auth import ViGriseHttpxAuth
-from vigrise_auth.requests_auth import ViGriseAuth
-from vigrise_auth.sts import StsError, assume_role
+from vigrise.auth import Credentials
+from vigrise.auth.httpx_auth import ViGriseHttpxAuth
+from vigrise.auth.requests_auth import ViGriseAuth
+from vigrise.auth.sts import StsError, assume_role
 
 BACKEND = Credentials("VGAKBACKEND", "secret")
 SESSION = Credentials("VGSTABCDEFGHIJKLMNOP", "session-secret", "v1.sealed")
@@ -111,7 +111,7 @@ def test_auth_classes_accept_a_credentials_provider(client):
     ["2026-09-26T10:30:00Z", "2026-09-26T10:30:00.123Z", "2026-09-26T10:30:00.123456789Z", "2026-09-26T10:30:00+00:00"],
 )
 def test_expirations_parse_whatever_their_fraction(text):
-    from vigrise_auth.sts import parse_timestamp
+    from vigrise.auth.sts import parse_timestamp
 
     parsed = parse_timestamp(text)
     assert parsed.replace(microsecond=0) == datetime(2026, 9, 26, 10, 30, tzinfo=timezone.utc)

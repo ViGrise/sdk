@@ -7,7 +7,7 @@ import sys
 
 import requests
 
-from vigrise_auth.requests_auth import ViGriseAuth
+from vigrise.auth.requests_auth import ViGriseAuth
 
 base = sys.argv[1]
 voice = sys.argv[2] if len(sys.argv) > 2 else None

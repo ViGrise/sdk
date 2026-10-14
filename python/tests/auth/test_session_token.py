@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 
 import pytest
 
-from vigrise_auth import Credentials, sign_request
+from vigrise.auth import Credentials, sign_request
 
 
 def test_signs_and_returns_session_token_header():
