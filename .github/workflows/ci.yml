@@ -82,4 +82,5 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - run: pip install -e ".[test]"
+      - run: ruff format --check .
       - run: python -m pytest -q

@@ -12,10 +12,10 @@ cargo clippy --all-targets --all-features -- -D warnings
 cargo test
 
 # TypeScript (typescript)
-npm ci && npm run typecheck && npm test && npm run build && npm run check:package
+npm ci && npm run format:check && npm run typecheck && npm test && npm run build && npm run check:package
 
 # Python (python)
-pip install -e ".[test]" && python -m pytest -q
+pip install -e ".[test]" && ruff format --check . && python -m pytest -q
 ```
 
 The VGR4 vectors in `test-vectors/vgr4` are generated from
@@ -84,6 +84,7 @@ convention.
 
 ## Style
 
-- Rust: edition 2024, `rustfmt` with two-space indentation (`.rustfmt.toml`).
+- Two-space indentation in every language, enforced in CI: `rust/rustfmt.toml` (`cargo fmt`), Prettier in `typescript` (`npm run format`) and Ruff in `python` (`ruff format .`, line length 100). `.editorconfig` configures editors.
+- Rust: edition 2024.
 - Comments state what the code does and why, in the present tense.
 - Write "ViGrise" in prose.

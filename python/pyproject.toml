@@ -18,7 +18,7 @@ speech = ["httpx>=0.24"]
 storage = ["httpx>=0.24"]
 accounts = ["httpx>=0.24", "PyJWT[crypto]>=2.8"]
 all = ["requests>=2.28", "httpx>=0.24", "PyJWT[crypto]>=2.8"]
-test = ["pytest>=7", "pytest-asyncio>=0.23", "requests>=2.28", "httpx>=0.24", "PyJWT[crypto]>=2.8"]
+test = ["pytest>=7", "pytest-asyncio>=0.23", "ruff>=0.6", "requests>=2.28", "httpx>=0.24", "PyJWT[crypto]>=2.8"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["vigrise"]
@@ -26,3 +26,11 @@ packages = ["vigrise"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
+
+[tool.ruff]
+indent-width = 2
+line-length = 100
+target-version = "py39"
+
+[tool.ruff.format]
+indent-style = "space"
