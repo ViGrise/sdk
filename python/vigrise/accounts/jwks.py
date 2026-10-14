@@ -5,7 +5,7 @@ from typing import Any, Dict, Mapping, Optional
 import httpx
 import jwt
 
-from ._errors import JwksError
+from .errors import JwksError
 
 CACHE_TTL = 600.0
 REFETCH_COOLDOWN = 30.0

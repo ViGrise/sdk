@@ -2,13 +2,13 @@ from typing import Any, AsyncIterable, AsyncIterator, Dict, Iterable, Iterator, 
 
 import httpx
 
-from .. import _http
-from .._client import AsyncSender, Failures, SyncSender
+from .._common import http as _http
+from .._common.senders import AsyncSender, Failures, SyncSender
 from ..auth.credentials import CredentialsSource
-from ..auth.endpoint import resolve_endpoint
-from . import _operations as ops
-from ._errors import StorageError, error_from_response, signing_error, transport_error
-from ._models import (
+from .._common.endpoint import resolve_endpoint
+from . import operations as ops
+from .errors import StorageError, error_from_response, signing_error, transport_error
+from .dto import (
     Bucket,
     CompletedPart,
     LifecycleRule,

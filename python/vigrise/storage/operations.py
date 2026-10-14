@@ -5,9 +5,9 @@ from typing import Any, Dict, Iterable, List, Optional
 
 import httpx
 
-from .._http import Request, query_pairs, segment
-from ._errors import transport_error
-from ._models import (
+from .._common.http import Request, query_pairs, segment
+from .errors import transport_error
+from .dto import (
     Bucket,
     CompletedPart,
     LifecycleRule,

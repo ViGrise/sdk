@@ -1,4 +1,4 @@
-import json
+from .._common.envelope import parse_error_envelope
 
 
 class StorageError(Exception):
@@ -22,10 +22,7 @@ def transport_error(message: str) -> StorageError:
 
 def error_from_response(status: int, body: bytes) -> StorageError:
     """The error an error response carries: `{"error": {"code", "message"}}`, or the status when the body is not that envelope."""
-    try:
-        envelope = json.loads(body).get("error")
-    except (ValueError, AttributeError):
-        envelope = None
-    if isinstance(envelope, dict) and isinstance(envelope.get("code"), str):
-        return StorageError(status, envelope["code"], str(envelope.get("message", "")))
+    envelope = parse_error_envelope(body)
+    if envelope is not None and envelope.code is not None:
+        return StorageError(status, envelope.code, str(envelope.message))
     return StorageError(status, "UnknownError", body.decode("utf-8", "replace"))

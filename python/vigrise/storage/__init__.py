@@ -1,7 +1,7 @@
 """Client for ViGrise Storage: buckets, objects, multipart uploads, tags, presigned URLs and lifecycle rules."""
 
-from ._errors import StorageError
-from ._models import (
+from .errors import StorageError
+from .dto import (
     Bucket,
     CompletedPart,
     LifecycleRule,

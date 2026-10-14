@@ -2,10 +2,10 @@ import threading
 import time
 from typing import Any, Dict
 
-from ._errors import InvalidTokenError
-from ._jwks import Jwks
-from ._models import LogoutResult
-from ._verify import LEEWAY_SECONDS, decode, unverified_header
+from .errors import InvalidTokenError
+from .jwks import Jwks
+from .dto import LogoutResult
+from .verify import LEEWAY_SECONDS, decode, unverified_header
 
 EVENT = "http://schemas.openid.net/event/backchannel-logout"
 MAX_AGE_SECONDS = 300

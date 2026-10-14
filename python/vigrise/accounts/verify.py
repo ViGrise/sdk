@@ -4,7 +4,7 @@ from typing import Any, Dict
 
 import jwt
 
-from ._errors import InvalidTokenError
+from .errors import InvalidTokenError
 
 LEEWAY_SECONDS = 30
 

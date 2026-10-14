@@ -4,8 +4,8 @@ from dataclasses import dataclass, field
 from typing import AsyncIterable, Dict, Iterable, List, Optional, Tuple, Union
 from urllib.parse import quote
 
-from .auth import UNSIGNED_PAYLOAD, sign_request
-from .auth.credentials import CredentialsSource, credentials_from
+from ..auth import UNSIGNED_PAYLOAD, sign_request
+from ..auth.credentials import CredentialsSource, credentials_from
 
 
 @dataclass

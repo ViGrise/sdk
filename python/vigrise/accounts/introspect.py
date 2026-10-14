@@ -6,10 +6,10 @@ from typing import Dict, Optional, Tuple
 
 import httpx
 
-from .._http import Request
-from ._errors import AccountsMisconfiguredError, AccountsUnavailableError, InactiveSessionError
-from ._hash import sso_token_hash
-from ._models import Introspection
+from .._common.http import Request
+from .errors import AccountsMisconfiguredError, AccountsUnavailableError, InactiveSessionError
+from .hash import sso_token_hash
+from .dto import Introspection
 
 MAX_CACHE_ENTRIES = 10_000
 REQUEST_TIMEOUT = 5.0

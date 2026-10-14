@@ -5,8 +5,8 @@ from typing import Callable, Optional
 
 import httpx
 
-from . import _http
-from .auth.credentials import CredentialsSource
+from . import http as _http
+from ..auth.credentials import CredentialsSource
 
 
 @dataclass(frozen=True)

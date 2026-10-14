@@ -1,37 +1,39 @@
 """Client for the Speech API and verification of its webhooks."""
 
-from ._errors import (
+from .errors import (
     SpeechError,
     SpeechServiceError,
     SpeechSigningError,
     SpeechTransportError,
     SpeechWaitTimeoutError,
 )
-from ._models import (
-    AudioFormat,
+from .._common.pagination import Page
+from .dto import (
     AudioInfo,
     AudioUrl,
     Consent,
     ConsentStatement,
     Generation,
-    GenerationSource,
-    GenerationStatus,
     Job,
     JobInput,
     JobScript,
-    JobStatus,
     JobText,
     Model,
-    Page,
     Progress,
-    Relationship,
     Speech,
     Turn,
     Voice,
-    VoiceKind,
     VoiceReference,
     WebhookEvent,
     WebhookSecret,
+)
+from .enums import (
+    AudioFormat,
+    GenerationSource,
+    GenerationStatus,
+    JobStatus,
+    Relationship,
+    VoiceKind,
 )
 from .webhook import WebhookVerificationError, verify_webhook, verify_webhook_signature
 

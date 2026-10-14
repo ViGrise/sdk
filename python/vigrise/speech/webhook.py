@@ -9,8 +9,8 @@ from datetime import datetime, timezone
 from hashlib import sha256
 from typing import Mapping, Optional, Union
 
-from ._errors import SpeechError
-from ._models import Job, WebhookEvent, _time
+from .errors import SpeechError
+from .dto import Job, WebhookEvent, _time
 
 SECRET_PREFIX = "whsec_"
 

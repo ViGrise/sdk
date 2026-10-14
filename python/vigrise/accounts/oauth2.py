@@ -7,10 +7,10 @@ from urllib.parse import urlencode, urlsplit, urlunsplit
 
 import httpx
 
-from ._errors import InvalidTokenError, TokenExchangeError
-from ._jwks import Jwks
-from ._models import IdTokenClaims, TokenResponse
-from ._verify import decode, unverified_header
+from .errors import InvalidTokenError, TokenExchangeError
+from .jwks import Jwks
+from .dto import IdTokenClaims, TokenResponse
+from .verify import decode, unverified_header
 
 REQUEST_TIMEOUT = 5.0
 # Clock skew an ID token's expiry tolerates.

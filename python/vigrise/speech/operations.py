@@ -5,28 +5,30 @@ from typing import Any, Dict, List, Optional
 
 import httpx
 
-from .._http import Request, query_pairs, segment
-from ._errors import SpeechSigningError, SpeechTransportError, error_from_response
-from ._models import (
-    AudioFormat,
+from .._common.http import Request, query_pairs, segment
+from .errors import SpeechSigningError, SpeechTransportError, error_from_response
+from .._common.pagination import Page
+from .dto import (
     AudioUrl,
     Consent,
     ConsentStatement,
     Generation,
-    GenerationSource,
     Job,
     JobInput,
     JobScript,
-    JobStatus,
     Model,
-    Page,
     Speech,
     Voice,
     VoiceReference,
     WebhookSecret,
     _time,
 )
-from ._multipart import encode_multipart
+from .enums import (
+    AudioFormat,
+    GenerationSource,
+    JobStatus,
+)
+from .._common.multipart import encode_multipart
 
 _JSON = {"content-type": "application/json"}
 

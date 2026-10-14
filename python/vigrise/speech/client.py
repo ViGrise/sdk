@@ -4,28 +4,30 @@ from typing import AsyncIterator, Iterator, List, Optional
 
 import httpx
 
-from .. import _http
-from .._client import AsyncSender, Failures, SyncSender
+from .._common import http as _http
+from .._common.senders import AsyncSender, Failures, SyncSender
 from ..auth.credentials import CredentialsSource
-from ..auth.endpoint import resolve_endpoint
-from . import _operations as ops
-from ._errors import SpeechSigningError, SpeechTransportError, SpeechWaitTimeoutError, error_from_response
-from ._models import (
-    AudioFormat,
+from .._common.endpoint import resolve_endpoint
+from . import operations as ops
+from .errors import SpeechSigningError, SpeechTransportError, SpeechWaitTimeoutError, error_from_response
+from .._common.pagination import Page
+from .dto import (
     AudioUrl,
     Consent,
     ConsentStatement,
     Generation,
-    GenerationSource,
     Job,
     JobInput,
-    JobStatus,
     Model,
-    Page,
     Speech,
     Voice,
     VoiceReference,
     WebhookSecret,
+)
+from .enums import (
+    AudioFormat,
+    GenerationSource,
+    JobStatus,
 )
 
 

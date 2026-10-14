@@ -1,7 +1,7 @@
 """ViGrise Accounts for Python services: SSO introspection, back-channel logout verification and OAuth2/OIDC helpers."""
 
-from ._backchannel import BackchannelLogout
-from ._errors import (
+from .backchannel import BackchannelLogout
+from .errors import (
     AccountsError,
     AccountsMisconfiguredError,
     AccountsUnavailableError,
@@ -10,10 +10,10 @@ from ._errors import (
     JwksError,
     TokenExchangeError,
 )
-from ._hash import SSO_HEADER, sso_token_hash
-from ._introspect import AsyncSsoIntrospector, SsoIntrospector
-from ._jwks import Jwks
-from ._models import (
+from .hash import SSO_HEADER, sso_token_hash
+from .introspect import AsyncSsoIntrospector, SsoIntrospector
+from .jwks import Jwks
+from .dto import (
     IdTokenClaims,
     Introspection,
     LogoutResult,
@@ -22,7 +22,7 @@ from ._models import (
     SsoSession,
     TokenResponse,
 )
-from ._oauth2 import (
+from .oauth2 import (
     AsyncOAuth2Client,
     AuthorizationRequest,
     IdTokenVerifier,

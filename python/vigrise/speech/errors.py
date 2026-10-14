@@ -1,5 +1,6 @@
-import json
 from typing import Any, Dict, Optional
+
+from .._common.envelope import parse_error_envelope
 
 
 class SpeechError(Exception):
@@ -38,14 +39,7 @@ class SpeechWaitTimeoutError(SpeechError):
 
 def error_from_response(status: int, body: bytes) -> SpeechServiceError:
     """The error an error response carries: `{"error": {"code", "message", ...}}`, or the status when the body is not that envelope."""
-    try:
-        envelope = json.loads(body).get("error")
-    except (ValueError, AttributeError):
-        envelope = None
-    if isinstance(envelope, dict):
-        details = dict(envelope)
-        code = details.pop("code", None)
-        message = details.pop("message", "")
-        resource_id = details.pop("resource_id", None)
-        return SpeechServiceError(status, code if isinstance(code, str) else "UnknownError", message, resource_id, details)
+    envelope = parse_error_envelope(body)
+    if envelope is not None:
+        return SpeechServiceError(status, envelope.code or "UnknownError", envelope.message, envelope.resource_id, envelope.details)
     return SpeechServiceError(status, "UnknownError", body.decode("utf-8", "replace"))
