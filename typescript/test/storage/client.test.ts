@@ -285,3 +285,15 @@ describe("StorageClient tags, lifecycle and presigned URLs", () => {
     expect(server.last().json()).toEqual({ key: "a.txt", method: "GET", expires_in: 60, response_content_disposition: "attachment" });
   });
 });
+
+describe("StorageClient credentials", () => {
+  it("invalidates the provider when the service refuses the credentials", async () => {
+    let invalidated = 0;
+    const server = await fakeServer(() => jsonReply({ error: { code: "AccessDenied", message: "no" } }, 403));
+    servers.push(server);
+    const provider = Object.assign(() => credentials, { invalidate: () => void (invalidated += 1) });
+    const client = new StorageClient({ endpoint: server.url, credentials: provider });
+    await expect(client.listBuckets()).rejects.toBeInstanceOf(StorageError);
+    expect(invalidated).toBe(1);
+  });
+});

@@ -1,6 +1,6 @@
-import { signedFetch } from "../auth/fetch.js";
+import { signRequest } from "../auth/webcrypto.js";
 import type { Credentials, CredentialsProvider } from "../auth/types.js";
-import { camelize } from "./case.js";
+import { camelize } from "../internal/case.js";
 import { errorFromResponse, SpeechSigningError, SpeechTransportError, SpeechWaitTimeoutError } from "./errors.js";
 import { encodeMultipart } from "./multipart.js";
 import type {
@@ -14,7 +14,7 @@ export const DEFAULT_ENDPOINT = "https://speech.vigrise.com";
 export interface SpeechClientOptions {
   /** Base URL of the Speech API; `https://speech.vigrise.com` by default. */
   endpoint?: string;
-  /** Fixed credentials or a provider called before each request; resolved from the environment when omitted. */
+  /** Fixed credentials or a provider called before each request. Omitted, Node reads VIGRISE_ACCESS_KEY_ID and VIGRISE_SECRET_ACCESS_KEY; other runtimes need them passed. */
   credentials?: Credentials | CredentialsProvider;
 }
 
@@ -52,6 +52,17 @@ export class SpeechClient {
     this.credentials = options.credentials;
   }
 
+  private async resolveCredentials(): Promise<Credentials> {
+    const source = this.credentials;
+    if (typeof source === "function") return source();
+    if (source) return source;
+    const env = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env;
+    if (env?.VIGRISE_ACCESS_KEY_ID && env.VIGRISE_SECRET_ACCESS_KEY) {
+      return { accessKeyId: env.VIGRISE_ACCESS_KEY_ID, secretAccessKey: env.VIGRISE_SECRET_ACCESS_KEY, sessionToken: env.VIGRISE_SESSION_TOKEN };
+    }
+    throw new Error("no credentials: pass `credentials`, or set VIGRISE_ACCESS_KEY_ID and VIGRISE_SECRET_ACCESS_KEY");
+  }
+
   private async send(call: Call): Promise<Response> {
     const headers: Record<string, string> = {};
     let body: string | Uint8Array | undefined;
@@ -64,16 +75,22 @@ export class SpeechClient {
     }
     if (call.idempotencyKey !== undefined) headers["idempotency-key"] = call.idempotencyKey;
     const url = this.endpoint + target(call.path, call.query);
+    try {
+      const credentials = await this.resolveCredentials();
+      Object.assign(headers, await signRequest({ method: call.method ?? "GET", url, headers, body, credentials, service: "speech" }));
+    } catch (error) {
+      throw new SpeechSigningError((error as Error).message, { cause: error });
+    }
     let response: Response;
     try {
-      response = await signedFetch(url, { method: call.method ?? "GET", headers, body: body as BodyInit | undefined }, { service: "speech", credentials: this.credentials });
+      response = await fetch(url, { method: call.method ?? "GET", headers, body: body as BodyInit | undefined });
     } catch (error) {
-      const message = (error as Error).message;
-      throw message.includes("cannot be signed") || message.includes("credentials")
-        ? new SpeechSigningError(message, { cause: error })
-        : new SpeechTransportError(message, { cause: error });
+      throw new SpeechTransportError((error as Error).message, { cause: error });
     }
-    if (!response.ok) throw errorFromResponse(response.status, await response.text());
+    if (!response.ok) {
+      if ((response.status === 401 || response.status === 403) && typeof this.credentials === "function") this.credentials.invalidate?.();
+      throw errorFromResponse(response.status, await response.text());
+    }
     return response;
   }
 
@@ -142,22 +159,28 @@ export class SpeechClient {
   }
 
   /** Clones a voice from a recording of its speaker, who has given `consent`. */
-  cloneVoice(name: string, reference: VoiceReference, consent: Consent, options: CloneVoiceOptions = {}): Promise<Voice> {
+  async cloneVoice(name: string, reference: VoiceReference, consent: Consent, options: CloneVoiceOptions = {}): Promise<Voice> {
     const encoder = new TextEncoder();
-    const { contentType, body } = encodeMultipart([
-      { name: "name", body: encoder.encode(name) },
-      { name: "reference", body: reference.bytes, fileName: reference.fileName, contentType: reference.contentType },
-      {
-        name: "consent",
-        body: encoder.encode(JSON.stringify({
-          statement_version: consent.statementVersion,
-          speaker_name: consent.speakerName,
-          relationship: consent.relationship,
-          agreed: consent.agreed,
-        })),
-      },
-    ]);
-    return this.json({ method: "POST", path: "/v1/voices", body, contentType, idempotencyKey: options.idempotencyKey });
+    let encoded: ReturnType<typeof encodeMultipart>;
+    try {
+      encoded = encodeMultipart([
+        { name: "name", body: encoder.encode(name) },
+        { name: "reference", body: reference.bytes, fileName: reference.fileName, contentType: reference.contentType },
+        {
+          name: "consent",
+          body: encoder.encode(JSON.stringify({
+            statement_version: consent.statementVersion,
+            speaker_name: consent.speakerName,
+            relationship: consent.relationship,
+            agreed: consent.agreed,
+          })),
+        },
+      ]);
+    } catch (error) {
+      throw new SpeechSigningError((error as Error).message, { cause: error });
+    }
+    const { contentType, body } = encoded;
+    return await this.json({ method: "POST", path: "/v1/voices", body, contentType, idempotencyKey: options.idempotencyKey });
   }
 
   /** The statement a speaker agrees to before a voice is cloned. */

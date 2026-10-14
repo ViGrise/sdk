@@ -1,6 +1,6 @@
 # @vigrise/sdk
 
-The ViGrise SDK for Node 18+ and browsers: VGR4 request signing, ViGrise
+The ViGrise SDK for Node 18+ and browsers (only `/storage` is Node-only): VGR4 request signing, ViGrise
 Accounts, ViGrise Storage and the Speech API. There is no root export; import a
 subpath.
 
@@ -12,7 +12,7 @@ subpath.
 | `@vigrise/sdk/accounts/astro` | Astro SSO middleware and endpoints (ESM) |
 | `@vigrise/sdk/accounts/react` | `AccountMenu` (ESM; `react` is an optional peer dependency) |
 | `@vigrise/sdk/accounts/server` | SSO introspection, back-channel logout, OAuth2/OIDC helpers, JWKS |
-| `@vigrise/sdk/speech` | `SpeechClient`, `verifyWebhook` |
+| `@vigrise/sdk/speech` | `SpeechClient`, `verifyWebhook` (Node and browsers, signing with Web Crypto) |
 | `@vigrise/sdk/storage` | `StorageClient` (Node; browsers use presigned URLs) |
 
 All but the three browser-facing `accounts` entries ship as ESM and CommonJS.
@@ -22,14 +22,14 @@ All but the three browser-facing `accounts` entries ship as ESM and CommonJS.
 ```ts
 import { SpeechClient, verifyWebhook } from "@vigrise/sdk/speech";
 
-const speech = new SpeechClient(); // { endpoint, credentials } optional
+const speech = new SpeechClient(); // { endpoint, credentials } optional; Node reads VIGRISE_ACCESS_KEY_ID and VIGRISE_SECRET_ACCESS_KEY, other runtimes need `credentials`
 const { audio, contentType } = await speech.synthesize("Xin chào", "haley-f1", { format: "mp3" });
 const job = await speech.createJob({ text: "A long text", voice: "haley-f1" }, { webhookUrl });
 const done = await speech.waitForJob(job.id, { timeoutMs: 60_000 });
 const wav = await speech.downloadGenerationAudio(done.generationId!);
 
 // In the webhook handler, with the raw request body:
-const event = verifyWebhook(secret, request.headers, rawBody);
+const event = await verifyWebhook(secret, request.headers, rawBody);
 ```
 
 `synthesizeStream` returns the audio as a `ReadableStream`. Errors extend

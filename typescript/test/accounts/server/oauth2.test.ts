@@ -116,6 +116,11 @@ describe("IdTokenVerifier", () => {
     await expect(verifier().verify(await signer.sign(claims({ exp: now() - 600 })))).rejects.toBeInstanceOf(InvalidTokenError);
   });
 
+  it("tolerates 60 seconds of clock skew and no more", async () => {
+    await expect(verifier().verify(await signer.sign(claims({ exp: now() - 10 })))).resolves.toBeDefined();
+    await expect(verifier().verify(await signer.sign(claims({ exp: now() - 120 })))).rejects.toBeInstanceOf(InvalidTokenError);
+  });
+
   it("skips the nonce check when none is expected", async () => {
     expect((await verifier().verify(await signer.sign(claims()))).sub).toBe("user-1");
   });

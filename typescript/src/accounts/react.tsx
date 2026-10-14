@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react"
 import { accountMenuModel } from "./account-menu-model.js"
-import type { SsoAccount } from "./index.js"
+import type { SsoAccount } from "./types.js"
 
 export interface AccountMenuLabels {
   /** Label of the add-account entry; `addAnotherAccount` takes precedence. */

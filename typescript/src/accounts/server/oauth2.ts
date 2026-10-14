@@ -6,6 +6,7 @@ import { InvalidTokenError, TokenExchangeError } from "./errors.js";
 import type { Jwks } from "./jwks.js";
 
 const REQUEST_TIMEOUT_MS = 5000;
+const ID_TOKEN_LEEWAY_SECONDS = 60;
 
 const randomUrlSafe = (bytes: number) => randomBytes(bytes).toString("base64url");
 
@@ -191,6 +192,7 @@ export class IdTokenVerifier {
         issuer: this.options.issuer,
         audience,
         algorithms: ["RS256"],
+        clockTolerance: ID_TOKEN_LEEWAY_SECONDS,
         requiredClaims: ["iss", "aud", "exp", "sub"],
       });
       return {

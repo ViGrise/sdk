@@ -72,6 +72,17 @@ function readHead(response: Response): ObjectHead {
   };
 }
 
+function concat(chunks: Uint8Array[], length: number): Uint8Array {
+  if (chunks.length === 1) return chunks[0]!;
+  const joined = new Uint8Array(length);
+  let offset = 0;
+  for (const chunk of chunks) {
+    joined.set(chunk, offset);
+    offset += chunk.length;
+  }
+  return joined;
+}
+
 const bucketOf = (raw: any): Bucket => ({ name: raw.name, projectId: raw.project_id, createdAt: raw.created_at });
 const partOf = (raw: any): CompletedPart => ({ number: raw.number, etag: raw.etag });
 
@@ -129,7 +140,10 @@ export class StorageClient {
     } catch (error) {
       throw new StorageError(0, "TransportError", (error as Error).message, { cause: error });
     }
-    if (!response.ok) throw errorFromResponse(response.status, await response.text());
+    if (!response.ok) {
+      if ((response.status === 401 || response.status === 403) && typeof this.credentials === "function") this.credentials.invalidate?.();
+      throw errorFromResponse(response.status, await response.text());
+    }
     return response;
   }
 
@@ -312,17 +326,21 @@ export class StorageClient {
       const store = async (part: Uint8Array) => {
         parts.push(await this.uploadPart(bucket, uploadId, parts.length + 1, part));
       };
-      let buffer = new Uint8Array(0);
+      let pending: Uint8Array[] = [];
+      let pendingLength = 0;
       for await (const chunk of body as AsyncIterable<Uint8Array>) {
-        const joined = new Uint8Array(buffer.length + chunk.length);
-        joined.set(buffer);
-        joined.set(chunk, buffer.length);
-        buffer = joined;
-        while (buffer.length >= partSize) {
-          await store(buffer.slice(0, partSize));
-          buffer = buffer.slice(partSize);
+        pending.push(chunk);
+        pendingLength += chunk.length;
+        if (pendingLength < partSize) continue;
+        let joined = concat(pending, pendingLength);
+        while (joined.length >= partSize) {
+          await store(joined.subarray(0, partSize));
+          joined = joined.subarray(partSize);
         }
+        pending = joined.length ? [joined] : [];
+        pendingLength = joined.length;
       }
+      const buffer = concat(pending, pendingLength);
       if (buffer.length > 0 || parts.length === 0) await store(buffer);
       return await this.completeUpload(bucket, uploadId, parts);
     } catch (error) {

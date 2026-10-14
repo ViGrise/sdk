@@ -1,11 +1,10 @@
-import { createHmac, timingSafeEqual } from "node:crypto";
-
-import { camelize } from "./case.js";
+import { camelize } from "../internal/case.js";
 import { SpeechError } from "./errors.js";
 import type { WebhookEvent } from "./types.js";
 
 const SECRET_PREFIX = "whsec_";
 const BASE64 = /^[A-Za-z0-9+/]*={0,2}$/;
+const encoder = new TextEncoder();
 
 export type WebhookFailure = "headers" | "timestamp" | "secret" | "signature" | "payload";
 
@@ -41,8 +40,21 @@ function header(headers: HeaderSource, name: string): string {
   return text;
 }
 
-/** Checks the signature headers of a webhook against the raw body. */
-export function verifyWebhookSignature(secret: string, headers: HeaderSource, rawBody: string | Uint8Array, options: VerifyWebhookOptions = {}): void {
+function decodeBase64(text: string): Uint8Array {
+  const binary = atob(text);
+  return Uint8Array.from(binary, (character) => character.charCodeAt(0));
+}
+
+/** Compares in time that depends only on the lengths. */
+function sameBytes(a: Uint8Array, b: Uint8Array): boolean {
+  if (a.length !== b.length) return false;
+  let difference = 0;
+  for (let index = 0; index < a.length; index += 1) difference |= a[index]! ^ b[index]!;
+  return difference === 0;
+}
+
+/** Checks the signature headers of a webhook against the raw body. Runs wherever Web Crypto does. */
+export async function verifyWebhookSignature(secret: string, headers: HeaderSource, rawBody: string | Uint8Array, options: VerifyWebhookOptions = {}): Promise<void> {
   const id = header(headers, "webhook-id");
   const timestamp = header(headers, "webhook-timestamp");
   const signatures = header(headers, "webhook-signature");
@@ -54,22 +66,24 @@ export function verifyWebhookSignature(secret: string, headers: HeaderSource, ra
   }
   const encodedKey = secret.startsWith(SECRET_PREFIX) ? secret.slice(SECRET_PREFIX.length) : secret;
   if (!BASE64.test(encodedKey) || encodedKey.length % 4 !== 0) throw new WebhookVerificationError("secret", "the webhook secret is not base64");
-  const expected = createHmac("sha256", Buffer.from(encodedKey, "base64"))
-    .update(`${id}.${timestamp}.`)
-    .update(rawBody)
-    .digest();
+  const body = typeof rawBody === "string" ? encoder.encode(rawBody) : rawBody;
+  const prefix = encoder.encode(`${id}.${timestamp}.`);
+  const message = new Uint8Array(prefix.length + body.length);
+  message.set(prefix);
+  message.set(body, prefix.length);
+  const key = await crypto.subtle.importKey("raw", decodeBase64(encodedKey) as Uint8Array<ArrayBuffer>, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const expected = new Uint8Array(await crypto.subtle.sign("HMAC", key, message));
   let matched = false;
   for (const entry of signatures.split(/\s+/)) {
-    if (!entry.startsWith("v1,")) continue;
-    const candidate = Buffer.from(entry.slice(3), "base64");
-    if (candidate.length === expected.length && timingSafeEqual(candidate, expected)) matched = true;
+    if (!entry.startsWith("v1,") || !BASE64.test(entry.slice(3)) || entry.slice(3).length % 4 !== 0) continue;
+    if (sameBytes(decodeBase64(entry.slice(3)), expected)) matched = true;
   }
   if (!matched) throw new WebhookVerificationError("signature", "no webhook signature matches");
 }
 
 /** Verifies a webhook and parses its event. `rawBody` is the request body as received, before any JSON parsing. */
-export function verifyWebhook(secret: string, headers: HeaderSource, rawBody: string | Uint8Array, options: VerifyWebhookOptions = {}): WebhookEvent {
-  verifyWebhookSignature(secret, headers, rawBody, options);
+export async function verifyWebhook(secret: string, headers: HeaderSource, rawBody: string | Uint8Array, options: VerifyWebhookOptions = {}): Promise<WebhookEvent> {
+  await verifyWebhookSignature(secret, headers, rawBody, options);
   let body: any;
   try {
     body = JSON.parse(typeof rawBody === "string" ? rawBody : new TextDecoder().decode(rawBody));

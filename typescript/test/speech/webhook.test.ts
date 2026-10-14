@@ -24,7 +24,7 @@ describe("webhook signatures", () => {
   it("has the shared vectors", () => expect(cases.length).toBeGreaterThanOrEqual(10));
 
   for (const vector of cases) {
-    it(vector.name, () => {
+    it(vector.name, async () => {
       const headers = {
         "webhook-id": vector.id,
         "webhook-timestamp": String(vector.timestamp),
@@ -33,10 +33,11 @@ describe("webhook signatures", () => {
       const verify = () =>
         verifyWebhookSignature(vector.secret, headers, vector.body, { toleranceSeconds: vector.tolerance_seconds, now: new Date(vector.now * 1000) });
       if (vector.valid) {
-        expect(verify).not.toThrow();
+        await expect(verify()).resolves.toBeUndefined();
       } else {
-        expect(verify).toThrow(WebhookVerificationError);
-        try { verify(); } catch (error) { expect((error as WebhookVerificationError).reason).toBe(vector.error); }
+        const error = await verify().catch((e) => e);
+        expect(error).toBeInstanceOf(WebhookVerificationError);
+        expect(error.reason).toBe(vector.error);
       }
     });
   }
@@ -60,18 +61,18 @@ describe("verifyWebhook", () => {
     "v1," + createHmac("sha256", Buffer.from(secret.slice(6), "base64")).update(`evt_1.${timestamp}.${text}`).digest("base64");
   const headers = new Headers({ "webhook-id": "evt_1", "webhook-timestamp": String(timestamp), "webhook-signature": sign(body) });
 
-  it("returns the event", () => {
-    const event = verifyWebhook(secret, headers, body, { now });
+  it("returns the event", async () => {
+    const event = await verifyWebhook(secret, headers, body, { now });
     expect(event).toMatchObject({ id: "evt_1", type: "job.succeeded" });
     expect(event.timestamp).toEqual(new Date("2026-10-01T12:00:05Z"));
     expect(event.data).toMatchObject({ id: "job_1", status: "succeeded", generationId: "gen_1" });
   });
 
-  it("refuses a tampered body", () => {
-    expect(() => verifyWebhook(secret, headers, body.replace("job_1", "job_2"), { now })).toThrow(WebhookVerificationError);
+  it("refuses a tampered body", async () => {
+    await expect(verifyWebhook(secret, headers, body.replace("job_1", "job_2"), { now })).rejects.toBeInstanceOf(WebhookVerificationError);
   });
 
-  it("accepts raw bytes", () => {
-    expect(verifyWebhook(secret, headers, new TextEncoder().encode(body), { now }).id).toBe("evt_1");
+  it("accepts raw bytes", async () => {
+    expect((await verifyWebhook(secret, headers, new TextEncoder().encode(body), { now })).id).toBe("evt_1");
   });
 });

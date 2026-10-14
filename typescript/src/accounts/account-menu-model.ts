@@ -1,4 +1,4 @@
-import type { SsoAccount } from "./index.js"
+import type { SsoAccount } from "./types.js"
 import { addAccountUrl, manageAccountUrl, signOutUrl, switchAccountUrl } from "./urls.js"
 
 /** Primary line of an account: the name when it has one, else the email. */

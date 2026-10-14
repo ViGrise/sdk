@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 
-import { SpeechClient, SpeechServiceError, SpeechTransportError, SpeechWaitTimeoutError } from "../../src/speech/index.js";
+import { SpeechClient, SpeechServiceError, SpeechSigningError, SpeechTransportError, SpeechWaitTimeoutError } from "../../src/speech/index.js";
 import { fakeServer, jsonReply, type FakeServer } from "../helpers/fake-server.js";
 
 const credentials = { accessKeyId: "VGAKTEST", secretAccessKey: "secret" };
@@ -229,5 +229,49 @@ describe("SpeechClient", () => {
   it("raises transport errors when the endpoint is unreachable", async () => {
     const client = new SpeechClient({ endpoint: "http://127.0.0.1:1", credentials });
     await expect(client.listVoices()).rejects.toBeInstanceOf(SpeechTransportError);
+  });
+});
+
+describe("SpeechClient credentials", () => {
+  it("wraps a failing provider in a signing error without sending", async () => {
+    const server = await fakeServer(() => jsonReply({}));
+    servers.push(server);
+    const client = new SpeechClient({ endpoint: server.url, credentials: () => Promise.reject(new Error("sts down")) });
+    await expect(client.listVoices()).rejects.toBeInstanceOf(SpeechSigningError);
+    expect(server.requests).toHaveLength(0);
+  });
+
+  it("invalidates the provider when the service refuses the credentials", async () => {
+    const server = await fakeServer(() => jsonReply({ error: { code: "InvalidClientTokenId", message: "revoked" } }, 403));
+    servers.push(server);
+    let invalidated = 0;
+    const provider = Object.assign(() => credentials, { invalidate: () => void (invalidated += 1) });
+    const client = new SpeechClient({ endpoint: server.url, credentials: provider });
+    await expect(client.listVoices()).rejects.toBeInstanceOf(SpeechServiceError);
+    expect(invalidated).toBe(1);
+  });
+
+  it("reads the environment when no credentials are given", async () => {
+    const server = await fakeServer(() => jsonReply({ data: [] }));
+    servers.push(server);
+    const previous = { ...process.env };
+    process.env.VIGRISE_ACCESS_KEY_ID = "VGAKENV";
+    process.env.VIGRISE_SECRET_ACCESS_KEY = "s";
+    try {
+      await new SpeechClient({ endpoint: server.url }).listVoices();
+    } finally {
+      process.env = previous;
+    }
+    expect(String(server.last().headers.authorization)).toContain("Credential=VGAKENV/");
+  });
+
+  it("refuses a file name or content type that would break the multipart framing", async () => {
+    const server = await fakeServer(() => jsonReply({}));
+    servers.push(server);
+    const client = new SpeechClient({ endpoint: server.url, credentials });
+    const consent = { statementVersion: 1, speakerName: "An", relationship: "self" as const, agreed: true };
+    await expect(client.cloneVoice("n", { bytes: new Uint8Array(1), contentType: "audio/wav\r\nX: y", fileName: "a.wav" }, consent)).rejects.toBeInstanceOf(SpeechSigningError);
+    await client.cloneVoice("n", { bytes: new Uint8Array(1), contentType: "audio/wav", fileName: 'a"\r\nb.wav' }, consent).catch(() => undefined);
+    expect(server.last().text()).toContain('filename="a%22%0D%0Ab.wav"');
   });
 });

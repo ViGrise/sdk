@@ -18,9 +18,9 @@ const delivered = new Promise((resolve) => (deliver = resolve));
 const receiver = createServer((request, response) => {
   const chunks = [];
   request.on("data", (chunk) => chunks.push(chunk));
-  request.on("end", () => {
+  request.on("end", async () => {
     try {
-      deliver(verifyWebhook(secret, request.headers, Buffer.concat(chunks)));
+      deliver(await verifyWebhook(secret, request.headers, Buffer.concat(chunks)));
       response.writeHead(200).end();
     } catch {
       response.writeHead(400).end();

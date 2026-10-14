@@ -5,4 +5,7 @@ export interface Credentials {
 }
 
 /** Supplies the credentials to sign each request with, such as a refreshed role session. */
-export type CredentialsProvider = () => Credentials | Promise<Credentials>;
+export type CredentialsProvider = (() => Credentials | Promise<Credentials>) & {
+  /** Called when the service refuses the current credentials, for example a revoked session. */
+  invalidate?: () => void;
+};

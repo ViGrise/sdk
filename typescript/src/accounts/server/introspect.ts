@@ -1,6 +1,7 @@
-import type { SsoAccount } from "../index.js";
+import { ssoTokenHash } from "../hash.js";
+import type { SsoAccount as MenuAccount } from "../types.js";
+import { camelize } from "../../internal/case.js";
 import { AccountsMisconfiguredError, AccountsUnavailableError, InactiveSessionError } from "./errors.js";
-import { ssoTokenHash } from "./hash.js";
 
 const MAX_CACHE_ENTRIES = 10_000;
 const REQUEST_TIMEOUT_MS = 5000;
@@ -12,19 +13,43 @@ export interface SsoIdentity {
   email?: string;
   name?: string;
   picture?: string;
-  email_verified: boolean;
+  emailVerified: boolean;
 }
 
 /** An Accounts session. */
 export interface SsoSession {
   /** Session id, the `sso_sid` of app sessions and the `sid` of logout tokens. */
   id: string;
-  /** When the person authenticated, RFC 3339. */
-  authenticated_at: string;
+  authenticatedAt: Date;
   /** Authenticator assurance level. */
   aal: string;
-  /** When the session ends, RFC 3339. */
-  expires_at: string;
+  expiresAt: Date;
+}
+
+/** An account of the browser's group. */
+export interface SsoAccount {
+  /** Session id to switch to. */
+  sessionId: string;
+  identityId: string;
+  name?: string;
+  email?: string;
+  picture?: string;
+  active: boolean;
+  /** Whether the session expired and needs re-authentication. */
+  expired: boolean;
+}
+
+/** The shape `AccountMenu` takes, for forwarding the accounts of an introspection to the browser. */
+export function toMenuAccount(account: SsoAccount): MenuAccount {
+  return {
+    session_id: account.sessionId,
+    identity_id: account.identityId,
+    name: account.name,
+    email: account.email,
+    picture: account.picture,
+    active: account.active,
+    expired: account.expired,
+  };
 }
 
 /** The answer of the introspection endpoint. */
@@ -33,7 +58,7 @@ export interface Introspection {
   active: boolean;
   identity?: SsoIdentity;
   session?: SsoSession;
-  /** Every account of the browser's group, as the account menu takes them. */
+  /** Every account of the browser's group. */
   accounts: SsoAccount[];
 }
 
@@ -53,15 +78,6 @@ export interface SsoIntrospectorOptions {
   cacheTtlMs?: number;
 }
 
-/** Drops the keys whose value is null, so absent fields read as undefined. */
-function withoutNulls<T>(value: T): T {
-  if (Array.isArray(value)) return value.map(withoutNulls) as T;
-  if (value && typeof value === "object") {
-    return Object.fromEntries(Object.entries(value).filter(([, entry]) => entry !== null).map(([key, entry]) => [key, withoutNulls(entry)])) as T;
-  }
-  return value;
-}
-
 /** Introspects `vigrise_sso` tokens against Accounts and caches the answers by token hash. */
 export class SsoIntrospector {
   private readonly cache = new Map<string, { at: number; answer: Introspection }>();
@@ -79,9 +95,9 @@ export class SsoIntrospector {
 
   /** Introspects a `vigrise_sso` value. Failures are never cached. */
   async introspect(token: string): Promise<Introspection> {
-    const key = ssoTokenHash(token);
+    const key = await ssoTokenHash(token);
     const cached = this.cache.get(key);
-    if (cached && Date.now() - cached.at < this.cacheTtlMs) return cached.answer;
+    if (cached && Date.now() - cached.at < this.cacheTtlMs) return structuredClone(cached.answer);
     const url = `${this.options.internalUrl.replace(/\/+$/, "")}/sessions/sso/introspect`;
     const credentials = Buffer.from(`${this.options.clientId}:${this.options.clientSecret}`).toString("base64");
     let response: Response;
@@ -107,7 +123,7 @@ export class SsoIntrospector {
     if (status !== 200) throw new AccountsMisconfiguredError(`unexpected answer from ViGrise Accounts: status ${status}`, status);
     let raw: any;
     try {
-      raw = withoutNulls(await response.json());
+      raw = camelize(await response.json());
     } catch (error) {
       throw new AccountsMisconfiguredError(`unexpected answer from ViGrise Accounts: ${(error as Error).message}`, status, { cause: error });
     }
@@ -142,6 +158,6 @@ export class SsoIntrospector {
         if (now - entry.at >= this.cacheTtlMs) this.cache.delete(entryKey);
       }
     }
-    this.cache.set(key, { at: Date.now(), answer });
+    this.cache.set(key, { at: Date.now(), answer: structuredClone(answer) });
   }
 }
