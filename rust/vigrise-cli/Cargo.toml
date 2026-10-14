@@ -38,7 +38,7 @@ url = "2"
 [dev-dependencies]
 axum = { version = "0.8", features = ["tokio", "http1", "query", "form", "json"] }
 tempfile = "3"
-vigrise-auth = { path = "../vigrise-auth", version = "0.1.0" }
+vigrise = { path = "../vigrise", version = "0.1.0" }
 
 [package.metadata.docs.rs]
 all-features = true

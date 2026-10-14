@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["vigrise-auth", "vigrise-storage", "vigrise-accounts", "vigrise-cli"]
+members = ["vigrise", "vigrise-cli"]
 
 [workspace.package]
 version = "0.1.0"

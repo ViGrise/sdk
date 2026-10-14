@@ -1,0 +1,253 @@
+//! Key derivation, string-to-sign and signature primitives shared by clients,
+//! services and the platform.
+
+use hmac::{Hmac, Mac};
+use sha2::Sha256;
+
+use crate::auth::canonical::hex_sha256;
+use crate::auth::error::AuthError;
+
+type HmacSha256 = Hmac<Sha256>;
+
+/// Algorithm identifier that opens every VGR4 string to sign and `Authorization` header.
+pub const ALGORITHM: &str = "VGR4-HMAC-SHA256";
+/// Last component of a VGR4 credential scope and of the signing key derivation.
+pub const TERMINATOR: &str = "vgr4_request";
+/// `chrono` format of the `x-vgr-date` timestamp.
+pub const TIMESTAMP_FORMAT: &str = "%Y%m%dT%H%M%SZ";
+
+/// The credential scope, `<date>/<service>/vgr4_request`.
+pub fn scope(date: &str, service: &str) -> String {
+  format!("{date}/{service}/{TERMINATOR}")
+}
+
+/// The string to sign: algorithm, timestamp, scope and the hash of the
+/// canonical request.
+pub fn string_to_sign(timestamp: &str, scope: &str, canonical_request: &str) -> String {
+  format!(
+    "{ALGORITHM}\n{timestamp}\n{scope}\n{}",
+    hex_sha256(canonical_request.as_bytes())
+  )
+}
+
+pub(crate) fn hmac_sha256(key: &[u8], message: &str) -> [u8; 32] {
+  let mut mac = HmacSha256::new_from_slice(key).expect("HMAC accepts keys of any length");
+  mac.update(message.as_bytes());
+  mac.finalize().into_bytes().into()
+}
+
+/// Derives the signing key of a date and service from the secret access key.
+pub fn derive_signing_key(secret_access_key: &str, date: &str, service: &str) -> [u8; 32] {
+  let k_date = hmac_sha256(format!("VGR4{secret_access_key}").as_bytes(), date);
+  let k_service = hmac_sha256(&k_date, service);
+  hmac_sha256(&k_service, TERMINATOR)
+}
+
+/// Hex-encoded HMAC-SHA256 of `string_to_sign` under `signing_key`.
+pub fn signature(signing_key: &[u8; 32], string_to_sign: &str) -> String {
+  hex::encode(hmac_sha256(signing_key, string_to_sign))
+}
+
+/// Constant-time comparison of a hex signature against the expected value.
+pub fn verify_signature(signing_key: &[u8; 32], string_to_sign: &str, provided_hex: &str) -> bool {
+  let Ok(provided) = hex::decode(provided_hex) else {
+    return false;
+  };
+  let mut mac = HmacSha256::new_from_slice(signing_key).expect("HMAC accepts keys of any length");
+  mac.update(string_to_sign.as_bytes());
+  mac.verify_slice(&provided).is_ok()
+}
+
+/// The signature scheme a string to sign belongs to.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SigningAlgorithm {
+  /// VGR4.
+  Vgr4,
+  /// AWS Signature Version 4.
+  Aws4,
+}
+
+impl SigningAlgorithm {
+  /// The header a request of this scheme signs its payload hash in.
+  pub fn payload_hash_header(self) -> &'static str {
+    match self {
+      Self::Vgr4 => "x-vgr-content-sha256",
+      Self::Aws4 => "x-amz-content-sha256",
+    }
+  }
+}
+
+/// A streamed body that did not hash to the payload hash its request signed.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error)]
+#[error("{} does not match the request body", .algorithm.payload_hash_header())]
+pub struct PayloadHashMismatch {
+  /// The scheme of the string to sign.
+  pub algorithm: SigningAlgorithm,
+}
+
+/// The components of a string to sign.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ParsedStringToSign {
+  /// The scheme of the string to sign.
+  pub algorithm: SigningAlgorithm,
+  /// Request timestamp.
+  pub timestamp: String,
+  /// Credential scope date.
+  pub date: String,
+  /// The credential scope region; present for AWS4 only.
+  pub region: Option<String>,
+  /// Credential scope service.
+  pub service: String,
+  /// Hex-encoded SHA-256 of the canonical request.
+  pub canonical_request_hash: String,
+}
+
+impl ParsedStringToSign {
+  /// The signing key of this string's scope, derived with its scheme.
+  pub fn signing_key(&self, secret_access_key: &str) -> [u8; 32] {
+    match (&self.algorithm, &self.region) {
+      (SigningAlgorithm::Aws4, Some(region)) => {
+        crate::auth::sigv4::derive_signing_key(secret_access_key, &self.date, region, &self.service)
+      }
+      _ => derive_signing_key(secret_access_key, &self.date, &self.service),
+    }
+  }
+}
+
+/// Parses a VGR4 or AWS4 string to sign into its components.
+pub fn parse_string_to_sign(value: &str) -> Result<ParsedStringToSign, AuthError> {
+  let invalid = || AuthError::IncompleteSignature("Malformed string to sign".to_string());
+  let lines: Vec<&str> = value.split('\n').collect();
+  let [algorithm, timestamp, scope, hash] = lines.as_slice() else {
+    return Err(invalid());
+  };
+  let algorithm = match *algorithm {
+    ALGORITHM => SigningAlgorithm::Vgr4,
+    crate::auth::sigv4::ALGORITHM => SigningAlgorithm::Aws4,
+    _ => return Err(invalid()),
+  };
+  if !crate::auth::sigv4::timestamp_shape_ok(timestamp)
+    || chrono::NaiveDateTime::parse_from_str(timestamp, TIMESTAMP_FORMAT).is_err()
+  {
+    return Err(invalid());
+  }
+  let scope_parts: Vec<&str> = scope.split('/').collect();
+  let (date, region, service, terminator) = match (algorithm, scope_parts.as_slice()) {
+    (SigningAlgorithm::Vgr4, [date, service, terminator]) => (date, None, service, terminator),
+    (SigningAlgorithm::Aws4, [date, region, service, terminator]) if !region.is_empty() => {
+      (date, Some(region), service, terminator)
+    }
+    _ => return Err(invalid()),
+  };
+  let expected_terminator = match algorithm {
+    SigningAlgorithm::Vgr4 => TERMINATOR,
+    SigningAlgorithm::Aws4 => crate::auth::sigv4::TERMINATOR,
+  };
+  if *terminator != expected_terminator || **date != timestamp[..8] || service.is_empty() {
+    return Err(invalid());
+  }
+  if hash.len() != 64
+    || !hash
+      .bytes()
+      .all(|b| b.is_ascii_hexdigit() && !b.is_ascii_uppercase())
+  {
+    return Err(invalid());
+  }
+  Ok(ParsedStringToSign {
+    algorithm,
+    timestamp: timestamp.to_string(),
+    date: date.to_string(),
+    region: region.map(|r| r.to_string()),
+    service: service.to_string(),
+    canonical_request_hash: hash.to_string(),
+  })
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn verify_accepts_own_signature_and_rejects_others() {
+    let key = derive_signing_key("secret", "20261001", "speech");
+    let sig = signature(&key, "payload");
+    assert!(verify_signature(&key, "payload", &sig));
+    assert!(!verify_signature(&key, "payload2", &sig));
+    assert!(!verify_signature(&key, "payload", "zz"));
+  }
+
+  #[test]
+  fn parse_string_to_sign_round_trips() {
+    let sts = string_to_sign("20261001T120000Z", &scope("20261001", "speech"), "req");
+    let parsed = parse_string_to_sign(&sts).unwrap();
+    assert_eq!(parsed.date, "20261001");
+    assert_eq!(parsed.service, "speech");
+  }
+
+  #[test]
+  fn parse_accepts_aws4_with_its_region_and_derives_the_matching_key() {
+    let scope = crate::auth::sigv4::Scope::new("20130524", "us-east-1", "s3");
+    let sts = crate::auth::sigv4::string_to_sign("20130524T000000Z", &scope, "req");
+    let parsed = parse_string_to_sign(&sts).unwrap();
+    assert_eq!(parsed.algorithm, SigningAlgorithm::Aws4);
+    assert_eq!(parsed.region.as_deref(), Some("us-east-1"));
+    assert_eq!(parsed.service, "s3");
+    assert_eq!(
+      parsed.signing_key("secret"),
+      crate::auth::sigv4::derive_signing_key("secret", "20130524", "us-east-1", "s3")
+    );
+    let vgr4 = parse_string_to_sign(&string_to_sign(
+      "20261001T120000Z",
+      &super::scope("20261001", "speech"),
+      "req",
+    ))
+    .unwrap();
+    assert_eq!(vgr4.algorithm, SigningAlgorithm::Vgr4);
+    assert_eq!(vgr4.region, None);
+    assert_eq!(
+      vgr4.signing_key("secret"),
+      derive_signing_key("secret", "20261001", "speech")
+    );
+  }
+
+  #[test]
+  fn parse_rejects_mixed_scope_shapes() {
+    let hash = "a".repeat(64);
+    for sts in [
+      format!("AWS4-HMAC-SHA256\n20130524T000000Z\n20130524/s3/aws4_request\n{hash}"),
+      format!("AWS4-HMAC-SHA256\n20130524T000000Z\n20130524/us-east-1/s3/vgr4_request\n{hash}"),
+      format!("VGR4-HMAC-SHA256\n20130524T000000Z\n20130524/us-east-1/s3/vgr4_request\n{hash}"),
+    ] {
+      assert!(parse_string_to_sign(&sts).is_err(), "accepted {sts:?}");
+    }
+  }
+
+  #[test]
+  fn parse_rejects_partial_or_empty_scope_date() {
+    for date in ["", "2026", "2026100"] {
+      let sts = format!(
+        "{ALGORITHM}\n20261001T120000Z\n{date}/speech/{TERMINATOR}\n{}",
+        "a".repeat(64)
+      );
+      assert!(
+        parse_string_to_sign(&sts).is_err(),
+        "accepted scope date {date:?}"
+      );
+    }
+  }
+
+  #[test]
+  fn parse_rejects_non_digit_timestamp() {
+    let sts = format!(
+      "{ALGORITHM}\n202610 1T120000Z\n202610 1/speech/{TERMINATOR}\n{}",
+      "a".repeat(64)
+    );
+    assert!(parse_string_to_sign(&sts).is_err());
+  }
+
+  #[test]
+  fn parse_rejects_scope_date_mismatch() {
+    let sts = string_to_sign("20261001T120000Z", &scope("20261002", "speech"), "req");
+    assert!(parse_string_to_sign(&sts).is_err());
+  }
+}

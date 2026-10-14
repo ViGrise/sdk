@@ -16,7 +16,7 @@ fn a_session_is_written_as_a_profile_the_sdks_read() {
   let path = dir.path().join("credentials");
   write_session(&path, "dev", &session("VGSTONE")).unwrap();
   let contents = std::fs::read_to_string(&path).unwrap();
-  let credentials = vigrise_auth::credentials::parse_profile(&contents, "dev").unwrap();
+  let credentials = vigrise::auth::credentials::parse_profile(&contents, "dev").unwrap();
   assert_eq!(credentials.access_key_id, "VGSTONE");
   assert_eq!(credentials.session_token.as_deref(), Some("token"));
   assert_eq!(
@@ -54,9 +54,9 @@ fn other_profiles_comments_and_keys_are_kept() {
     2,
     "{contents}"
   );
-  let default = vigrise_auth::credentials::parse_profile(&contents, "default").unwrap();
+  let default = vigrise::auth::credentials::parse_profile(&contents, "default").unwrap();
   assert_eq!(default.access_key_id, "VGAKLONG");
-  let dev = vigrise_auth::credentials::parse_profile(&contents, "dev").unwrap();
+  let dev = vigrise::auth::credentials::parse_profile(&contents, "dev").unwrap();
   assert_eq!(dev.access_key_id, "VGSTNEW");
 }
 

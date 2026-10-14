@@ -1,0 +1,70 @@
+[package]
+name = "vigrise"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "ViGrise SDK: VGR4 request signing, ViGrise Accounts, ViGrise Storage and the Speech API"
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+documentation = "https://docs.rs/vigrise"
+readme = "README.md"
+keywords = ["vigrise", "authentication", "signing", "sdk", "speech"]
+categories = ["authentication", "api-bindings"]
+include = ["src/**", "examples/**", "README.md", "LICENSE"]
+
+[features]
+default = []
+reqwest = ["dep:reqwest"]
+sts = ["reqwest", "dep:tokio", "tokio/sync", "chrono/serde"]
+verify = ["sts", "dep:axum", "dep:bytes", "dep:http-body", "dep:http-body-util", "dep:tokio", "tokio/rt", "dep:uuid", "dep:tracing"]
+sigv4 = ["verify", "dep:base64", "dep:crc-fast", "dep:sha1"]
+metering = ["verify", "tokio/sync", "tokio/rt", "tokio/macros", "uuid/v4", "chrono/serde"]
+openapi = ["dep:utoipa"]
+accounts = ["reqwest", "chrono/serde", "dep:base64", "dep:jsonwebtoken", "dep:rand", "dep:tracing", "dep:url"]
+accounts-axum = ["accounts", "dep:axum"]
+accounts-testing = ["accounts", "dep:rsa", "dep:rand_core"]
+storage = ["reqwest", "dep:bytes", "dep:futures-util"]
+speech = ["reqwest", "dep:base64", "dep:bytes", "dep:futures-util", "dep:subtle", "chrono/serde"]
+
+[dependencies]
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
+hex = "0.4"
+hmac = "0.12"
+http = "1"
+percent-encoding = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.10"
+thiserror = "2"
+
+reqwest = { version = "0.13", optional = true, default-features = false, features = ["json", "rustls", "form", "stream"] }
+axum = { version = "0.8", optional = true, default-features = false, features = ["json", "original-uri", "tokio"] }
+base64 = { version = "0.22", optional = true }
+bytes = { version = "1", optional = true }
+crc-fast = { version = "1", optional = true, default-features = false, features = ["std"] }
+futures-util = { version = "0.3", optional = true }
+http-body = { version = "1", optional = true }
+http-body-util = { version = "0.1", optional = true }
+jsonwebtoken = { version = "10.3", optional = true, default-features = false, features = ["rust_crypto", "use_pem"] }
+rand = { version = "0.9", optional = true }
+rand_core = { version = "0.6", optional = true, features = ["getrandom"] }
+rsa = { version = "0.9", optional = true, features = ["pem"] }
+sha1 = { version = "0.10", optional = true }
+subtle = { version = "2", optional = true }
+tokio = { version = "1", optional = true, features = ["time"] }
+tracing = { version = "0.1", optional = true }
+url = { version = "2", optional = true }
+utoipa = { version = "5.4", optional = true, features = ["chrono", "uuid"] }
+uuid = { version = "1", optional = true, features = ["serde"] }
+
+[dev-dependencies]
+vigrise = { path = ".", features = ["sigv4", "metering", "openapi", "accounts-axum", "accounts-testing", "storage", "speech"] }
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "net"] }
+axum = { version = "0.8", features = ["tokio", "http1", "json", "query", "form"] }
+tower = { version = "0.5", features = ["util"] }
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
