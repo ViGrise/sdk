@@ -90,11 +90,16 @@ jobs:
       - name: Stage the package when npm lacks this version
         env:
           VERSION: ${{ needs.version.outputs.version }}
+        shell: bash
         run: |
+          set -o pipefail
           if npm view "@vigrise/sdk@$VERSION" version >/dev/null 2>&1; then
             echo "@vigrise/sdk $VERSION is already on npm"
-          else
-            npm stage publish
+          elif ! npm stage publish 2>&1 | tee stage.log; then
+            # The registry answers 409 for a version it already holds before
+            # `npm view` shows it.
+            grep -q 'previously published version' stage.log
+            echo "@vigrise/sdk $VERSION is already on npm"
           fi
 
   pypi:
