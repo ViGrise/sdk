@@ -6,13 +6,13 @@ Run the checks of the language you changed. CI runs all of them
 (`.github/workflows/ci.yml`).
 
 ```bash
-# Rust (rust/vigrise, rust/vigrise-cli)
+# Rust (rust/vigrise, rust/vigrise-sso, rust/vigrise-cli)
 cargo fmt --check
 cargo clippy --all-targets --all-features -- -D warnings
 cargo test
 
-# TypeScript (typescript)
-npm ci && npm run format:check && npm run typecheck && npm test && npm run build && npm run check:package
+# TypeScript (typescript, an npm workspaces root with sdk and sso)
+npm ci && npm run format:check && npm run build && npm run typecheck && npm test && npm run check:package
 
 # Python (python)
 pip install -e ".[test]" && ruff format --check . && python -m pytest -q
@@ -29,7 +29,7 @@ Each language keeps core signing in `auth`, code the services share in `common`,
 and one directory per service.
 
 ```
-rust/vigrise/src/            typescript/src/              python/vigrise/
+rust/vigrise/src/            typescript/sdk/src/          python/vigrise/
 ├── auth/                    ├── auth/                    ├── auth/
 ├── common/                  ├── common/                  ├── _common/
 └── services/                └── services/                ├── speech/
@@ -45,7 +45,7 @@ rust/vigrise/src/            typescript/src/              python/vigrise/
   named domain submodules such as `speech/webhook` or `accounts/jwks`.
 - Public paths do not follow the directories: Rust re-exports
   `services::<service>` as `vigrise::<service>`, and TypeScript maps
-  `@vigrise/sdk/<service>` in `package.json` `exports`. Python's directory is the
+  `@vigrise/sdk/<service>` in `sdk/package.json` `exports`. Python's directory is the
   import path.
 
 ## Adding a service
@@ -55,8 +55,8 @@ language, the same operations under the names of each language's convention.
 
 - [ ] **Module in every language**, laid out as above: `services/<service>` in
       Rust behind the Cargo feature `<service>` and re-exported from `lib.rs`,
-      `src/services/<service>` in `typescript` with the subpath `./<service>` in
-      `package.json` `exports` (ESM and CommonJS builds, and `check:package`),
+      `sdk/src/services/<service>` in `typescript` with the subpath `./<service>` in
+      `sdk/package.json` `exports` (ESM and CommonJS builds, and `check:package`),
       and `vigrise/<service>` in `python` with a `<service>` extra and sync and
       async clients.
 - [ ] **Endpoint resolver.** Create the client with
@@ -93,14 +93,15 @@ language, the same operations under the names of each language's convention.
 Every package shares one version. To release `X.Y.Z`:
 
 1. Set `X.Y.Z` in `rust/Cargo.toml` (`[workspace.package]`), in the `vigrise`
-   dependency of `rust/vigrise-cli/Cargo.toml`, in `typescript/package.json`
-   and in `python/pyproject.toml`.
+   dependency of `rust/vigrise-cli/Cargo.toml`, in `typescript/sdk/package.json`, in `typescript/sso/package.json`
+   (also its `@vigrise/sdk` dependency, `^X.Y.Z`), in the `vigrise` dependency of
+   `rust/vigrise-sso/Cargo.toml` and in `python/pyproject.toml`.
 2. Commit on `main` and push a `vX.Y.Z` tag.
 
 `.github/workflows/release.yml` runs CI, checks that the tagged commit is on
 `main` and that every package carries the tag's version, then publishes to
 crates.io, npm and PyPI through trusted publishing once a reviewer approves the
-`release` environment. npm receives a staged package: a maintainer makes it
+`release` environment. npm receives staged packages: a maintainer makes them
 public with 2FA through Approve on npmjs.com or `npm stage approve`. A GitHub
 release with the registry links and the generated changelog follows. A registry that already holds the version is skipped, so
 a failed release is retried by re-running the workflow.
@@ -109,5 +110,6 @@ Only repository admins create, move or delete `v*` tags (the "Release tags"
 ruleset), and the `release` environment accepts only `v*` tags. Trusted
 publishing is configured once per registry for the repository `ViGrise/sdk`,
 the workflow `release.yml` and the environment `release`: on crates.io for
-`vigrise` and `vigrise-cli`, on npm for `@vigrise/sdk`, and on PyPI for
+`vigrise`, `vigrise-sso` and `vigrise-cli`, on npm for `@vigrise/sdk` and
+`@vigrise/sso`, and on PyPI for
 `vigrise`.

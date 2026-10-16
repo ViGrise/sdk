@@ -15,10 +15,7 @@ npm install @vigrise/sdk
 | `@vigrise/sdk/auth/browser`    | Web Crypto `signRequest` and `signedFetch`                                          | ESM, CommonJS |
 | `@vigrise/sdk/speech`          | `SpeechClient`, `verifyWebhook` (Web Crypto, Node and browsers)                     | ESM, CommonJS |
 | `@vigrise/sdk/storage`         | `StorageClient` (Node; browsers use presigned URLs)                                 | ESM, CommonJS |
-| `@vigrise/sdk/accounts/server` | SSO introspection, back-channel logout, OAuth2/OIDC, JWKS                           | ESM, CommonJS |
-| `@vigrise/sdk/accounts`        | URL builders, SSO state, tab sync                                                   | ESM           |
-| `@vigrise/sdk/accounts/astro`  | Astro SSO middleware and endpoints                                                  | ESM           |
-| `@vigrise/sdk/accounts/react`  | `AccountMenu` (`react` is an optional peer dependency)                              | ESM           |
+| `@vigrise/sdk/accounts/server` | Back-channel logout, OAuth2/OIDC, JWKS                                              | ESM, CommonJS |
 
 ## Guides
 
@@ -28,7 +25,7 @@ examples live in [`typescript/examples/`](https://github.com/ViGrise/sdk/tree/ma
 ## Development
 
 ```bash
-npm ci && npm run typecheck && npm test && npm run build && npm run check:package
+npm ci && npm run build && npm run typecheck && npm test && npm run check:package
 ```
 
 ## License

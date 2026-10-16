@@ -9,8 +9,10 @@ for each ViGrise service.
 | Path | Contents |
 | --- | --- |
 | `rust/vigrise` | The `vigrise` crate |
+| `rust/vigrise-sso` | The `vigrise-sso` crate: first-party SSO for ViGrise apps on `*.vigrise.com` |
 | `rust/vigrise-cli` | The `vigrise` command line: `login`, `logout`, `whoami` |
-| `typescript` | The `@vigrise/sdk` package |
+| `typescript/sdk` | The `@vigrise/sdk` package |
+| `typescript/sso` | The `@vigrise/sso` package: first-party SSO for ViGrise apps on `*.vigrise.com` |
 | `python` | The `vigrise` package |
 | `test-vectors` | Reference implementation and the VGR4 and webhook vectors every language passes |
 | `docs` | One guide per service |
@@ -20,7 +22,7 @@ for each ViGrise service.
 | Language | Install | Requires | Guide |
 | --- | --- | --- | --- |
 | Rust | `cargo add vigrise --features speech,storage` | Rust 1.85, edition 2024 | [rust/vigrise](rust/vigrise/README.md) |
-| TypeScript | `npm install @vigrise/sdk` | Node 24 | [typescript](typescript/README.md) |
+| TypeScript | `npm install @vigrise/sdk` | Node 24 | [typescript/sdk](typescript/sdk/README.md) |
 | Python | `pip install "vigrise[speech,storage]"` | Python 3.9 | [python](python/README.md) |
 | Command line | `cargo install vigrise-cli` | | [rust/vigrise-cli](rust/vigrise-cli/README.md) |
 
@@ -31,7 +33,7 @@ for each ViGrise service.
 | Auth | VGR4 signing, credentials, role sessions, sign-in from the command line | [docs/auth](docs/auth/README.md) |
 | Speech | Text to speech, voice cloning, jobs and webhooks | [docs/speech](docs/speech/README.md) |
 | Storage | Buckets, objects, multipart uploads, presigned URLs | [docs/storage](docs/storage/README.md) |
-| Accounts | SSO introspection, back-channel logout, OAuth2 and OIDC | [docs/accounts](docs/accounts/README.md) |
+| Accounts | OAuth2 and OIDC sign-in, back-channel logout | [docs/accounts](docs/accounts/README.md) |
 
 ## Credentials
 

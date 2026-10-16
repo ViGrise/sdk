@@ -12,7 +12,7 @@ pip install "vigrise[speech,storage]"
 | `requests` | `requests` | `vigrise.auth.requests_auth.ViGriseAuth` |
 | `httpx` | `httpx` | `vigrise.auth.httpx_auth.ViGriseHttpxAuth` |
 | `speech`, `storage` | `httpx` | `vigrise.speech`, `vigrise.storage` |
-| `accounts` | `httpx`, `PyJWT[crypto]` | `vigrise.accounts` |
+| `accounts` | `httpx`, `PyJWT[crypto]` | `vigrise.accounts`: OAuth2/OIDC and back-channel logout |
 | `all` | every extra | |
 
 Each client has a sync class and an async class (`SpeechClient` and

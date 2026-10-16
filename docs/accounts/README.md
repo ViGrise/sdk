@@ -1,56 +1,20 @@
 # Accounts
 
-ViGrise Accounts is the sign-in service. The SDK covers two jobs.
+ViGrise Accounts is the sign-in service. The SDK covers two jobs for any
+application.
 
-- **First-party apps on `*.vigrise.com`** read the shared `vigrise_sso` cookie
-  on the server, introspect it, and issue their own sessions. Accounts calls an
-  app's back-channel logout endpoint when a session ends.
-- **Apps on other domains** use the OAuth2 and OpenID Connect authorization
-  code flow with PKCE.
+- **Sign in with OAuth2 and OpenID Connect**: the authorization code flow with
+  PKCE, ID token verification and RP-initiated logout.
+- **Back-channel logout**: Accounts calls an app's logout endpoint when a
+  session ends.
 
 | | Rust | TypeScript | Python |
 | --- | --- | --- | --- |
 | Server side | `vigrise::accounts`, feature `accounts` | `@vigrise/sdk/accounts/server` | `vigrise.accounts` (extra `accounts`) |
-| `axum` extractor | feature `accounts-axum` | | |
 | Test signer | feature `accounts-testing` (`accounts::testing::TestSigner`) | | |
-| Browser | | `@vigrise/sdk/accounts`, `/astro`, `/react` | |
 
-## Introspect the SSO cookie
-
-`SsoIntrospector` posts the cookie value to the internal Accounts URL with the
-app's client credentials and caches answers by token hash for 30 seconds.
-
-```rust
-use vigrise::accounts::{SsoIntrospector, SsoIntrospectorConfig};
-
-let introspector = SsoIntrospector::new(SsoIntrospectorConfig::new(
-    "http://accounts-backend:8080/o/auth", "vigrise-drive", "client-secret"));
-let answer = introspector.introspect("value of the vigrise_sso cookie").await?;
-if answer.active {
-    println!("signed in as {:?}", answer.identity.unwrap().email);
-}
-```
-
-```ts
-import { SsoIntrospector } from "@vigrise/sdk/accounts/server";
-
-const introspector = new SsoIntrospector({ internalUrl, clientId: "vigrise-drive", clientSecret });
-const { identity, session, accounts } = await introspector.introspectActive(cookieValue);
-```
-
-```python
-from vigrise.accounts import SsoIntrospector
-
-introspector = SsoIntrospector(internal_url, "vigrise-drive", client_secret)
-answer = introspector.introspect_active(cookie_value)  # AsyncSsoIntrospector for async
-```
-
-An unknown, revoked or ended token answers `active: false`
-(`introspectActive` raises `InactiveSessionError` instead). Errors split into
-unavailable (Accounts unreachable, rate limiting or failing: retry later,
-counted by `unavailable_count`) and misconfigured (rejected client credentials
-or an unexpected answer). `invalidate_session(sid)` and `invalidate_token(hash)`
-drop cached answers; the cache lives in the process.
+ViGrise's own apps on `*.vigrise.com` have extra helpers for the shared sign-in
+cookie in the `vigrise-sso` crate and the `@vigrise/sso` package.
 
 ## Back-channel logout
 
@@ -60,17 +24,17 @@ window and `jti` replay. A repeated `jti` of a valid token is `replayed`: answer
 200 and do nothing.
 
 ```rust
-let logout = BackchannelLogout::new(issuer, "vigrise-drive", Jwks::remote(jwks_url));
+let logout = BackchannelLogout::new(issuer, "my-client", Jwks::remote(jwks_url));
 let outcome = logout.verify(&logout_token).await?; // Verified or Replayed
 ```
 
 ```ts
-const logout = new BackchannelLogout({ issuer, clientId: "vigrise-drive", jwks: Jwks.remote(jwksUrl) });
+const logout = new BackchannelLogout({ issuer, clientId: "my-client", jwks: Jwks.remote(jwksUrl) });
 const { outcome, sid } = await logout.verify(logoutToken); // "fresh" or "replayed"
 ```
 
 ```python
-logout = BackchannelLogout(issuer, "vigrise-drive", Jwks.remote(jwks_url))
+logout = BackchannelLogout(issuer, "my-client", Jwks.remote(jwks_url))
 result = logout.verify(logout_token)  # result.outcome; averify() for async
 ```
 
@@ -110,9 +74,3 @@ claims = IdTokenVerifier(issuer, client_id, jwks).verify(tokens.id_token, nonce=
 
 Leave out the client secret for a public client (CLI, desktop app). ID tokens
 tolerate 60 seconds of clock skew.
-
-## Browser and Astro
-
-`@vigrise/sdk/accounts` has the account-menu URL builders, the SSO state
-helpers and tab sync. `/astro` has the SSO middleware and endpoints, and
-`/react` has `AccountMenu`. These ship as ESM only.
