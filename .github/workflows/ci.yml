@@ -38,6 +38,21 @@ jobs:
       - run: cargo clippy --all-targets --all-features -- -D warnings
       - run: cargo test
 
+  sso:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: rust/vigrise-sso
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - run: cargo fmt --check
+      - run: cargo clippy --no-default-features -- -D warnings
+      - run: cargo clippy --all-targets --all-features -- -D warnings
+      - run: cargo test
+
   cli:
     runs-on: ubuntu-latest
     defaults:
@@ -64,9 +79,9 @@ jobs:
           node-version: "24"
       - run: npm ci
       - run: npm run format:check
+      - run: npm run build
       - run: npm run typecheck
       - run: npm test
-      - run: npm run build
       - run: npm run check:package
 
   python:

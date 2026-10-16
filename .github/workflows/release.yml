@@ -31,12 +31,18 @@ jobs:
           version="${GITHUB_REF_NAME#v}"
           rust=$(sed -n 's/^version = "\(.*\)"/\1/p' rust/Cargo.toml | head -1)
           cli_dep=$(sed -n 's/^vigrise = .*version = "\([^"]*\)".*/\1/p' rust/vigrise-cli/Cargo.toml)
-          typescript=$(node -p 'require("./typescript/package.json").version')
+          sso_dep=$(sed -n 's/^vigrise = .*version = "\([^"]*\)".*/\1/p' rust/vigrise-sso/Cargo.toml)
+          typescript=$(node -p 'require("./typescript/sdk/package.json").version')
+          typescript_sso=$(node -p 'require("./typescript/sso/package.json").version')
+          typescript_sso_dep=$(node -p 'require("./typescript/sso/package.json").dependencies["@vigrise/sdk"]')
           python=$(sed -n 's/^version = "\(.*\)"/\1/p' python/pyproject.toml | head -1)
-          echo "tag $version, rust $rust, vigrise-cli dependency $cli_dep, typescript $typescript, python $python"
+          echo "tag $version, rust $rust, vigrise-cli dependency $cli_dep, vigrise-sso dependency $sso_dep, @vigrise/sdk $typescript, @vigrise/sso $typescript_sso (sdk range $typescript_sso_dep), python $python"
           test "$rust" = "$version"
           test "$cli_dep" = "$version"
+          test "$sso_dep" = "$version"
           test "$typescript" = "$version"
+          test "$typescript_sso" = "$version"
+          test "$typescript_sso_dep" = "^$version"
           test "$python" = "$version"
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
@@ -59,7 +65,7 @@ jobs:
           CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
           VERSION: ${{ needs.version.outputs.version }}
         run: |
-          for crate in vigrise vigrise-cli; do
+          for crate in vigrise vigrise-sso vigrise-cli; do
             status=$(curl -s -o /dev/null -w '%{http_code}' -A 'ViGrise release (github.com/ViGrise/sdk)' \
               "https://crates.io/api/v1/crates/$crate/$VERSION")
             if [ "$status" = 200 ]; then
@@ -87,20 +93,24 @@ jobs:
       - name: npm with staged publishing support
         run: npm install -g "npm@>=11.15.0"
       - run: npm ci
-      - name: Stage the package when npm lacks this version
+      - run: npm run build
+      - name: Stage the packages when npm lacks this version
         env:
           VERSION: ${{ needs.version.outputs.version }}
         shell: bash
         run: |
           set -o pipefail
-          if npm view "@vigrise/sdk@$VERSION" version >/dev/null 2>&1; then
-            echo "@vigrise/sdk $VERSION is already on npm"
-          elif ! npm stage publish 2>&1 | tee stage.log; then
-            # The registry answers 409 for a version it already holds before
-            # `npm view` shows it.
-            grep -q 'previously published version' stage.log
-            echo "@vigrise/sdk $VERSION is already on npm"
-          fi
+          for package in sdk sso; do
+            name=$(node -p "require('./$package/package.json').name")
+            if npm view "$name@$VERSION" version >/dev/null 2>&1; then
+              echo "$name $VERSION is already on npm"
+            elif ! (cd "$package" && npm stage publish 2>&1 | tee "../stage-$package.log"); then
+              # The registry answers 409 for a version it already holds before
+              # `npm view` shows it.
+              grep -q 'previously published version' "stage-$package.log"
+              echo "$name $VERSION is already on npm"
+            fi
+          done
 
   pypi:
     needs: [ci, version]
@@ -133,8 +143,8 @@ jobs:
           gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --verify-tag \
             --title "$GITHUB_REF_NAME" --generate-notes --notes "$(cat <<NOTES
           Packages:
-          - crates.io: [vigrise $VERSION](https://crates.io/crates/vigrise/$VERSION), [vigrise-cli $VERSION](https://crates.io/crates/vigrise-cli/$VERSION)
-          - npm: [@vigrise/sdk $VERSION](https://www.npmjs.com/package/@vigrise/sdk/v/$VERSION) (public once a maintainer approves the staged package)
+          - crates.io: [vigrise $VERSION](https://crates.io/crates/vigrise/$VERSION), [vigrise-sso $VERSION](https://crates.io/crates/vigrise-sso/$VERSION), [vigrise-cli $VERSION](https://crates.io/crates/vigrise-cli/$VERSION)
+          - npm: [@vigrise/sdk $VERSION](https://www.npmjs.com/package/@vigrise/sdk/v/$VERSION), [@vigrise/sso $VERSION](https://www.npmjs.com/package/@vigrise/sso/v/$VERSION) (public once a maintainer approves the staged packages)
           - PyPI: [vigrise $VERSION](https://pypi.org/project/vigrise/$VERSION/)
           NOTES
           )"
