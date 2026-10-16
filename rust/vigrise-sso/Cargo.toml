@@ -1,0 +1,40 @@
+[package]
+name = "vigrise-sso"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "First-party ViGrise SSO for Rust: introspect the vigrise_sso cookie of ViGrise apps on *.vigrise.com"
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+documentation = "https://docs.rs/vigrise-sso"
+readme = "README.md"
+keywords = ["vigrise", "sso", "session", "introspection"]
+categories = ["authentication"]
+include = ["src/**", "README.md", "LICENSE"]
+
+[features]
+default = []
+axum = ["dep:axum"]
+
+[dependencies]
+vigrise = { path = "../vigrise", version = "0.2.0", features = ["accounts"] }
+chrono = { version = "0.4", default-features = false, features = ["clock", "std", "serde"] }
+hex = "0.4"
+reqwest = { version = "0.13", default-features = false, features = ["json", "rustls"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.10"
+tracing = "0.1"
+axum = { version = "0.8", optional = true, default-features = false, features = ["json"] }
+
+[dev-dependencies]
+vigrise-sso = { path = ".", features = ["axum"] }
+axum = { version = "0.8", features = ["tokio", "http1", "json", "query", "form"] }
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "net"] }
+tower = { version = "0.5", features = ["util"] }
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]

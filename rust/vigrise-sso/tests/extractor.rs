@@ -1,4 +1,4 @@
-#![cfg(feature = "accounts-axum")]
+#![cfg(feature = "axum")]
 mod common;
 
 use std::sync::Arc;
@@ -12,7 +12,7 @@ use axum::{
 };
 use serde_json::json;
 use tower::ServiceExt;
-use vigrise::accounts::{AccountsIdentity, SsoIntrospector, SsoIntrospectorConfig};
+use vigrise_sso::{AccountsIdentity, SsoIntrospector, SsoIntrospectorConfig};
 
 #[derive(Clone)]
 struct AppState {

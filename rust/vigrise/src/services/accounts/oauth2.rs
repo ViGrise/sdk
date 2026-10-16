@@ -157,7 +157,7 @@ impl OAuth2Client {
     redirect_uri: impl Into<String>,
   ) -> Self {
     Self {
-      http: crate::accounts::introspect::default_http_client(),
+      http: crate::accounts::http::default_http_client(),
       token_endpoint: token_endpoint.into(),
       client_id: client_id.into(),
       client_secret: Some(client_secret.into()),
@@ -173,7 +173,7 @@ impl OAuth2Client {
     redirect_uri: impl Into<String>,
   ) -> Self {
     Self {
-      http: crate::accounts::introspect::default_http_client(),
+      http: crate::accounts::http::default_http_client(),
       token_endpoint: token_endpoint.into(),
       client_id: client_id.into(),
       client_secret: None,

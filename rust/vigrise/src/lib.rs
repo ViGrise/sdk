@@ -11,7 +11,7 @@ pub mod auth;
 mod common;
 mod services;
 
-/// ViGrise Accounts: SSO introspection, back-channel logout and OAuth2/OIDC.
+/// ViGrise Accounts: OAuth2/OIDC helpers and back-channel logout.
 #[cfg(feature = "accounts")]
 #[cfg_attr(docsrs, doc(cfg(feature = "accounts")))]
 pub use services::accounts;

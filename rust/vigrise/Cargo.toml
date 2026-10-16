@@ -23,7 +23,6 @@ sigv4 = ["verify", "dep:base64", "dep:crc-fast", "dep:sha1"]
 metering = ["verify", "tokio/sync", "tokio/rt", "tokio/macros", "uuid/v4", "chrono/serde"]
 openapi = ["dep:utoipa"]
 accounts = ["reqwest", "chrono/serde", "dep:base64", "dep:jsonwebtoken", "dep:rand", "dep:tracing", "dep:url"]
-accounts-axum = ["accounts", "dep:axum"]
 accounts-testing = ["accounts", "dep:rsa", "dep:rand_core"]
 storage = ["reqwest", "dep:bytes", "dep:futures-util"]
 speech = ["reqwest", "dep:base64", "dep:bytes", "dep:futures-util", "dep:subtle", "dep:tokio", "chrono/serde"]
@@ -60,7 +59,7 @@ utoipa = { version = "5.4", optional = true, features = ["chrono", "uuid"] }
 uuid = { version = "1", optional = true, features = ["serde"] }
 
 [dev-dependencies]
-vigrise = { path = ".", features = ["sigv4", "metering", "openapi", "accounts-axum", "accounts-testing", "storage", "speech"] }
+vigrise = { path = ".", features = ["sigv4", "metering", "openapi", "accounts-testing", "storage", "speech"] }
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "net"] }
 axum = { version = "0.8", features = ["tokio", "http1", "json", "query", "form"] }
 tower = { version = "0.5", features = ["util"] }

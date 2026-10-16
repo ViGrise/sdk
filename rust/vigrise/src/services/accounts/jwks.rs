@@ -34,7 +34,7 @@ impl Jwks {
   /// Fetches the key set from `url`, caches it for ten minutes and
   /// refetches when a token names an unknown key id.
   pub fn remote(url: impl Into<String>) -> Self {
-    Self::remote_with_client(url, crate::accounts::introspect::default_http_client())
+    Self::remote_with_client(url, crate::accounts::http::default_http_client())
   }
 
   /// Like [`Jwks::remote`], sending the fetch through `http`.

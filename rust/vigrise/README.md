@@ -20,8 +20,7 @@ No feature is on by default. `vigrise::auth` is always available.
 | `sigv4` | AWS Signature Version 4 verification with aws-chunked bodies and additional checksums (implies `verify`) |
 | `metering` | `auth::metering`: background reporting of usage records (implies `verify`) |
 | `openapi` | `utoipa` schemas for the wire types |
-| `accounts` | `vigrise::accounts`: SSO introspection, back-channel logout, OAuth2/OIDC |
-| `accounts-axum` | `AccountsIdentity` extractor for `axum` |
+| `accounts` | `vigrise::accounts`: OAuth2/OIDC helpers and back-channel logout |
 | `accounts-testing` | `accounts::testing::TestSigner` for app tests |
 | `storage` | `vigrise::storage`: the Storage client |
 | `speech` | `vigrise::speech`: the Speech client and webhook verification |

@@ -7,9 +7,9 @@ use axum::{
   response::{IntoResponse, Response},
 };
 
-use crate::accounts::{
-  AccountsError, SsoAccount, SsoIdentity, SsoIntrospector, SsoSession, sso_token_hash,
-};
+use vigrise::accounts::AccountsError;
+
+use crate::{SsoAccount, SsoIdentity, SsoIntrospector, SsoSession, sso_token_hash};
 
 /// Header an app's frontend server uses to pass the `vigrise_sso` value to its
 /// backend.

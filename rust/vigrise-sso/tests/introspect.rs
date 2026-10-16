@@ -8,7 +8,8 @@ use std::time::Duration;
 
 use axum::{Json, Router, extract::State, http::HeaderMap, http::StatusCode, routing::post};
 use serde_json::{Value, json};
-use vigrise::accounts::{AccountsError, SsoIntrospector, SsoIntrospectorConfig, sso_token_hash};
+use vigrise::accounts::AccountsError;
+use vigrise_sso::{SsoIntrospector, SsoIntrospectorConfig, sso_token_hash};
 
 #[derive(Clone)]
 struct Fake {
@@ -179,7 +180,7 @@ fn the_token_hash_is_lowercase_sha256_hex() {
 
 #[test]
 fn an_identity_without_an_email_deserializes() {
-  let answer: vigrise::accounts::Introspection = serde_json::from_value(json!({
+  let answer: vigrise_sso::Introspection = serde_json::from_value(json!({
         "active": true,
         "identity": {"id": "i1", "email": null, "name": null, "picture": null, "email_verified": false},
         "session": {"id": "s1", "authenticated_at": "2026-10-11T10:00:00Z", "aal": "aal1",
