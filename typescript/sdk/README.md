@@ -20,7 +20,7 @@ npm install @vigrise/sdk
 ## Guides
 
 Each service has a guide with examples in [`docs/`](https://github.com/ViGrise/sdk/tree/main/docs), and runnable
-examples live in [`typescript/examples/`](https://github.com/ViGrise/sdk/tree/main/typescript/examples).
+examples live in [`typescript/sdk/examples/`](https://github.com/ViGrise/sdk/tree/main/typescript/sdk/examples).
 
 ## Development
 

@@ -7,7 +7,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
-use vigrise::accounts::AccountsError;
+use crate::SsoError;
 
 const MAX_CACHE_ENTRIES: usize = 10_000;
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(2);
@@ -173,7 +173,7 @@ impl SsoIntrospector {
   }
 
   /// Introspects a `vigrise_sso` value. Failures are never cached.
-  pub async fn introspect(&self, token: &str) -> Result<Introspection, AccountsError> {
+  pub async fn introspect(&self, token: &str) -> Result<Introspection, SsoError> {
     let key = sso_token_hash(token);
     if let Some(answer) = self.cached(&key) {
       return Ok(answer);
@@ -192,25 +192,25 @@ impl SsoIntrospector {
       .map_err(|e| {
         self.unavailable.fetch_add(1, Ordering::Relaxed);
         tracing::warn!(error = %e, "ViGrise Accounts introspection unreachable");
-        AccountsError::Unavailable(e.to_string())
+        SsoError::Unavailable(e.to_string())
       })?;
     let status = response.status();
     match status.as_u16() {
       200 => {}
-      401 => return Err(AccountsError::InvalidClient),
-      403 => return Err(AccountsError::Forbidden),
-      429 => return Err(AccountsError::RateLimited),
+      401 => return Err(SsoError::InvalidClient),
+      403 => return Err(SsoError::Forbidden),
+      429 => return Err(SsoError::RateLimited),
       s if s >= 500 => {
         self.unavailable.fetch_add(1, Ordering::Relaxed);
         tracing::warn!(status = s, "ViGrise Accounts introspection failed");
-        return Err(AccountsError::Unavailable(format!("status {s}")));
+        return Err(SsoError::Unavailable(format!("status {s}")));
       }
-      s => return Err(AccountsError::Protocol(format!("status {s}"))),
+      s => return Err(SsoError::Protocol(format!("status {s}"))),
     }
     let answer: Introspection = response
       .json()
       .await
-      .map_err(|e| AccountsError::Protocol(e.to_string()))?;
+      .map_err(|e| SsoError::Protocol(e.to_string()))?;
     self.store(key, answer.clone());
     Ok(answer)
   }

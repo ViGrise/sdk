@@ -3,7 +3,7 @@
 First-party SSO for TypeScript apps on `*.vigrise.com`. This package is for
 ViGrise's own apps. The app's Accounts client needs `first_party` and
 `sso_introspection`, which only operators set. Apps on other domains use the
-OAuth2 helpers of [`@vigrise/sdk/accounts/server`](../sdk/README.md) instead.
+OAuth2 helpers of [`@vigrise/sdk/accounts/server`](https://github.com/ViGrise/sdk/tree/main/typescript/sdk) instead.
 Requires Node 24.
 
 ```sh

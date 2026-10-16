@@ -1,3 +1,4 @@
+export { AccountsMisconfiguredError, AccountsUnavailableError, InactiveSessionError } from "./errors.js";
 export { SSO_HEADER, ssoTokenHash } from "./hash.js";
 export {
   SsoIntrospector,

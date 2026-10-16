@@ -3,7 +3,7 @@
 First-party SSO for Rust apps on `*.vigrise.com`. This crate is for ViGrise's own
 apps. The app's Accounts client needs `first_party` and `sso_introspection`,
 which only operators set. Apps on other domains use `vigrise::accounts::oauth2`
-from the [`vigrise`](../vigrise/README.md) crate instead.
+from the [`vigrise`](https://github.com/ViGrise/sdk/tree/main/rust/vigrise) crate instead.
 
 ```sh
 cargo add vigrise-sso

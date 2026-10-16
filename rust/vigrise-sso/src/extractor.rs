@@ -7,9 +7,7 @@ use axum::{
   response::{IntoResponse, Response},
 };
 
-use vigrise::accounts::AccountsError;
-
-use crate::{SsoAccount, SsoIdentity, SsoIntrospector, SsoSession, sso_token_hash};
+use crate::{SsoAccount, SsoError, SsoIdentity, SsoIntrospector, SsoSession, sso_token_hash};
 
 /// Header an app's frontend server uses to pass the `vigrise_sso` value to its
 /// backend.
@@ -67,8 +65,8 @@ where
       .filter(|v| !v.is_empty())
       .ok_or(AccountsRejection::Inactive)?;
     let answer = introspector.introspect(token).await.map_err(|e| match e {
-      AccountsError::Unavailable(_) | AccountsError::RateLimited => AccountsRejection::Unavailable,
-      AccountsError::InvalidClient | AccountsError::Forbidden => {
+      SsoError::Unavailable(_) | SsoError::RateLimited => AccountsRejection::Unavailable,
+      SsoError::InvalidClient | SsoError::Forbidden => {
         tracing::error!(error = %e, "SSO introspection client is misconfigured");
         AccountsRejection::Misconfigured
       }

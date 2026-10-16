@@ -4,9 +4,11 @@ import {
   AccountsMisconfiguredError,
   AccountsUnavailableError,
   InactiveSessionError,
-} from "@vigrise/sdk/accounts/server";
-
-import { SSO_HEADER, SsoIntrospector, ssoTokenHash, toMenuAccount } from "../../src/server/index.js";
+  SSO_HEADER,
+  SsoIntrospector,
+  ssoTokenHash,
+  toMenuAccount,
+} from "../../src/server/index.js";
 import { fakeServer, jsonReply, type FakeServer, type FakeReply, type SeenRequest } from "../helpers/fake-server.js";
 
 const active = {

@@ -113,7 +113,7 @@ pass `idempotency_key` (`idempotencyKey`) to repeat a call safely.
 
 ## Examples
 
-`rust/vigrise/examples/speech.rs`, `typescript/examples/speech.mjs` and
+`rust/vigrise/examples/speech.rs`, `typescript/sdk/examples/speech.mjs` and
 `python/examples/speech.py` list voices or synthesize; the `speech_tour`
 examples of each language run a synthesis, a job with a webhook and the audio
 download.

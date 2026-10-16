@@ -6,6 +6,7 @@
     "outDir": "dist/cjs",
     "declaration": false,
     "rootDir": "src",
+    // Node10 resolution ignores package `exports`, so the subpath maps to its declarations.
     "paths": { "@vigrise/sdk/accounts/server": ["../sdk/dist/services/accounts/server/index.d.ts"] }
   },
   "include": ["src/server"]

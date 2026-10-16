@@ -18,10 +18,12 @@
 //! # }
 //! ```
 
+mod error;
 #[cfg(feature = "axum")]
 mod extractor;
 mod introspect;
 
+pub use error::SsoError;
 #[cfg(feature = "axum")]
 #[cfg_attr(docsrs, doc(cfg(feature = "axum")))]
 pub use extractor::{AccountsIdentity, AccountsRejection, SSO_HEADER};
@@ -29,3 +31,4 @@ pub use introspect::{
   Introspection, SsoAccount, SsoIdentity, SsoIntrospector, SsoIntrospectorConfig, SsoSession,
   sso_token_hash,
 };
+pub use vigrise::accounts::AccountsError;

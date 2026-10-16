@@ -1,11 +1,7 @@
 import { ssoTokenHash } from "../hash.js";
 import type { SsoAccount as MenuAccount } from "../types.js";
-import {
-  AccountsMisconfiguredError,
-  AccountsUnavailableError,
-  InactiveSessionError,
-} from "@vigrise/sdk/accounts/server";
 import { camelize } from "./case.js";
+import { AccountsMisconfiguredError, AccountsUnavailableError, InactiveSessionError } from "./errors.js";
 
 const MAX_CACHE_ENTRIES = 10_000;
 const REQUEST_TIMEOUT_MS = 5000;

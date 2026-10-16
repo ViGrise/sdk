@@ -106,6 +106,18 @@ public with 2FA through Approve on npmjs.com or `npm stage approve`. A GitHub
 release with the registry links and the generated changelog follows. A registry that already holds the version is skipped, so
 a failed release is retried by re-running the workflow.
 
+### First publish of a new package
+
+A trusted publisher can only be added to a package that exists, so the first
+version of `vigrise-sso` and `@vigrise/sso` is published by hand with a
+short-lived token (`cargo publish -p vigrise-sso`; `npm publish --access public`
+in `typescript/sso`, after `@vigrise/sdk` 0.2.0 is public). Then add the trusted
+publisher for the repository `ViGrise/sdk`, the workflow `release.yml` and the
+environment `release` on crates.io and npm, and revoke the token.
+
+Approve the staged `@vigrise/sdk` before `@vigrise/sso`: the second package
+depends on the first being public.
+
 Only repository admins create, move or delete `v*` tags (the "Release tags"
 ruleset), and the `release` environment accepts only `v*` tags. Trusted
 publishing is configured once per registry for the repository `ViGrise/sdk`,

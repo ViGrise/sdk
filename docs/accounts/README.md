@@ -13,9 +13,6 @@ application.
 | Server side | `vigrise::accounts`, feature `accounts` | `@vigrise/sdk/accounts/server` | `vigrise.accounts` (extra `accounts`) |
 | Test signer | feature `accounts-testing` (`accounts::testing::TestSigner`) | | |
 
-ViGrise's own apps on `*.vigrise.com` have extra helpers for the shared sign-in
-cookie in the `vigrise-sso` crate and the `@vigrise/sso` package.
-
 ## Back-channel logout
 
 `BackchannelLogout` verifies the `logout_token` Accounts posts when a session

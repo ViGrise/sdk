@@ -1,13 +1,5 @@
 export { BackchannelLogout, type BackchannelLogoutOptions, type LogoutResult } from "./backchannel.js";
-export {
-  AccountsError,
-  AccountsMisconfiguredError,
-  AccountsUnavailableError,
-  InactiveSessionError,
-  InvalidTokenError,
-  JwksError,
-  TokenExchangeError,
-} from "./errors.js";
+export { AccountsError, InvalidTokenError, JwksError, TokenExchangeError } from "./errors.js";
 export { Jwks, type RemoteJwksOptions } from "./jwks.js";
 export {
   AuthorizationRequest,

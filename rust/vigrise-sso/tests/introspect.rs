@@ -8,8 +8,7 @@ use std::time::Duration;
 
 use axum::{Json, Router, extract::State, http::HeaderMap, http::StatusCode, routing::post};
 use serde_json::{Value, json};
-use vigrise::accounts::AccountsError;
-use vigrise_sso::{SsoIntrospector, SsoIntrospectorConfig, sso_token_hash};
+use vigrise_sso::{SsoError, SsoIntrospector, SsoIntrospectorConfig, sso_token_hash};
 
 #[derive(Clone)]
 struct Fake {
@@ -122,24 +121,24 @@ async fn client_errors_map_to_typed_errors_and_are_not_cached() {
   let (forbidden, calls) = start(StatusCode::FORBIDDEN, true).await;
   assert!(matches!(
     forbidden.introspect("good-token").await,
-    Err(AccountsError::Forbidden)
+    Err(SsoError::Forbidden)
   ));
   assert!(matches!(
     forbidden.introspect("good-token").await,
-    Err(AccountsError::Forbidden)
+    Err(SsoError::Forbidden)
   ));
   assert_eq!(calls.load(Ordering::SeqCst), 2);
 
   let (limited, _) = start(StatusCode::TOO_MANY_REQUESTS, true).await;
   assert!(matches!(
     limited.introspect("good-token").await,
-    Err(AccountsError::RateLimited)
+    Err(SsoError::RateLimited)
   ));
 
   let (down, _) = start(StatusCode::BAD_GATEWAY, true).await;
   assert!(matches!(
     down.introspect("good-token").await,
-    Err(AccountsError::Unavailable(_))
+    Err(SsoError::Unavailable(_))
   ));
 }
 
@@ -153,7 +152,7 @@ async fn wrong_credentials_are_invalid_client() {
   ));
   assert!(matches!(
     wrong.introspect("good-token").await,
-    Err(AccountsError::InvalidClient)
+    Err(SsoError::InvalidClient)
   ));
 }
 
@@ -166,7 +165,7 @@ async fn an_unreachable_server_is_unavailable() {
   ));
   assert!(matches!(
     unreachable.introspect("t").await,
-    Err(AccountsError::Unavailable(_))
+    Err(SsoError::Unavailable(_))
   ));
 }
 
@@ -199,7 +198,7 @@ async fn unavailability_is_counted() {
   assert_eq!(introspector.unavailable_count(), 0);
   assert!(matches!(
     introspector.introspect("good-token").await,
-    Err(AccountsError::Unavailable(_))
+    Err(SsoError::Unavailable(_))
   ));
   assert_eq!(introspector.unavailable_count(), 1);
 }
@@ -221,7 +220,7 @@ async fn a_slow_accounts_times_out_as_unavailable() {
   );
   assert!(matches!(
     introspector.introspect("t").await,
-    Err(AccountsError::Unavailable(_))
+    Err(SsoError::Unavailable(_))
   ));
   assert_eq!(introspector.unavailable_count(), 1);
 }

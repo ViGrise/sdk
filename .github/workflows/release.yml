@@ -34,7 +34,7 @@ jobs:
           sso_dep=$(sed -n 's/^vigrise = .*version = "\([^"]*\)".*/\1/p' rust/vigrise-sso/Cargo.toml)
           typescript=$(node -p 'require("./typescript/sdk/package.json").version')
           typescript_sso=$(node -p 'require("./typescript/sso/package.json").version')
-          typescript_sso_dep=$(node -p 'require("./typescript/sso/package.json").dependencies["@vigrise/sdk"]')
+          typescript_sso_dep=$(node -p 'require("./typescript/sso/package.json").peerDependencies["@vigrise/sdk"]')
           python=$(sed -n 's/^version = "\(.*\)"/\1/p' python/pyproject.toml | head -1)
           echo "tag $version, rust $rust, vigrise-cli dependency $cli_dep, vigrise-sso dependency $sso_dep, @vigrise/sdk $typescript, @vigrise/sso $typescript_sso (sdk range $typescript_sso_dep), python $python"
           test "$rust" = "$version"
