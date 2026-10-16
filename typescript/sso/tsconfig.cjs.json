@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "CommonJS",
+    "moduleResolution": "Node10",
+    "outDir": "dist/cjs",
+    "declaration": false,
+    "rootDir": "src",
+    "paths": { "@vigrise/sdk/accounts/server": ["../sdk/dist/services/accounts/server/index.d.ts"] }
+  },
+  "include": ["src/server"]
+}

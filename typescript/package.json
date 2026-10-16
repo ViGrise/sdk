@@ -1,91 +1,25 @@
 {
-  "name": "@vigrise/sdk",
-  "version": "0.1.1",
-  "description": "Official ViGrise SDK for TypeScript and JavaScript: request signing, credentials and clients for ViGrise services",
-  "license": "Apache-2.0",
-  "homepage": "https://platform.vigrise.com",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/ViGrise/sdk.git",
-    "directory": "typescript"
-  },
-  "bugs": "https://github.com/ViGrise/sdk/issues",
-  "publishConfig": {
-    "access": "public"
-  },
+  "name": "vigrise-sdk-typescript",
+  "private": true,
   "type": "module",
   "engines": {
     "node": ">=24"
   },
-  "exports": {
-    "./auth": {
-      "types": "./dist/auth/index.d.ts",
-      "import": "./dist/auth/index.js",
-      "require": "./dist/cjs/auth/index.js"
-    },
-    "./auth/browser": {
-      "types": "./dist/auth/browser.d.ts",
-      "import": "./dist/auth/browser.js",
-      "require": "./dist/cjs/auth/browser.js"
-    },
-    "./accounts": {
-      "types": "./dist/services/accounts/index.d.ts",
-      "import": "./dist/services/accounts/index.js"
-    },
-    "./accounts/astro": {
-      "types": "./dist/services/accounts/astro.d.ts",
-      "import": "./dist/services/accounts/astro.js"
-    },
-    "./accounts/react": {
-      "types": "./dist/services/accounts/react.d.ts",
-      "import": "./dist/services/accounts/react.js"
-    },
-    "./accounts/server": {
-      "types": "./dist/services/accounts/server/index.d.ts",
-      "import": "./dist/services/accounts/server/index.js",
-      "require": "./dist/cjs/services/accounts/server/index.js"
-    },
-    "./speech": {
-      "types": "./dist/services/speech/index.d.ts",
-      "import": "./dist/services/speech/index.js",
-      "require": "./dist/cjs/services/speech/index.js"
-    },
-    "./storage": {
-      "types": "./dist/services/storage/index.d.ts",
-      "import": "./dist/services/storage/index.js",
-      "require": "./dist/cjs/services/storage/index.js"
-    }
-  },
-  "files": [
-    "dist"
+  "workspaces": [
+    "sdk",
+    "sso"
   ],
   "scripts": {
-    "build": "rm -rf dist && tsc -p tsconfig.build.json && tsc -p tsconfig.cjs.json && node -e \"require('fs').writeFileSync('dist/cjs/package.json', JSON.stringify({type: 'commonjs'}))\"",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run",
-    "check:package": "node scripts/check-package.cjs",
-    "prepublishOnly": "npm run build && npm run check:package",
+    "build": "npm run build --workspaces",
+    "typecheck": "npm run typecheck --workspaces",
+    "test": "npm test --workspaces",
+    "check:package": "npm run check:package --workspaces",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },
-  "dependencies": {
-    "jose": "^5.10.0"
-  },
-  "peerDependencies": {
-    "react": ">=18"
-  },
-  "peerDependenciesMeta": {
-    "react": {
-      "optional": true
-    }
-  },
   "devDependencies": {
     "@types/node": "^22.20.4",
-    "@types/react": "^19.2.7",
-    "@types/react-dom": "^19.2.3",
     "prettier": "^3.9.10",
-    "react": "^19.2.3",
-    "react-dom": "^19.2.3",
     "typescript": "^5.9.3",
     "vitest": "^3.2.7"
   }

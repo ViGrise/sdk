@@ -28,7 +28,7 @@ interface Vector {
   };
 }
 
-const dir = join(import.meta.dirname, "../../../test-vectors/vgr4");
+const dir = join(import.meta.dirname, "../../../../test-vectors/vgr4");
 const vectors: [string, Vector][] = readdirSync(dir)
   .filter((f) => f.endsWith(".json"))
   .sort()

@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { AccountMenu, AccountMenuList } from "../../src/services/accounts/react.js";
+import { AccountMenu, AccountMenuList } from "../src/react.js";
 
 const accounts = [
   {

@@ -19,7 +19,7 @@ interface Vector {
 }
 
 const { cases } = JSON.parse(
-  readFileSync(join(import.meta.dirname, "../../../test-vectors/webhooks/standard-webhooks.json"), "utf8"),
+  readFileSync(join(import.meta.dirname, "../../../../test-vectors/webhooks/standard-webhooks.json"), "utf8"),
 ) as { cases: Vector[] };
 
 describe("webhook signatures", () => {

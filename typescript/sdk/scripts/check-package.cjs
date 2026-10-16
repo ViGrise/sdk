@@ -20,8 +20,6 @@ for (const [subpath, name] of [
 
 Promise.all([
   import("@vigrise/sdk/auth"),
-  import("@vigrise/sdk/accounts"),
-  import("@vigrise/sdk/accounts/astro"),
   import("@vigrise/sdk/accounts/server"),
   import("@vigrise/sdk/speech"),
   import("@vigrise/sdk/storage"),

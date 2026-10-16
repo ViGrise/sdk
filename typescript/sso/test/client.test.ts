@@ -8,7 +8,7 @@ import {
   type SsoExchange,
   type SsoState,
   watchSsoState,
-} from "../../src/services/accounts/index.js";
+} from "../src/browser.js";
 
 const auth = { user: { id: "u" }, tokens: {}, accounts: [] };
 

@@ -1,0 +1,66 @@
+{
+  "name": "@vigrise/sso",
+  "version": "0.2.0",
+  "description": "First-party ViGrise SSO for TypeScript: introspect the vigrise_sso cookie, account menu, Astro and React helpers for ViGrise apps on *.vigrise.com",
+  "license": "Apache-2.0",
+  "homepage": "https://platform.vigrise.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ViGrise/sdk.git",
+    "directory": "typescript/sso"
+  },
+  "bugs": "https://github.com/ViGrise/sdk/issues",
+  "publishConfig": {
+    "access": "public"
+  },
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "exports": {
+    "./server": {
+      "types": "./dist/server/index.d.ts",
+      "import": "./dist/server/index.js",
+      "require": "./dist/cjs/server/index.js"
+    },
+    "./browser": {
+      "types": "./dist/browser.d.ts",
+      "import": "./dist/browser.js"
+    },
+    "./astro": {
+      "types": "./dist/astro.d.ts",
+      "import": "./dist/astro.js"
+    },
+    "./react": {
+      "types": "./dist/react.d.ts",
+      "import": "./dist/react.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "rm -rf dist && tsc -p tsconfig.build.json && tsc -p tsconfig.cjs.json && node -e \"require('fs').writeFileSync('dist/cjs/package.json', JSON.stringify({type: 'commonjs'}))\"",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "check:package": "node scripts/check-package.cjs",
+    "prepublishOnly": "npm run build && npm run check:package"
+  },
+  "dependencies": {
+    "@vigrise/sdk": "^0.2.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3"
+  },
+  "peerDependencies": {
+    "react": ">=18"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    }
+  }
+}

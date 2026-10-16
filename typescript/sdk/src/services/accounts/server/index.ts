@@ -8,17 +8,6 @@ export {
   JwksError,
   TokenExchangeError,
 } from "./errors.js";
-export { SSO_HEADER, ssoTokenHash } from "./hash.js";
-export {
-  SsoIntrospector,
-  toMenuAccount,
-  type ActiveIntrospection,
-  type Introspection,
-  type SsoAccount,
-  type SsoIdentity,
-  type SsoIntrospectorOptions,
-  type SsoSession,
-} from "./introspect.js";
 export { Jwks, type RemoteJwksOptions } from "./jwks.js";
 export {
   AuthorizationRequest,
