@@ -19,7 +19,7 @@ default = []
 axum = ["dep:axum"]
 
 [dependencies]
-vigrise = { path = "../vigrise", version = "0.2.0", features = ["accounts"] }
+vigrise = { path = "../vigrise", version = "0.3.0", features = ["accounts"] }
 chrono = { version = "0.4", default-features = false, features = ["clock", "std", "serde"] }
 hex = "0.4"
 reqwest = { version = "0.13", default-features = false, features = ["json", "rustls"] }
