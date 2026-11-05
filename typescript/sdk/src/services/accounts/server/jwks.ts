@@ -1,4 +1,4 @@
-import { createLocalJWKSet, type JSONWebKeySet, type JWSHeaderParameters, type KeyLike } from "jose";
+import { createLocalJWKSet, type JSONWebKeySet, type JWSHeaderParameters, type CryptoKey } from "jose";
 
 import { JwksError } from "./errors.js";
 
@@ -35,7 +35,7 @@ export class Jwks {
   }
 
   /** The key a token with this header is signed with. */
-  async key(header: JWSHeaderParameters): Promise<KeyLike | Uint8Array> {
+  async key(header: JWSHeaderParameters): Promise<CryptoKey> {
     if (this.url === undefined) return this.find(this.set!, header);
     const age = Date.now() - this.fetchedAt;
     if (this.set && age < CACHE_TTL_MS) {
@@ -53,7 +53,7 @@ export class Jwks {
     return this.find(fetched, header);
   }
 
-  private async find(set: JSONWebKeySet, header: JWSHeaderParameters): Promise<KeyLike | Uint8Array> {
+  private async find(set: JSONWebKeySet, header: JWSHeaderParameters): Promise<CryptoKey> {
     try {
       return await createLocalJWKSet(set)(header);
     } catch (error) {

@@ -1,11 +1,11 @@
-import { exportJWK, generateKeyPair, SignJWT, type JWK, type KeyLike } from "jose";
+import { exportJWK, generateKeyPair, SignJWT, type JWK, type CryptoKey } from "jose";
 
 /** An RSA key that signs tokens the way ViGrise Accounts does. */
 export class TestSigner {
   private constructor(
     readonly kid: string,
     readonly jwk: JWK,
-    private readonly privateKey: KeyLike,
+    private readonly privateKey: CryptoKey,
   ) {}
 
   static async generate(kid = `kid-${Math.random().toString(16).slice(2)}`): Promise<TestSigner> {
