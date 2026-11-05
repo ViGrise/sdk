@@ -250,12 +250,12 @@ impl<B> AwsChunkedBody<B> {
 
   fn emit(&mut self, data: Bytes) -> Result<Step, ChunkedError> {
     self.decoded += data.len() as u64;
-    if let Some(limit) = self.decoded_length {
-      if self.decoded > limit {
-        return Err(ChunkedError::Malformed(
-          "The body is longer than x-amz-decoded-content-length".into(),
-        ));
-      }
+    if let Some(limit) = self.decoded_length
+      && self.decoded > limit
+    {
+      return Err(ChunkedError::Malformed(
+        "The body is longer than x-amz-decoded-content-length".into(),
+      ));
     }
     if let Some((_, checksum)) = &mut self.checksum {
       checksum.update(&data);
@@ -415,10 +415,10 @@ impl<B> AwsChunkedBody<B> {
 
   fn finish(&mut self, trailer: Vec<(String, String)>) -> Result<(), ChunkedError> {
     self.phase = Phase::Done;
-    if let Some(declared) = self.decoded_length {
-      if self.decoded < declared {
-        return Err(ChunkedError::Truncated);
-      }
+    if let Some(declared) = self.decoded_length
+      && self.decoded < declared
+    {
+      return Err(ChunkedError::Truncated);
     }
     if let Some((algorithm, checksum)) = self.checksum.take() {
       let name = algorithm.header_name();

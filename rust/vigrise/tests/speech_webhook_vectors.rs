@@ -87,7 +87,7 @@ fn every_vector_is_verified_as_expected() {
 #[test]
 fn a_verified_webhook_becomes_an_event() {
   use base64::Engine;
-  use hmac::{Hmac, Mac};
+  use hmac::{Hmac, KeyInit, Mac};
   use vigrise::speech::JobStatus;
 
   let secret = "whsec_MfKQ9r8GKYqrTwjUPD8ILPZIo2LaLaSw";

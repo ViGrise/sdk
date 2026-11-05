@@ -7,7 +7,7 @@ use std::time::Duration;
 
 use base64::Engine;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
-use rand::RngCore;
+use rand::Rng;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
@@ -471,13 +471,13 @@ async fn sts_call<T: serde::de::DeserializeOwned>(
 /// writes the session to the profile. A profile holding a long-term key is
 /// refused, since the session would replace a secret shown only once.
 pub async fn login(options: &LoginOptions, ui: &dyn Ui) -> Result<SessionProfile, LoginError> {
-  if let Some(existing) = access_key_id(&options.credentials_file, &options.profile)? {
-    if !existing.starts_with("VGST") {
-      return Err(LoginError::LongTermKeys {
-        profile: options.profile.clone(),
-        access_key_id: existing,
-      });
-    }
+  if let Some(existing) = access_key_id(&options.credentials_file, &options.profile)?
+    && !existing.starts_with("VGST")
+  {
+    return Err(LoginError::LongTermKeys {
+      profile: options.profile.clone(),
+      access_key_id: existing,
+    });
   }
   let http = reqwest::Client::builder()
     .timeout(Duration::from_secs(30))

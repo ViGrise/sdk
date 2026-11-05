@@ -55,6 +55,6 @@
     "prepublishOnly": "npm run build && npm run check:package"
   },
   "dependencies": {
-    "jose": "^5.10.0"
+    "jose": "^6.2.15"
   }
 }

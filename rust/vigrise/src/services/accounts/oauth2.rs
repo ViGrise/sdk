@@ -4,7 +4,7 @@
 
 use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
 use jsonwebtoken::{Algorithm, Validation, decode, decode_header};
-use rand::RngCore;
+use rand::Rng;
 use serde::Deserialize;
 use sha2::{Digest, Sha256};
 
@@ -265,10 +265,10 @@ impl IdTokenVerifier {
     expected_nonce: Option<&str>,
   ) -> Result<IdTokenClaims, AccountsError> {
     let claims = self.verify_id_token(id_token, &self.client_id).await?;
-    if let Some(expected) = expected_nonce {
-      if claims.nonce.as_deref() != Some(expected) {
-        return Err(AccountsError::InvalidIdToken("nonce mismatch".into()));
-      }
+    if let Some(expected) = expected_nonce
+      && claims.nonce.as_deref() != Some(expected)
+    {
+      return Err(AccountsError::InvalidIdToken("nonce mismatch".into()));
     }
     Ok(claims)
   }

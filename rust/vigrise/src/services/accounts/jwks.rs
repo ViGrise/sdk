@@ -57,10 +57,10 @@ impl Jwks {
           guard.as_ref().map(|(at, set)| (*at, set.clone()))
         };
         if let Some((at, set)) = &cached {
-          if at.elapsed() < CACHE_TTL {
-            if let Ok(key) = find(set, kid) {
-              return Ok(key);
-            }
+          if at.elapsed() < CACHE_TTL
+            && let Ok(key) = find(set, kid)
+          {
+            return Ok(key);
           }
           if at.elapsed() < REFRESH_MIN_INTERVAL {
             return find(set, kid);

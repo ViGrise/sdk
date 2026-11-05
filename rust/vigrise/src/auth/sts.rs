@@ -286,15 +286,15 @@ impl CredentialsProvider for AssumeRoleProvider {
         .as_ref()
         .filter(|current| now < current.expiration)
         .map(|current| current.credentials.clone());
-      if let Some(current) = state.cached.as_ref() {
-        if now < current.refresh_at {
-          return Ok(current.credentials.clone());
-        }
+      if let Some(current) = state.cached.as_ref()
+        && now < current.refresh_at
+      {
+        return Ok(current.credentials.clone());
       }
-      if let Some((retry_at, error)) = &state.retry_at {
-        if now < *retry_at {
-          return usable.ok_or_else(|| error.clone());
-        }
+      if let Some((retry_at, error)) = &state.retry_at
+        && now < *retry_at
+      {
+        return usable.ok_or_else(|| error.clone());
       }
       match self.client.assume_role(&self.request).await {
         Ok(assumed) => {

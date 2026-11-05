@@ -1,7 +1,7 @@
 //! Key derivation, string-to-sign and signature primitives shared by clients,
 //! services and the platform.
 
-use hmac::{Hmac, Mac};
+use hmac::{Hmac, KeyInit, Mac};
 use sha2::Sha256;
 
 use crate::auth::canonical::hex_sha256;

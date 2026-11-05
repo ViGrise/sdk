@@ -205,14 +205,14 @@ impl http_body::Body for HashCheckedBody {
         }
       }
       std::task::Poll::Ready(None) => {
-        if let Some(hasher) = self.hasher.take() {
-          if hex::encode(hasher.finalize()) != self.expected {
-            return std::task::Poll::Ready(Some(Err(axum::Error::new(
-              crate::auth::signing::PayloadHashMismatch {
-                algorithm: crate::auth::signing::SigningAlgorithm::Vgr4,
-              },
-            ))));
-          }
+        if let Some(hasher) = self.hasher.take()
+          && hex::encode(hasher.finalize()) != self.expected
+        {
+          return std::task::Poll::Ready(Some(Err(axum::Error::new(
+            crate::auth::signing::PayloadHashMismatch {
+              algorithm: crate::auth::signing::SigningAlgorithm::Vgr4,
+            },
+          ))));
         }
       }
       _ => {}
