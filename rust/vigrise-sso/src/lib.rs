@@ -8,7 +8,7 @@
 //! use vigrise_sso::{SsoIntrospector, SsoIntrospectorConfig};
 //!
 //! # async fn run() -> Result<(), Box<dyn std::error::Error>> {
-//! let config = SsoIntrospectorConfig::new("http://accounts-backend:8080/o/auth", "vigrise-drive", "secret");
+//! let config = SsoIntrospectorConfig::new("http://accounts-backend:8080", "vigrise-drive", "secret");
 //! let introspector = SsoIntrospector::new(config);
 //! let answer = introspector.introspect("value of the vigrise_sso cookie").await?;
 //! if answer.active {

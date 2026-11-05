@@ -69,7 +69,7 @@ export interface ActiveIntrospection extends Introspection {
 }
 
 export interface SsoIntrospectorOptions {
-  /** Base URL of the Accounts identity paths reachable from the app server, for example `http://accounts-backend:8080/o/auth`. */
+  /** Base URL of the Accounts identity paths reachable from the app server, for example `http://accounts-backend:8080`. */
   internalUrl: string;
   /** OAuth2 client id of the app, registered with `sso_introspection`. */
   clientId: string;

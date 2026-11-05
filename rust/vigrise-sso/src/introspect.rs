@@ -104,7 +104,7 @@ pub struct Introspection {
 #[derive(Debug, Clone)]
 pub struct SsoIntrospectorConfig {
   /// Base URL of the Accounts identity paths reachable from the app server,
-  /// for example `http://accounts-backend:8080/o/auth`.
+  /// for example `http://accounts-backend:8080`.
   pub internal_url: String,
   /// OAuth2 client id of the app, registered with `sso_introspection`.
   pub client_id: String,

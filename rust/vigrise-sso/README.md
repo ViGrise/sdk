@@ -23,7 +23,7 @@ seconds.
 use vigrise_sso::{SsoIntrospector, SsoIntrospectorConfig};
 
 let introspector = SsoIntrospector::new(SsoIntrospectorConfig::new(
-    "http://accounts-backend:8080/o/auth", "vigrise-drive", "client-secret"));
+    "http://accounts-backend:8080", "vigrise-drive", "client-secret"));
 let answer = introspector.introspect("value of the vigrise_sso cookie").await?;
 if answer.active {
     println!("signed in as {:?}", answer.identity.unwrap().email);

@@ -367,11 +367,11 @@ async fn an_expired_sign_in_falls_back_to_the_browser_and_logout_forgets_it() {
 fn the_default_accounts_url_is_the_production_issuer() {
   assert_eq!(
     vigrise_cli::login::discovery_url(vigrise_cli::login::DEFAULT_ACCOUNTS_URL),
-    "https://accounts.vigrise.com/o/oauth2/.well-known/openid-configuration"
+    "https://accounts.vigrise.com/.well-known/openid-configuration"
   );
   assert_eq!(
-    vigrise_cli::login::discovery_url("https://accounts.vigrise.com/o/oauth2/"),
-    "https://accounts.vigrise.com/o/oauth2/.well-known/openid-configuration"
+    vigrise_cli::login::discovery_url("https://accounts.vigrise.com/"),
+    "https://accounts.vigrise.com/.well-known/openid-configuration"
   );
 }
 

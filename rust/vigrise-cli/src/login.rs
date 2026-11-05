@@ -17,7 +17,7 @@ use crate::profile::{SessionProfile, access_key_id, remove_session, write_privat
 
 const SCOPES: &str = "openid email offline_access";
 /// The Accounts issuer, where its OpenID configuration is published.
-pub const DEFAULT_ACCOUNTS_URL: &str = "https://accounts.vigrise.com/o/oauth2";
+pub const DEFAULT_ACCOUNTS_URL: &str = "https://accounts.vigrise.com";
 /// How long the browser sign-in may take before the listener gives up.
 const BROWSER_TIMEOUT: Duration = Duration::from_secs(300);
 
@@ -64,7 +64,7 @@ pub enum LoginError {
 /// Settings of a sign-in.
 #[derive(Debug, Clone)]
 pub struct LoginOptions {
-  /// Accounts issuer, for example `https://accounts.vigrise.com/o/oauth2`.
+  /// Accounts issuer, for example `https://accounts.vigrise.com`.
   pub accounts_url: String,
   /// Base URL of the STS endpoint, for example `https://sts-api.vigrise.com`.
   pub sts_url: String,
