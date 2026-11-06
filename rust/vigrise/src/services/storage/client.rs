@@ -69,8 +69,9 @@ impl StorageClient {
   /// A client whose calls carry `delegation_token`, for a service acting for a
   /// person. Past `until`, calls go out with no token and run on the service's
   /// own rights, so work the person started in time can finish; the service
-  /// decides beforehand whether an operation may start. With no `until`, every
-  /// call carries the token and the platform refuses it once it has expired.
+  /// decides beforehand whether an operation may start. `presign` always
+  /// carries the token. With no `until`, every call carries the token and the
+  /// platform refuses it once it has expired.
   pub fn delegated(
     &self,
     delegation_token: &str,
@@ -82,6 +83,18 @@ impl StorageClient {
       signed: self.signed.clone(),
       delegation: Some(DelegationHeader { token, until }),
     })
+  }
+
+  /// This client with a delegation that never lapses, for calls whose result
+  /// outlives the call.
+  fn with_lasting_delegation(&self) -> Self {
+    Self {
+      signed: self.signed.clone(),
+      delegation: self.delegation.as_ref().map(|delegation| DelegationHeader {
+        token: delegation.token.clone(),
+        until: None,
+      }),
+    }
   }
 
   async fn send(
@@ -633,13 +646,15 @@ impl StorageClient {
   }
 
   /// Creates a presigned URL for downloading or uploading an object without
-  /// credentials.
+  /// credentials. A delegated client sends its token on every presign, also
+  /// past `until`, because the URL outlives the call.
   pub async fn presign(
     &self,
     bucket: &str,
     request: &PresignRequest,
   ) -> Result<Presigned, StorageError> {
     self
+      .with_lasting_delegation()
       .json(
         Method::POST,
         &format!("/v1/buckets/{bucket}/presign"),
