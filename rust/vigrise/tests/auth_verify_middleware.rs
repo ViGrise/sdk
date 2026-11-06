@@ -35,6 +35,67 @@ struct RecordingPlatform {
   asked: Arc<Mutex<Vec<AuthorizeRequest>>>,
 }
 
+/// Allows every request of a person and answers with a deadline and a token.
+struct PersonPlatform {
+  asked: Arc<Mutex<Vec<AuthorizeRequest>>>,
+  deadline: chrono::DateTime<Utc>,
+}
+
+impl Authorizer for PersonPlatform {
+  fn authorize<'a>(
+    &'a self,
+    request: &'a AuthorizeRequest,
+  ) -> vigrise::auth::verify::AuthorizeFuture<'a> {
+    self.asked.lock().unwrap().push(request.clone());
+    Box::pin(async move {
+      Ok(AuthorizeResponse {
+        decision: Decision::Allow,
+        error: None,
+        principal: Some(Principal {
+          vrn: "vrn:vigrise:iam:p:role/member".into(),
+          id: Uuid::nil(),
+          principal_type: "Role".into(),
+          name: "member".into(),
+          project_id: Uuid::nil(),
+          organization_id: Uuid::nil(),
+          source_identity: None,
+          source_principal: None,
+          on_behalf_of: None,
+        }),
+        tier: None,
+        quotas: vec![],
+        leases: vec![],
+        signing_key: None,
+        delegation_token: Some("token-for-storage".into()),
+        auth_deadline: Some(self.deadline),
+      })
+    })
+  }
+}
+
+/// Names Storage as the next hop of one request, and of its first action only.
+struct DelegatingResolver;
+
+impl ActionResolver for DelegatingResolver {
+  fn resolve(&self, _parts: &Parts, _body: &Bytes) -> Result<ResolvedAction, AuthError> {
+    Ok(ResolvedAction {
+      action: "speech:GetGeneration".into(),
+      ..Default::default()
+    })
+  }
+
+  fn additional(&self, _parts: &Parts, _body: &Bytes) -> Result<Vec<ResolvedAction>, AuthError> {
+    Ok(vec![ResolvedAction {
+      action: "speech:ListVoices".into(),
+      ..Default::default()
+    }])
+  }
+
+  fn delegation_audience(&self, _parts: &Parts) -> Option<String> {
+    Some("storage".into())
+  }
+}
+
 impl Authorizer for RecordingPlatform {
   fn authorize<'a>(
     &'a self,
@@ -50,6 +111,8 @@ impl Authorizer for RecordingPlatform {
         quotas: vec![],
         leases: vec![],
         signing_key: None,
+        delegation_token: None,
+        auth_deadline: None,
       })
     })
   }
@@ -77,6 +140,8 @@ impl Authorizer for FakePlatform {
         quotas: vec![],
         leases: vec![],
         signing_key: None,
+        delegation_token: None,
+        auth_deadline: None,
       };
       let parsed = parse_string_to_sign(&request.string_to_sign).unwrap();
       let key = derive_signing_key(SECRET, &parsed.date, &parsed.service);
@@ -98,6 +163,8 @@ impl Authorizer for FakePlatform {
           quotas: vec![],
           leases: vec![],
           signing_key: None,
+          delegation_token: None,
+          auth_deadline: None,
         });
       }
       Ok(AuthorizeResponse {
@@ -112,11 +179,14 @@ impl Authorizer for FakePlatform {
           organization_id: Uuid::nil(),
           source_identity: None,
           source_principal: None,
+          on_behalf_of: None,
         }),
         tier: Some("Pro".into()),
         quotas: vec![],
         leases: vec![],
         signing_key: None,
+        delegation_token: None,
+        auth_deadline: None,
       })
     })
   }
@@ -386,11 +456,14 @@ impl Authorizer for CaptureContext {
           organization_id: Uuid::nil(),
           source_identity: None,
           source_principal: None,
+          on_behalf_of: None,
         }),
         tier: None,
         quotas: vec![],
         leases: vec![],
         signing_key: None,
+        delegation_token: None,
+        auth_deadline: None,
       })
     })
   }
@@ -454,6 +527,8 @@ impl Authorizer for QuotaPlatform {
           quotas: vec![status],
           leases: vec![],
           signing_key: None,
+          delegation_token: None,
+          auth_deadline: None,
         });
       }
       Ok(AuthorizeResponse {
@@ -468,11 +543,14 @@ impl Authorizer for QuotaPlatform {
           organization_id: Uuid::nil(),
           source_identity: None,
           source_principal: None,
+          on_behalf_of: None,
         }),
         tier: Some("Free".into()),
         quotas: vec![status],
         leases: vec![],
         signing_key: None,
+        delegation_token: None,
+        auth_deadline: None,
       })
     })
   }
@@ -567,11 +645,14 @@ impl Authorizer for LeasingPlatform {
           organization_id: Uuid::nil(),
           source_identity: None,
           source_principal: None,
+          on_behalf_of: None,
         }),
         tier: Some("Free".into()),
         quotas: vec![],
         leases: vec!["lease-1".into()],
         signing_key: None,
+        delegation_token: None,
+        auth_deadline: None,
       })
     })
   }
@@ -682,6 +763,8 @@ impl Authorizer for SharedPlatform {
           quotas: vec![],
           leases: vec![],
           signing_key: None,
+          delegation_token: None,
+          auth_deadline: None,
         });
       }
       Ok(AuthorizeResponse {
@@ -696,11 +779,14 @@ impl Authorizer for SharedPlatform {
           organization_id: Uuid::nil(),
           source_identity: None,
           source_principal: None,
+          on_behalf_of: None,
         }),
         tier: None,
         quotas: vec![],
         leases: vec![format!("lease-{}", request.action)],
         signing_key: None,
+        delegation_token: None,
+        auth_deadline: None,
       })
     })
   }
@@ -785,4 +871,46 @@ async fn a_denied_additional_action_rejects_the_request_and_returns_held_leases(
     *platform.released.lock().unwrap(),
     vec![vec!["lease-speech:SynthesizeSpeech".to_string()]]
   );
+}
+
+#[tokio::test]
+async fn the_delegation_context_travels_between_the_request_the_platform_and_the_handler() {
+  let asked = Arc::new(Mutex::new(Vec::new()));
+  let deadline = chrono::DateTime::from_timestamp(4_000_000_000, 0).unwrap();
+  let verifier = Arc::new(Verifier {
+    service: "speech".into(),
+    authorizer: Arc::new(PersonPlatform {
+      asked: asked.clone(),
+      deadline,
+    }),
+    resolver: Arc::new(DelegatingResolver),
+    max_body_bytes: 1024,
+    trust_forwarded_headers: false,
+  });
+  let handler = |Extension(auth): Extension<Authorized>| async move {
+    format!(
+      "{}|{}",
+      auth.delegation_token.unwrap_or_default(),
+      auth.auth_deadline.unwrap().timestamp()
+    )
+  };
+  let app = Router::new()
+    .route("/v1/audio/speech", post(handler))
+    .layer(axum::middleware::from_fn_with_state(verifier, verify));
+
+  let mut request = signed("/v1/audio/speech", "{}", SECRET);
+  request
+    .headers_mut()
+    .insert("x-vigrise-delegation", "presented".parse().unwrap());
+  let response = app.oneshot(request).await.unwrap();
+  assert_eq!(response.status(), StatusCode::OK);
+  let body = response.into_body().collect().await.unwrap().to_bytes();
+  assert_eq!(body, "token-for-storage|4000000000");
+
+  let asked = asked.lock().unwrap();
+  assert_eq!(asked.len(), 2);
+  assert_eq!(asked[0].delegation_token.as_deref(), Some("presented"));
+  assert_eq!(asked[0].delegation_audience.as_deref(), Some("storage"));
+  assert_eq!(asked[1].delegation_token.as_deref(), Some("presented"));
+  assert_eq!(asked[1].delegation_audience, None);
 }

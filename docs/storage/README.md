@@ -73,7 +73,10 @@ storage.upload_stream("photos", "big.bin", open("big.bin", "rb"), part_size=8 * 
 `put_lifecycle`, `get_lifecycle` and `delete_lifecycle` on a bucket (rules
 expire objects or abort stale uploads). `presign(bucket, request)` returns a URL
 for a `GET` or `PUT` that works without credentials until it expires; browsers
-upload and download through such URLs.
+upload and download through such URLs. In Rust, a service acting for a person
+calls `presign_delegated(bucket, request, token)` with the delegation token the
+platform gave it; the URL then ends no later than the person's authorization,
+and `expires_at` states the real expiry.
 
 ```ts
 const { url } = await storage.presign("photos", { key: "2026/cat.jpg", method: "GET", expiresIn: 600 });

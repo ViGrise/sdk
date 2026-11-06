@@ -78,5 +78,6 @@ pub use error::AuthError;
 pub use provider::{CredentialsFuture, CredentialsProvider};
 pub use quota::QuotaStatus;
 pub use signer::{
-  SignedRequestHeaders, UNSIGNED_PAYLOAD, sign_request, sign_request_with_payload_hash,
+  SignedRequestHeaders, UNSIGNED_PAYLOAD, X_VIGRISE_DELEGATION, sign_request,
+  sign_request_with_payload_hash,
 };

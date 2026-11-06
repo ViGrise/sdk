@@ -2,6 +2,7 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use crate::auth::CredentialsProvider;
+use crate::auth::X_VIGRISE_DELEGATION;
 use crate::common::signed::{Payload, SignedHttp};
 use bytes::{Bytes, BytesMut};
 use futures_util::{Stream, StreamExt};
@@ -605,13 +606,43 @@ impl StorageClient {
     bucket: &str,
     request: &PresignRequest,
   ) -> Result<Presigned, StorageError> {
-    self
-      .json(
+    self.presign_delegated(bucket, request, None).await
+  }
+
+  /// [`presign`](Self::presign) for a person this service acts for: with
+  /// `delegation_token`, the URL expires no later than the person's
+  /// authorization does, and `expires_at` states the real expiry.
+  pub async fn presign_delegated(
+    &self,
+    bucket: &str,
+    request: &PresignRequest,
+    delegation_token: Option<&str>,
+  ) -> Result<Presigned, StorageError> {
+    let mut headers = HeaderMap::new();
+    headers.insert(
+      http::header::CONTENT_TYPE,
+      HeaderValue::from_static("application/json"),
+    );
+    if let Some(token) = delegation_token {
+      headers.insert(
+        X_VIGRISE_DELEGATION,
+        HeaderValue::from_str(token)
+          .map_err(|_| StorageError::Transport("Invalid delegation token".into()))?,
+      );
+    }
+    let body = serde_json::to_vec(request).expect("presign request serializes");
+    let response = self
+      .send(
         Method::POST,
         &format!("/v1/buckets/{bucket}/presign"),
-        Some(serde_json::to_value(request).expect("presign request serializes")),
+        headers,
+        Payload::Buffered(Bytes::from(body)),
       )
+      .await?;
+    response
+      .json()
       .await
+      .map_err(|e| StorageError::Transport(e.to_string()))
   }
 
   /// Replaces the lifecycle rules of a bucket.
