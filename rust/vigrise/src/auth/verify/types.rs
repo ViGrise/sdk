@@ -9,7 +9,7 @@ use uuid::Uuid;
 pub use crate::auth::QuotaStatus;
 
 /// Body of `POST /internal/v1/authorize`.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub struct AuthorizeRequest {
   /// Access key ID of the signer.
@@ -50,6 +50,31 @@ pub struct AuthorizeRequest {
 
 fn is_false(value: &bool) -> bool {
   !value
+}
+
+impl fmt::Debug for AuthorizeRequest {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    f.debug_struct("AuthorizeRequest")
+      .field("access_key_id", &self.access_key_id)
+      .field(
+        "security_token",
+        &self.security_token.as_ref().map(|_| "<redacted>"),
+      )
+      .field("string_to_sign", &self.string_to_sign)
+      .field("signature", &self.signature)
+      .field("action", &self.action)
+      .field("resources", &self.resources)
+      .field("context", &self.context)
+      .field("usage", &self.usage)
+      .field("streaming_signing_key", &self.streaming_signing_key)
+      .field("presigned_expires", &self.presigned_expires)
+      .field(
+        "delegation_token",
+        &self.delegation_token.as_ref().map(|_| "<redacted>"),
+      )
+      .field("delegation_audience", &self.delegation_audience)
+      .finish()
+  }
 }
 
 /// The outcome of an authorization.
@@ -240,6 +265,27 @@ mod tests {
     assert!(!text.contains("00ff00ff"), "{text}");
     assert!(!text.contains("sealed-token"), "{text}");
     assert!(text.contains("<redacted>"));
+  }
+
+  #[test]
+  fn debug_output_redacts_the_tokens_of_a_request() {
+    let request = AuthorizeRequest {
+      access_key_id: "k".into(),
+      security_token: Some("session-secret".into()),
+      string_to_sign: "s".into(),
+      signature: "g".into(),
+      action: "a:B".into(),
+      resources: vec![],
+      context: Map::new(),
+      usage: BTreeMap::new(),
+      streaming_signing_key: false,
+      presigned_expires: None,
+      delegation_token: Some("sealed-token".into()),
+      delegation_audience: None,
+    };
+    let text = format!("{request:?}");
+    assert!(!text.contains("session-secret"), "{text}");
+    assert!(!text.contains("sealed-token"), "{text}");
   }
 
   #[test]

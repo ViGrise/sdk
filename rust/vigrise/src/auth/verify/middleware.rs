@@ -309,6 +309,17 @@ async fn authorize(
     ));
   }
 
+  if parts.headers.contains_key(X_VIGRISE_DELEGATION)
+    && !auth
+      .signed_headers
+      .iter()
+      .any(|name| name.eq_ignore_ascii_case(X_VIGRISE_DELEGATION))
+  {
+    return Err(AuthError::IncompleteSignature(format!(
+      "{X_VIGRISE_DELEGATION} must be a signed header"
+    )));
+  }
+
   let empty = Bytes::new();
   let (payload_hash, body) = match payload {
     Payload::Buffered(body) => {

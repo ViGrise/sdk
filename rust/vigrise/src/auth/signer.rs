@@ -15,8 +15,9 @@ pub const X_VGR_DATE: &str = "x-vgr-date";
 pub const X_VGR_CONTENT_SHA256: &str = "x-vgr-content-sha256";
 /// Header carrying the session token of temporary credentials.
 pub const X_VGR_SECURITY_TOKEN: &str = "x-vgr-security-token";
-/// Carries a delegation token from one service to the next. It is signed when
-/// present, so a captured request cannot be replayed with another token.
+/// Carries a delegation token from one service to the next. The signer covers
+/// it when present and the verify middleware refuses it otherwise, so the token
+/// cannot be removed from a request or replaced on the way.
 pub const X_VIGRISE_DELEGATION: &str = "x-vigrise-delegation";
 /// Payload hash of a request whose body streams unsigned; only routes that
 /// verify with `verify_streaming` accept it.
