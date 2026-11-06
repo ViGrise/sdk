@@ -5,6 +5,7 @@ use crate::auth::CredentialsProvider;
 use crate::auth::X_VIGRISE_DELEGATION;
 use crate::common::signed::{Payload, SignedHttp};
 use bytes::{Bytes, BytesMut};
+use chrono::{DateTime, Utc};
 use futures_util::{Stream, StreamExt};
 use http::{HeaderMap, HeaderName, HeaderValue, Method};
 use percent_encoding::{AsciiSet, NON_ALPHANUMERIC, utf8_percent_encode};
@@ -36,6 +37,14 @@ fn key_path(key: &str) -> String {
 #[derive(Clone)]
 pub struct StorageClient {
   signed: SignedHttp,
+  delegation: Option<DelegationHeader>,
+}
+
+/// The delegation token a client sends, and the moment it stops sending it.
+#[derive(Clone)]
+struct DelegationHeader {
+  token: HeaderValue,
+  until: Option<DateTime<Utc>>,
 }
 
 impl StorageClient {
@@ -44,6 +53,7 @@ impl StorageClient {
   pub fn new(endpoint: impl Into<String>, credentials: Arc<dyn CredentialsProvider>) -> Self {
     Self {
       signed: SignedHttp::new("storage", endpoint.into(), credentials),
+      delegation: None,
     }
   }
 
@@ -56,13 +66,36 @@ impl StorageClient {
     )
   }
 
+  /// A client whose calls carry `delegation_token`, for a service acting for a
+  /// person. Past `until`, calls go out with no token and run on the service's
+  /// own rights, so work the person started in time can finish; the service
+  /// decides beforehand whether an operation may start. With no `until`, every
+  /// call carries the token and the platform refuses it once it has expired.
+  pub fn delegated(
+    &self,
+    delegation_token: &str,
+    until: Option<DateTime<Utc>>,
+  ) -> Result<Self, StorageError> {
+    let token = HeaderValue::from_str(delegation_token)
+      .map_err(|_| StorageError::Transport("Invalid delegation token".into()))?;
+    Ok(Self {
+      signed: self.signed.clone(),
+      delegation: Some(DelegationHeader { token, until }),
+    })
+  }
+
   async fn send(
     &self,
     method: Method,
     path: &str,
-    headers: HeaderMap,
+    mut headers: HeaderMap,
     payload: Payload,
   ) -> Result<reqwest::Response, StorageError> {
+    if let Some(delegation) = &self.delegation
+      && delegation.until.is_none_or(|until| Utc::now() < until)
+    {
+      headers.insert(X_VIGRISE_DELEGATION, delegation.token.clone());
+    }
     Ok(self.signed.send(method, path, headers, payload).await?)
   }
 
@@ -606,7 +639,13 @@ impl StorageClient {
     bucket: &str,
     request: &PresignRequest,
   ) -> Result<Presigned, StorageError> {
-    self.presign_delegated(bucket, request, None).await
+    self
+      .json(
+        Method::POST,
+        &format!("/v1/buckets/{bucket}/presign"),
+        Some(serde_json::to_value(request).expect("presign request serializes")),
+      )
+      .await
   }
 
   /// [`presign`](Self::presign) for a person this service acts for: with
@@ -618,31 +657,10 @@ impl StorageClient {
     request: &PresignRequest,
     delegation_token: Option<&str>,
   ) -> Result<Presigned, StorageError> {
-    let mut headers = HeaderMap::new();
-    headers.insert(
-      http::header::CONTENT_TYPE,
-      HeaderValue::from_static("application/json"),
-    );
-    if let Some(token) = delegation_token {
-      headers.insert(
-        X_VIGRISE_DELEGATION,
-        HeaderValue::from_str(token)
-          .map_err(|_| StorageError::Transport("Invalid delegation token".into()))?,
-      );
+    match delegation_token {
+      Some(token) => self.delegated(token, None)?.presign(bucket, request).await,
+      None => self.presign(bucket, request).await,
     }
-    let body = serde_json::to_vec(request).expect("presign request serializes");
-    let response = self
-      .send(
-        Method::POST,
-        &format!("/v1/buckets/{bucket}/presign"),
-        headers,
-        Payload::Buffered(Bytes::from(body)),
-      )
-      .await?;
-    response
-      .json()
-      .await
-      .map_err(|e| StorageError::Transport(e.to_string()))
   }
 
   /// Replaces the lifecycle rules of a bucket.

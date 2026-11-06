@@ -76,7 +76,9 @@ for a `GET` or `PUT` that works without credentials until it expires; browsers
 upload and download through such URLs. In Rust, a service acting for a person
 calls `presign_delegated(bucket, request, token)` with the delegation token the
 platform gave it; the URL then ends no later than the person's authorization,
-and `expires_at` states the real expiry.
+and `expires_at` states the real expiry. `delegated(token, until)` returns a
+client whose every call carries the token; past `until` its calls run on the
+service's own rights, so work started in time can finish.
 
 ```ts
 const { url } = await storage.presign("photos", { key: "2026/cat.jpg", method: "GET", expiresIn: 600 });
