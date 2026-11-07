@@ -1,0 +1,13 @@
+# The default rules apply. Published test vectors and test fixtures hold values
+# made for tests, and a value in any other path fails the scan.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Test vectors and test fixtures"
+paths = [
+  '''^test-vectors/''',
+  '''/tests?/''',
+  '''^typescript/test/''',
+  '''^python/tests/''',
+]
