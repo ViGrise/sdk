@@ -1,3 +1,7 @@
+from copy import copy
+from dataclasses import replace
+from datetime import datetime, timezone
+
 from typing import (
   Any,
   AsyncIterable,
@@ -7,6 +11,7 @@ from typing import (
   Iterator,
   List,
   Optional,
+  TypeVar,
   Union,
 )
 
@@ -119,7 +124,42 @@ class AsyncStorageObjectStream(_Stream):
     await self.aclose()
 
 
-class StorageClient:
+_Storage = TypeVar("_Storage", bound="_DelegatedStorage")
+
+
+class _DelegatedStorage:
+  _delegation_token: Optional[str] = None
+  _delegation_until: Optional[datetime] = None
+
+  def delegated(
+    self: _Storage, delegation_token: str, until: Optional[datetime] = None
+  ) -> _Storage:
+    """Returns a client carrying the token until the cutoff; presign always carries it.
+    The returned client shares the HTTP connection pool and its lifetime with this client.
+    `until` is a timezone-aware datetime; omitted, the token accompanies every call.
+    """
+    if any((ord(char) < 32 and char != "\t") or ord(char) == 127 for char in delegation_token):
+      raise transport_error("Invalid delegation token")
+    if until is not None and (until.tzinfo is None or until.utcoffset() is None):
+      raise ValueError("Delegation cutoff must be timezone-aware")
+    client = copy(self)
+    client._delegation_token = delegation_token
+    client._delegation_until = until
+    return client
+
+  def _delegated_request(self, request: _http.Request, lasting: bool) -> _http.Request:
+    if self._delegation_token is not None and (
+      lasting
+      or self._delegation_until is None
+      or datetime.now(timezone.utc) < self._delegation_until
+    ):
+      return replace(
+        request, headers={**request.headers, "x-vigrise-delegation": self._delegation_token}
+      )
+    return request
+
+
+class StorageClient(_DelegatedStorage):
   """A client for ViGrise Storage. Every call is VGR4-signed for the `storage` service."""
 
   def __init__(
@@ -143,8 +183,10 @@ class StorageClient:
   def __exit__(self, *exc_info) -> None:
     self.close()
 
-  def _send(self, request: _http.Request, stream: bool = False) -> httpx.Response:
-    return self._sender.send(request, stream)
+  def _send(
+    self, request: _http.Request, stream: bool = False, *, lasting_delegation: bool = False
+  ) -> httpx.Response:
+    return self._sender.send(self._delegated_request(request, lasting_delegation), stream)
 
   def create_bucket(self, name: str) -> Bucket:
     """Creates a bucket in the caller's project."""
@@ -337,7 +379,16 @@ class StorageClient:
 
   def presign(self, bucket: str, request: PresignRequest) -> Presigned:
     """Creates a presigned URL for downloading or uploading an object without credentials."""
-    return ops.parse_presigned(self._send(ops.presign_request(bucket, request)))
+    return ops.parse_presigned(
+      self._send(ops.presign_request(bucket, request), lasting_delegation=True)
+    )
+
+  def presign_delegated(
+    self, bucket: str, request: PresignRequest, delegation_token: Optional[str] = None
+  ) -> Presigned:
+    """Creates a URL with the supplied delegation token when present."""
+    client = self if delegation_token is None else self.delegated(delegation_token)
+    return client.presign(bucket, request)
 
   def put_lifecycle(self, bucket: str, rules: List[LifecycleRule]) -> None:
     """Replaces the lifecycle rules of a bucket."""
@@ -350,7 +401,7 @@ class StorageClient:
     self._send(ops.delete_lifecycle_request(bucket))
 
 
-class AsyncStorageClient:
+class AsyncStorageClient(_DelegatedStorage):
   """The async counterpart of `StorageClient`, with the same operations."""
 
   def __init__(
@@ -374,8 +425,10 @@ class AsyncStorageClient:
   async def __aexit__(self, *exc_info) -> None:
     await self.aclose()
 
-  async def _send(self, request: _http.Request, stream: bool = False) -> httpx.Response:
-    return await self._sender.send(request, stream)
+  async def _send(
+    self, request: _http.Request, stream: bool = False, *, lasting_delegation: bool = False
+  ) -> httpx.Response:
+    return await self._sender.send(self._delegated_request(request, lasting_delegation), stream)
 
   async def create_bucket(self, name: str) -> Bucket:
     """Creates a bucket in the caller's project."""
@@ -573,7 +626,16 @@ class AsyncStorageClient:
 
   async def presign(self, bucket: str, request: PresignRequest) -> Presigned:
     """Creates a presigned URL for downloading or uploading an object without credentials."""
-    return ops.parse_presigned(await self._send(ops.presign_request(bucket, request)))
+    return ops.parse_presigned(
+      await self._send(ops.presign_request(bucket, request), lasting_delegation=True)
+    )
+
+  async def presign_delegated(
+    self, bucket: str, request: PresignRequest, delegation_token: Optional[str] = None
+  ) -> Presigned:
+    """Creates a URL with the supplied delegation token when present."""
+    client = self if delegation_token is None else self.delegated(delegation_token)
+    return await client.presign(bucket, request)
 
   async def put_lifecycle(self, bucket: str, rules: List[LifecycleRule]) -> None:
     """Replaces the lifecycle rules of a bucket."""

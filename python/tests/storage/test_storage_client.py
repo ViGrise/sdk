@@ -3,6 +3,7 @@ import inspect
 import io
 import json
 import re
+from datetime import datetime, timedelta, timezone
 
 import httpx
 import pytest
@@ -571,3 +572,36 @@ async def test_the_provider_is_invalidated_when_the_service_refuses_its_credenti
   with pytest.raises(StorageError):
     await call(client, "list_buckets")
   assert provider.invalidated == 1
+
+
+async def test_delegation_is_signed_until_cutoff_and_always_for_presign(make_client):
+  client, seen = make_client(
+    lambda r: json_response(
+      {"buckets": [], "url": "https://storage.test/object", "expires_at": "2026-10-01T12:00:00Z"}
+    )
+  )
+  delegated = client.delegated("sealed-token", datetime.now(timezone.utc) + timedelta(minutes=1))
+  await call(delegated, "list_buckets")
+  assert seen[-1].headers["x-vigrise-delegation"] == "sealed-token"
+  assert ";x-vigrise-delegation," in seen[-1].headers["authorization"]
+  await call(client, "list_buckets")
+  assert "x-vigrise-delegation" not in seen[-1].headers
+  expired = client.delegated("sealed-token", datetime(2000, 1, 1, tzinfo=timezone.utc))
+  await call(expired, "list_buckets")
+  assert "x-vigrise-delegation" not in seen[-1].headers
+  request = PresignRequest(key="cat.jpg", method="GET", expires_in=600)
+  await call(expired, "presign", "photos", request)
+  assert seen[-1].headers["x-vigrise-delegation"] == "sealed-token"
+  assert ";x-vigrise-delegation," in seen[-1].headers["authorization"]
+  await call(client, "presign_delegated", "photos", request, "other-token")
+  assert seen[-1].headers["x-vigrise-delegation"] == "other-token"
+  await call(client.delegated("lasting-token"), "list_buckets")
+  assert seen[-1].headers["x-vigrise-delegation"] == "lasting-token"
+
+
+@pytest.mark.parametrize("token", ["bad\r\nheader", "bad\0token"])
+async def test_invalid_delegation_header_is_a_storage_error(make_client, token):
+  client, _ = make_client(lambda r: json_response({"buckets": []}))
+  with pytest.raises(StorageError) as raised:
+    client.delegated(token)
+  assert (raised.value.status, raised.value.code) == (0, "TransportError")
