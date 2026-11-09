@@ -1,0 +1,30 @@
+{
+  "name": "delegation token on a streamed upload",
+  "request": {
+    "method": "PUT",
+    "path": "/v1/buckets/photos/objects/cat.jpg",
+    "query": "",
+    "headers": [
+      [
+        "host",
+        "storage.vigrise.test"
+      ],
+      [
+        "content-type",
+        "application/json"
+      ],
+      [
+        "X-Vigrise-Delegation",
+        "v1.7.bm9uY2U.Y2lwaGVydGV4dA"
+      ]
+    ],
+    "body": "",
+    "payload_hash": "UNSIGNED-PAYLOAD"
+  },
+  "credentials": {
+    "access_key_id": "VGAKTEST",
+    "secret_access_key": "secret"
+  },
+  "service": "storage",
+  "time": "20260926T100000Z"
+}

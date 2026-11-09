@@ -17,7 +17,10 @@ canonical headers, signed header names and the hex SHA-256 of the payload. The
 string to sign is `VGR4-HMAC-SHA256`, the timestamp, the scope and the hash of
 the canonical request, each on its own line. Every signature covers `host`,
 `x-vgr-date` (`yyyymmddThhmmssZ`) and `x-vgr-content-sha256`; temporary
-credentials also sign `x-vgr-security-token`. The result travels in
+credentials also sign `x-vgr-security-token`. Signatures also cover `content-type`,
+all `x-vgr-*` headers and `x-vigrise-delegation` when present. The delegation
+token is an opaque value supplied by the platform; callers put it in that
+header before signing and send the same header with the request. The result travels in
 `Authorization: VGR4-HMAC-SHA256 Credential=<access key>/<scope>, SignedHeaders=<names>, Signature=<hex>`.
 
 ## Signing a request
@@ -31,18 +34,25 @@ client.execute(request).await?;
 
 ```ts
 import { signedFetch } from "@vigrise/sdk/auth";
-const response = await signedFetch("https://speech-api.vigrise.com/v1/voices", {}, { service: "speech" });
+const response = await signedFetch("https://speech-api.vigrise.com/v1/voices", {
+  headers: { "x-vigrise-delegation": delegationToken },
+}, { service: "speech" });
 // Browsers: import { signedFetch } from "@vigrise/sdk/auth/browser" and pass credentials.
 ```
 
 ```python
 import requests
 from vigrise.auth.requests_auth import ViGriseAuth
-requests.get("https://speech-api.vigrise.com/v1/voices", auth=ViGriseAuth("speech"))
+requests.get("https://speech-api.vigrise.com/v1/voices",
+             headers={"x-vigrise-delegation": delegation_token}, auth=ViGriseAuth("speech"))
 # httpx: vigrise.auth.httpx_auth.ViGriseHttpxAuth
 ```
 
 Without the `reqwest` feature, `vigrise::auth::sign_request` signs any `http` request.
+Pass the delegation header through `headers` to TypeScript `signRequest`
+(Node or Web Crypto) or Python `sign_request`; include the original headers
+when sending the returned signing headers. Omit the delegation header for
+calls on the service's own rights.
 
 ## Credentials
 

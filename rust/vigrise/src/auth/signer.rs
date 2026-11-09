@@ -15,6 +15,10 @@ pub const X_VGR_DATE: &str = "x-vgr-date";
 pub const X_VGR_CONTENT_SHA256: &str = "x-vgr-content-sha256";
 /// Header carrying the session token of temporary credentials.
 pub const X_VGR_SECURITY_TOKEN: &str = "x-vgr-security-token";
+/// Carries a delegation token from one service to the next. The signer covers
+/// it when present and the verify middleware refuses it otherwise, so the token
+/// cannot be removed from a request or replaced on the way.
+pub const X_VIGRISE_DELEGATION: &str = "x-vigrise-delegation";
 /// Payload hash of a request whose body streams unsigned; only routes that
 /// verify with `verify_streaming` accept it.
 pub const UNSIGNED_PAYLOAD: &str = "UNSIGNED-PAYLOAD";
@@ -65,7 +69,8 @@ fn host_for(uri: &Uri) -> Result<String, AuthError> {
   })
 }
 
-/// Signs `host`, `content-type` when present, and every `x-vgr-*` header.
+/// Signs `host`, `content-type` and the delegation header when present, and
+/// every `x-vgr-*` header.
 pub fn sign_request(
   method: &Method,
   uri: &Uri,
@@ -132,7 +137,12 @@ pub fn sign_request_with_payload_hash(
   let mut signed_headers: Vec<String> = signing_headers
     .keys()
     .map(|name| name.as_str().to_string())
-    .filter(|name| name == "host" || name == "content-type" || name.starts_with("x-vgr-"))
+    .filter(|name| {
+      name == "host"
+        || name == "content-type"
+        || name == X_VIGRISE_DELEGATION
+        || name.starts_with("x-vgr-")
+    })
     .collect();
   signed_headers.sort();
   signed_headers.dedup();
@@ -167,6 +177,30 @@ pub fn sign_request_with_payload_hash(
 #[cfg(test)]
 mod tests {
   use super::*;
+
+  #[test]
+  fn the_delegation_header_is_signed_when_present() {
+    let uri: Uri = "https://storage.test/v1/buckets/b/presign".parse().unwrap();
+    let mut headers = HeaderMap::new();
+    headers.insert(X_VIGRISE_DELEGATION, HeaderValue::from_static("sealed"));
+    let time = DateTime::from_timestamp(1_800_000_000, 0).unwrap();
+    let credentials = Credentials::new("VGAKTEST", "secret");
+    let signed = sign_request(
+      &Method::POST,
+      &uri,
+      &headers,
+      b"",
+      &credentials,
+      "storage",
+      time,
+    )
+    .unwrap();
+    assert!(
+      signed.authorization.contains(X_VIGRISE_DELEGATION),
+      "{}",
+      signed.authorization
+    );
+  }
 
   #[test]
   fn host_drops_default_port_only() {

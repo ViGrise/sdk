@@ -1,0 +1,38 @@
+{
+  "name": "delegation token with temporary credentials",
+  "request": {
+    "method": "POST",
+    "path": "/v1/buckets/photos/presign",
+    "query": "",
+    "headers": [
+      [
+        "host",
+        "storage.vigrise.test"
+      ],
+      [
+        "content-type",
+        "application/json"
+      ],
+      [
+        "X-Vigrise-Delegation",
+        "v1.7.bm9uY2U.Y2lwaGVydGV4dA"
+      ]
+    ],
+    "body": "{\"key\":\"cat.jpg\",\"method\":\"GET\",\"expires_in\":600}"
+  },
+  "credentials": {
+    "access_key_id": "VGSTABCDEFGHIJKLMNOP",
+    "secret_access_key": "temporary-secret",
+    "session_token": "v1.7.bm9uY2U.Y2lwaGVydGV4dA"
+  },
+  "service": "storage",
+  "time": "20260926T100000Z",
+  "expected": {
+    "payload_hash": "e74a9e275ff2915ca7de384324a93a4d02a3a4b4532fd6e1c30873ac686fb1ff",
+    "signed_headers": "content-type;host;x-vgr-content-sha256;x-vgr-date;x-vgr-security-token;x-vigrise-delegation",
+    "canonical_request": "POST\n/v1/buckets/photos/presign\n\ncontent-type:application/json\nhost:storage.vigrise.test\nx-vgr-content-sha256:e74a9e275ff2915ca7de384324a93a4d02a3a4b4532fd6e1c30873ac686fb1ff\nx-vgr-date:20260926T100000Z\nx-vgr-security-token:v1.7.bm9uY2U.Y2lwaGVydGV4dA\nx-vigrise-delegation:v1.7.bm9uY2U.Y2lwaGVydGV4dA\n\ncontent-type;host;x-vgr-content-sha256;x-vgr-date;x-vgr-security-token;x-vigrise-delegation\ne74a9e275ff2915ca7de384324a93a4d02a3a4b4532fd6e1c30873ac686fb1ff",
+    "string_to_sign": "VGR4-HMAC-SHA256\n20260926T100000Z\n20260926/storage/vgr4_request\n384df16b408f9033ea282ae549134b98bc2cb447a496391e4e519e9869841392",
+    "signature": "59460a08e0655cd652f6171f3842c42828e5fac948622d746b8835b38570ca4b",
+    "authorization": "VGR4-HMAC-SHA256 Credential=VGSTABCDEFGHIJKLMNOP/20260926/storage/vgr4_request, SignedHeaders=content-type;host;x-vgr-content-sha256;x-vgr-date;x-vgr-security-token;x-vigrise-delegation, Signature=59460a08e0655cd652f6171f3842c42828e5fac948622d746b8835b38570ca4b"
+  }
+}

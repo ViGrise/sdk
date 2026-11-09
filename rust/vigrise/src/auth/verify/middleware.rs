@@ -7,6 +7,7 @@ use axum::extract::{ConnectInfo, OriginalUri, Request, State};
 use axum::middleware::Next;
 use axum::response::{IntoResponse, Response};
 use bytes::Bytes;
+use chrono::{DateTime, Utc};
 use http::request::Parts;
 use http::{HeaderMap, HeaderValue, Uri, header};
 use http_body_util::{BodyExt, LengthLimitError, Limited};
@@ -17,7 +18,9 @@ use crate::auth::QuotaStatus;
 use crate::auth::authorization::AuthorizationHeader;
 use crate::auth::canonical::{canonical_request, hex_sha256};
 use crate::auth::error::AuthError;
-use crate::auth::signer::{UNSIGNED_PAYLOAD, X_VGR_CONTENT_SHA256, X_VGR_DATE};
+use crate::auth::signer::{
+  UNSIGNED_PAYLOAD, X_VGR_CONTENT_SHA256, X_VGR_DATE, X_VIGRISE_DELEGATION,
+};
 use crate::auth::signing::string_to_sign;
 use crate::auth::verify::client::Authorizer;
 use crate::auth::verify::resolver::{ActionResolver, ResolvedAction};
@@ -306,6 +309,17 @@ async fn authorize(
     ));
   }
 
+  if parts.headers.contains_key(X_VIGRISE_DELEGATION)
+    && !auth
+      .signed_headers
+      .iter()
+      .any(|name| name.eq_ignore_ascii_case(X_VIGRISE_DELEGATION))
+  {
+    return Err(AuthError::IncompleteSignature(format!(
+      "{X_VIGRISE_DELEGATION} must be a signed header"
+    )));
+  }
+
   let empty = Bytes::new();
   let (payload_hash, body) = match payload {
     Payload::Buffered(body) => {
@@ -357,9 +371,14 @@ async fn authorize(
       usage: resolved.usage,
       streaming_signing_key: false,
       presigned_expires: None,
+      delegation_token: header_str(parts, X_VIGRISE_DELEGATION).map(str::to_string),
+      delegation_audience: None,
     }
   };
-  let request = build(resolved);
+  let request = AuthorizeRequest {
+    delegation_audience: verifier.resolver.delegation_audience(parts),
+    ..build(resolved)
+  };
   let usage = request.usage.clone();
   let mut allowed = decide(verifier, &request, &sts).await?;
   for extra in additional {
@@ -381,6 +400,8 @@ async fn authorize(
     usage,
     leases: allowed.leases,
     signing_key: allowed.signing_key,
+    delegation_token: allowed.delegation_token,
+    auth_deadline: allowed.auth_deadline,
   })
 }
 
@@ -391,6 +412,8 @@ struct Allowed {
   quotas: Vec<QuotaStatus>,
   leases: Vec<String>,
   signing_key: Option<String>,
+  delegation_token: Option<String>,
+  auth_deadline: Option<DateTime<Utc>>,
 }
 
 /// Asks the platform about one action of a request.
@@ -407,6 +430,8 @@ async fn decide(
     quotas,
     leases,
     signing_key,
+    delegation_token,
+    auth_deadline,
   } = verifier.authorizer.authorize(request).await?;
 
   match (decision, principal) {
@@ -416,6 +441,8 @@ async fn decide(
       quotas,
       leases,
       signing_key,
+      delegation_token,
+      auth_deadline,
     }),
     (Decision::Allow, None) => Err(AuthError::ServiceUnavailable(
       "Authorization response is missing the principal".into(),

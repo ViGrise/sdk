@@ -81,12 +81,15 @@ fn authorized() -> Authorized {
       organization_id: Uuid::from_u128(3),
       source_identity: None,
       source_principal: None,
+      on_behalf_of: None,
     },
     tier: Some("Free".into()),
     quotas: vec![],
     usage: Default::default(),
     leases: vec![],
     signing_key: None,
+    delegation_token: None,
+    auth_deadline: None,
   }
 }
 

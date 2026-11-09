@@ -48,6 +48,8 @@ impl Authorizer for SigningPlatform {
           quotas: vec![],
           leases: vec![],
           signing_key: None,
+          delegation_token: None,
+          auth_deadline: None,
         });
       }
       Ok(AuthorizeResponse {
@@ -62,11 +64,14 @@ impl Authorizer for SigningPlatform {
           organization_id: Uuid::nil(),
           source_identity: None,
           source_principal: None,
+          on_behalf_of: None,
         }),
         tier: Some("Pro".into()),
         quotas: vec![],
         leases: vec![],
         signing_key: None,
+        delegation_token: None,
+        auth_deadline: None,
       })
     })
   }

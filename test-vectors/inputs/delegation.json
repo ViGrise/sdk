@@ -1,0 +1,30 @@
+{
+  "name": "delegation token with temporary credentials",
+  "request": {
+    "method": "POST",
+    "path": "/v1/buckets/photos/presign",
+    "query": "",
+    "headers": [
+      [
+        "host",
+        "storage.vigrise.test"
+      ],
+      [
+        "content-type",
+        "application/json"
+      ],
+      [
+        "X-Vigrise-Delegation",
+        "v1.7.bm9uY2U.Y2lwaGVydGV4dA"
+      ]
+    ],
+    "body": "{\"key\":\"cat.jpg\",\"method\":\"GET\",\"expires_in\":600}"
+  },
+  "credentials": {
+    "access_key_id": "VGSTABCDEFGHIJKLMNOP",
+    "secret_access_key": "temporary-secret",
+    "session_token": "v1.7.bm9uY2U.Y2lwaGVydGV4dA"
+  },
+  "service": "storage",
+  "time": "20260926T100000Z"
+}

@@ -43,7 +43,7 @@ def sign_request(
   payload_hash: Optional[str] = None,
 ) -> Dict[str, str]:
   """Returns the authorization, x-vgr-date and x-vgr-content-sha256 headers.
-  Signs host, content-type when present, and every x-vgr-* header.
+  Signs host, content-type and x-vigrise-delegation when present, and every x-vgr-* header.
   `payload_hash` replaces the body's SHA-256, for example UNSIGNED_PAYLOAD
   for a body that streams unsigned."""
   if credentials.access_key_id.startswith("VGST") and not credentials.session_token:
@@ -69,7 +69,8 @@ def sign_request(
     {
       n.lower()
       for n, _ in signing
-      if n.lower() in ("host", "content-type") or n.lower().startswith("x-vgr-")
+      if n.lower() in ("host", "content-type", "x-vigrise-delegation")
+      or n.lower().startswith("x-vgr-")
     }
   )
 

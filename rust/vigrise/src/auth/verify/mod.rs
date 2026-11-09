@@ -12,5 +12,6 @@ pub use middleware::{
 };
 pub use resolver::{ActionResolver, ResolvedAction};
 pub use types::{
-  AuthorizeRequest, AuthorizeResponse, Authorized, Decision, ErrorBody, Principal, QuotaStatus,
+  AuthorizeRequest, AuthorizeResponse, Authorized, Decision, DelegatedPerson, ErrorBody, Principal,
+  QuotaStatus,
 };

@@ -207,6 +207,8 @@ async fn the_authorize_client_signs_with_the_provider_session() {
     usage: Default::default(),
     streaming_signing_key: false,
     presigned_expires: None,
+    delegation_token: None,
+    delegation_audience: None,
   };
   client.authorize(&request).await.unwrap();
   let seen = sts.seen.lock().unwrap().clone();
@@ -306,6 +308,8 @@ async fn the_authorize_client_replaces_a_rejected_session_and_retries() {
     usage: Default::default(),
     streaming_signing_key: false,
     presigned_expires: None,
+    delegation_token: None,
+    delegation_audience: None,
   };
   client.authorize(&request).await.unwrap();
   let signers: Vec<String> = sts

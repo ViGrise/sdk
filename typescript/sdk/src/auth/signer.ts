@@ -4,7 +4,7 @@ import { deriveSigningKey, signature, stringToSign } from "./signing.js";
 
 export { UNSIGNED_PAYLOAD, type SignInput, type SignedHeaders } from "./request.js";
 
-/** Signs `host`, `content-type` when present, and every `x-vgr-*` header. */
+/** Signs `host`, `content-type` and `x-vigrise-delegation` when present, and every `x-vgr-*` header. */
 export function signRequest(input: SignInput): SignedHeaders {
   const payloadHash = input.payloadHash ?? sha256Hex(bodyBytes(input));
   const signing = plan(input, payloadHash);

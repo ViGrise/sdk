@@ -73,10 +73,20 @@ storage.upload_stream("photos", "big.bin", open("big.bin", "rb"), part_size=8 * 
 `put_lifecycle`, `get_lifecycle` and `delete_lifecycle` on a bucket (rules
 expire objects or abort stale uploads). `presign(bucket, request)` returns a URL
 for a `GET` or `PUT` that works without credentials until it expires; browsers
-upload and download through such URLs.
+upload and download through such URLs. A service acting for a person calls
+`presign_delegated(bucket, request, token)` (`presignDelegated` in TypeScript) with the delegation token the
+platform gave it; the URL then ends no later than the person's authorization,
+and `expires_at` states the real expiry. `delegated(token, until)` returns a
+client whose every call carries the token; past `until` its calls other than
+`presign` run on the service's own rights, so work started in time can finish.
+`presign` always carries the token, because the URL outlives the call. With no
+cutoff, every call carries the token. TypeScript takes a `Date` cutoff and
+Python takes a timezone-aware `datetime`. The original client stays unchanged;
+Python delegated clients share its connection pool and close lifetime. The
+platform validates the token and caps the URL expiry.
 
 ```ts
-const { url } = await storage.presign("photos", { key: "2026/cat.jpg", method: "GET", expiresIn: 600 });
+const { url } = await storage.presignDelegated("photos", { key: "2026/cat.jpg", method: "GET", expiresIn: 600 }, delegationToken);
 ```
 
 ## Errors

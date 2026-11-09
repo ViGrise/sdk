@@ -73,6 +73,8 @@ fn request() -> AuthorizeRequest {
     usage: Default::default(),
     streaming_signing_key: false,
     presigned_expires: None,
+    delegation_token: None,
+    delegation_audience: None,
   }
 }
 

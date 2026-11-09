@@ -1,6 +1,7 @@
 use std::collections::BTreeMap;
 use std::fmt;
 
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use uuid::Uuid;
@@ -8,7 +9,7 @@ use uuid::Uuid;
 pub use crate::auth::QuotaStatus;
 
 /// Body of `POST /internal/v1/authorize`.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub struct AuthorizeRequest {
   /// Access key ID of the signer.
@@ -36,10 +37,44 @@ pub struct AuthorizeRequest {
   /// Validity in seconds of a presigned request, counted from its signing time.
   #[serde(default, skip_serializing_if = "Option::is_none")]
   pub presigned_expires: Option<i64>,
+  /// The delegation token a calling service presents, from the
+  /// `X-ViGrise-Delegation` header of the request.
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub delegation_token: Option<String>,
+  /// Catalog namespace of the service this request goes on to call for its
+  /// caller. Platform seals it into the delegation token it answers with, and
+  /// only that service can use the token.
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub delegation_audience: Option<String>,
 }
 
 fn is_false(value: &bool) -> bool {
   !value
+}
+
+impl fmt::Debug for AuthorizeRequest {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    f.debug_struct("AuthorizeRequest")
+      .field("access_key_id", &self.access_key_id)
+      .field(
+        "security_token",
+        &self.security_token.as_ref().map(|_| "<redacted>"),
+      )
+      .field("string_to_sign", &self.string_to_sign)
+      .field("signature", &self.signature)
+      .field("action", &self.action)
+      .field("resources", &self.resources)
+      .field("context", &self.context)
+      .field("usage", &self.usage)
+      .field("streaming_signing_key", &self.streaming_signing_key)
+      .field("presigned_expires", &self.presigned_expires)
+      .field(
+        "delegation_token",
+        &self.delegation_token.as_ref().map(|_| "<redacted>"),
+      )
+      .field("delegation_audience", &self.delegation_audience)
+      .finish()
+  }
 }
 
 /// The outcome of an authorization.
@@ -60,6 +95,19 @@ pub struct ErrorBody {
   pub code: String,
   /// Human-readable message.
   pub message: String,
+}
+
+/// The person a service acts for, as a delegation token states it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
+pub struct DelegatedPerson {
+  /// Platform user ID of the person.
+  pub identity: Uuid,
+  /// Organization the person acts for.
+  pub organization_id: Uuid,
+  /// Accounts session of the person; a personal session can have none.
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub accounts_session_id: Option<String>,
 }
 
 /// The authenticated caller.
@@ -87,6 +135,10 @@ pub struct Principal {
   /// session; absent for principals that are not role sessions.
   #[serde(default, skip_serializing_if = "Option::is_none")]
   pub source_principal: Option<String>,
+  /// The person this caller, a service, acts for; present when the request
+  /// carried a valid delegation token.
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub on_behalf_of: Option<DelegatedPerson>,
 }
 
 /// The platform's answer to an authorization request.
@@ -114,6 +166,14 @@ pub struct AuthorizeResponse {
   /// service; returned only when the request asked for it.
   #[serde(default, skip_serializing_if = "Option::is_none")]
   pub signing_key: Option<String>,
+  /// The token a service sends on to the service the request named as
+  /// `delegation_audience`; returned only for a person's credential.
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub delegation_token: Option<String>,
+  /// The moment the person's authorization runs out, from the person's session
+  /// or the presented delegation token. Absent for every other caller.
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub auth_deadline: Option<DateTime<Utc>>,
 }
 
 impl fmt::Debug for AuthorizeResponse {
@@ -129,6 +189,11 @@ impl fmt::Debug for AuthorizeResponse {
         "signing_key",
         &self.signing_key.as_ref().map(|_| "<redacted>"),
       )
+      .field(
+        "delegation_token",
+        &self.delegation_token.as_ref().map(|_| "<redacted>"),
+      )
+      .field("auth_deadline", &self.auth_deadline)
       .finish()
   }
 }
@@ -150,6 +215,12 @@ pub struct Authorized {
   /// Hex SigV4 signing key of the request's scope, present only when the
   /// service asked for it and the platform allowed it.
   pub signing_key: Option<String>,
+  /// The token to send to the service the resolver named as the delegation
+  /// audience; present only for a person's credential.
+  pub delegation_token: Option<String>,
+  /// The moment the person's authorization runs out; what the service creates
+  /// for this caller must not outlive it. The platform is its only source.
+  pub auth_deadline: Option<DateTime<Utc>>,
 }
 
 impl fmt::Debug for Authorized {
@@ -164,6 +235,11 @@ impl fmt::Debug for Authorized {
         "signing_key",
         &self.signing_key.as_ref().map(|_| "<redacted>"),
       )
+      .field(
+        "delegation_token",
+        &self.delegation_token.as_ref().map(|_| "<redacted>"),
+      )
+      .field("auth_deadline", &self.auth_deadline)
       .finish()
   }
 }
@@ -173,7 +249,7 @@ mod tests {
   use super::*;
 
   #[test]
-  fn debug_output_redacts_the_signing_key() {
+  fn debug_output_redacts_the_secrets_of_a_response() {
     let response = AuthorizeResponse {
       decision: Decision::Allow,
       error: None,
@@ -182,10 +258,34 @@ mod tests {
       quotas: vec![],
       leases: vec![],
       signing_key: Some("00ff00ff".into()),
+      delegation_token: Some("sealed-token".into()),
+      auth_deadline: None,
     };
     let text = format!("{response:?}");
     assert!(!text.contains("00ff00ff"), "{text}");
+    assert!(!text.contains("sealed-token"), "{text}");
     assert!(text.contains("<redacted>"));
+  }
+
+  #[test]
+  fn debug_output_redacts_the_tokens_of_a_request() {
+    let request = AuthorizeRequest {
+      access_key_id: "k".into(),
+      security_token: Some("session-secret".into()),
+      string_to_sign: "s".into(),
+      signature: "g".into(),
+      action: "a:B".into(),
+      resources: vec![],
+      context: Map::new(),
+      usage: BTreeMap::new(),
+      streaming_signing_key: false,
+      presigned_expires: None,
+      delegation_token: Some("sealed-token".into()),
+      delegation_audience: None,
+    };
+    let text = format!("{request:?}");
+    assert!(!text.contains("session-secret"), "{text}");
+    assert!(!text.contains("sealed-token"), "{text}");
   }
 
   #[test]
@@ -217,5 +317,7 @@ mod tests {
     let json = serde_json::to_value(&request).unwrap();
     assert!(json.get("streaming_signing_key").is_none());
     assert!(json.get("presigned_expires").is_none());
+    assert!(json.get("delegation_token").is_none());
+    assert!(json.get("delegation_audience").is_none());
   }
 }
