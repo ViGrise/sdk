@@ -20,8 +20,10 @@ pip install -e ".[test]" && ruff format --check . && python -m pytest -q
 
 The VGR4 vectors in `test-vectors/vgr4` are generated from
 `test-vectors/inputs` by `python3 test-vectors/generate.py`; CI fails when the
-committed files differ from a fresh generation. Every language passes every
-vector.
+committed files differ from a fresh generation. Run
+`cargo run --manifest-path rust/vigrise/Cargo.toml --example generate_vgr4_vectors`
+to derive the same values from the Rust signer, then run the Python generator
+to normalize JSON key order. Every language passes every vector.
 
 ## Source layout
 

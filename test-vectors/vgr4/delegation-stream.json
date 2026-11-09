@@ -1,0 +1,38 @@
+{
+  "name": "delegation token on a streamed upload",
+  "request": {
+    "method": "PUT",
+    "path": "/v1/buckets/photos/objects/cat.jpg",
+    "query": "",
+    "headers": [
+      [
+        "host",
+        "storage.vigrise.test"
+      ],
+      [
+        "content-type",
+        "application/json"
+      ],
+      [
+        "X-Vigrise-Delegation",
+        "v1.7.bm9uY2U.Y2lwaGVydGV4dA"
+      ]
+    ],
+    "body": "",
+    "payload_hash": "UNSIGNED-PAYLOAD"
+  },
+  "credentials": {
+    "access_key_id": "VGAKTEST",
+    "secret_access_key": "secret"
+  },
+  "service": "storage",
+  "time": "20260926T100000Z",
+  "expected": {
+    "payload_hash": "UNSIGNED-PAYLOAD",
+    "signed_headers": "content-type;host;x-vgr-content-sha256;x-vgr-date;x-vigrise-delegation",
+    "canonical_request": "PUT\n/v1/buckets/photos/objects/cat.jpg\n\ncontent-type:application/json\nhost:storage.vigrise.test\nx-vgr-content-sha256:UNSIGNED-PAYLOAD\nx-vgr-date:20260926T100000Z\nx-vigrise-delegation:v1.7.bm9uY2U.Y2lwaGVydGV4dA\n\ncontent-type;host;x-vgr-content-sha256;x-vgr-date;x-vigrise-delegation\nUNSIGNED-PAYLOAD",
+    "string_to_sign": "VGR4-HMAC-SHA256\n20260926T100000Z\n20260926/storage/vgr4_request\nb2bfe27af53069ec38ae83354b9b7a20e8bd717a4c82a588bd0f1af9a86baa08",
+    "signature": "6e20040cc2f24486aa407b02514c9ee9620455cb227f908d16dc3a40043e4b2f",
+    "authorization": "VGR4-HMAC-SHA256 Credential=VGAKTEST/20260926/storage/vgr4_request, SignedHeaders=content-type;host;x-vgr-content-sha256;x-vgr-date;x-vigrise-delegation, Signature=6e20040cc2f24486aa407b02514c9ee9620455cb227f908d16dc3a40043e4b2f"
+  }
+}
