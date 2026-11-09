@@ -44,6 +44,7 @@ interface Call {
   body?: Body;
   /** Length of a streamed body; the body is signed as UNSIGNED-PAYLOAD. */
   streamLength?: number;
+  lastingDelegation?: boolean;
 }
 
 const segment = (value: string) => encodeURIComponent(value);
@@ -117,8 +118,9 @@ function ruleOf(raw: any): LifecycleRule {
 /** A client for ViGrise Storage in Node. Every call is VGR4-signed for the `storage` service; browsers use presigned URLs. */
 export class StorageClient {
   private readonly http: SignedHttp;
+  private delegation?: { token: string; until?: number };
 
-  constructor(options: StorageClientOptions = {}) {
+  constructor(private readonly options: StorageClientOptions = {}) {
     this.http = new SignedHttp({
       service: "storage",
       endpoint: options.endpoint,
@@ -132,8 +134,24 @@ export class StorageClient {
     });
   }
 
+  /** Returns a client that carries the token until the cutoff; presign always carries it. */
+  delegated(delegationToken: string, until?: Date): StorageClient {
+    if (/[\x00-\x08\x0a-\x1f\x7f]/.test(delegationToken)) {
+      throw new StorageError(0, "TransportError", "Invalid delegation token");
+    }
+    const client = new StorageClient(this.options);
+    client.delegation = { token: delegationToken, until: until?.getTime() };
+    return client;
+  }
+
   private send(call: Call): Promise<Response> {
     const headers: Record<string, string> = { ...call.headers };
+    if (
+      this.delegation &&
+      (call.lastingDelegation || this.delegation.until === undefined || Date.now() < this.delegation.until)
+    ) {
+      headers["x-vigrise-delegation"] = this.delegation.token;
+    }
     let body: Body | undefined = call.body;
     if (call.json !== undefined) {
       headers["content-type"] = "application/json";
@@ -410,6 +428,7 @@ export class StorageClient {
     const raw = await this.json({
       method: "POST",
       path: `/v1/buckets/${segment(bucket)}/presign`,
+      lastingDelegation: true,
       json: compact({
         key: request.key,
         method: request.method,
@@ -423,6 +442,11 @@ export class StorageClient {
       }),
     });
     return { url: raw.url, expiresAt: raw.expires_at };
+  }
+
+  /** Creates a URL with the supplied delegation token when present. */
+  presignDelegated(bucket: string, request: PresignRequest, delegationToken?: string): Promise<Presigned> {
+    return (delegationToken === undefined ? this : this.delegated(delegationToken)).presign(bucket, request);
   }
 
   /** Replaces the lifecycle rules of a bucket. */

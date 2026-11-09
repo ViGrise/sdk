@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import { canonicalRequest, sha256Hex } from "../../src/auth/canonical.js";
 import { deriveSigningKey, scope, signature, stringToSign } from "../../src/auth/signing.js";
 import { signRequest } from "../../src/auth/signer.js";
+import { signRequest as signWebCrypto } from "../../src/auth/webcrypto.js";
 
 interface Vector {
   request: {
@@ -62,10 +63,10 @@ describe("VGR4 vectors", () => {
       expect(signature(key, sts)).toBe(v.expected.signature);
     });
 
-    it(`signRequest matches ${name}`, () => {
+    it(`signRequest matches ${name}`, async () => {
       const host = v.request.headers.find(([n]) => n.toLowerCase() === "host")![1];
       const query = v.request.query ? `?${v.request.query}` : "";
-      const signed = signRequest({
+      const input = {
         method: v.request.method,
         url: `https://${host}${v.request.path}${query}`,
         headers: v.request.headers,
@@ -78,7 +79,9 @@ describe("VGR4 vectors", () => {
         },
         service: v.service,
         now: parseTime(v.time),
-      });
+      };
+      const signed = signRequest(input);
+      expect((await signWebCrypto(input)).authorization).toBe(v.expected.authorization);
       expect(signed.authorization).toBe(v.expected.authorization);
     });
   }

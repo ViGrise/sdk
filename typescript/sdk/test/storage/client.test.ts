@@ -424,3 +424,32 @@ describe("StorageClient credentials", () => {
     expect(invalidated).toBe(1);
   });
 });
+
+describe("StorageClient delegation", () => {
+  it("signs the token until the cutoff and always sends it for presign", async () => {
+    const { server, client } = await storage(() =>
+      jsonReply({ buckets: [], url: "https://storage.test/object", expires_at: "2026-10-01T12:00:00Z" }),
+    );
+    const cutoff = new Date(Date.now() + 60_000);
+    const delegated = client.delegated("sealed-token", cutoff);
+    await delegated.listBuckets();
+    expect(server.last().headers["x-vigrise-delegation"]).toBe("sealed-token");
+    expect(server.last().headers.authorization).toContain(";x-vigrise-delegation,");
+    await client.listBuckets();
+    expect(server.last().headers["x-vigrise-delegation"]).toBeUndefined();
+    const expired = client.delegated("sealed-token", new Date(0));
+    await expired.listBuckets();
+    expect(server.last().headers["x-vigrise-delegation"]).toBeUndefined();
+    await expired.presign("photos", { key: "cat.jpg", method: "GET", expiresIn: 600 });
+    expect(server.last().headers["x-vigrise-delegation"]).toBe("sealed-token");
+    expect(server.last().headers.authorization).toContain(";x-vigrise-delegation,");
+    await client.presignDelegated("photos", { key: "cat.jpg", method: "GET", expiresIn: 600 }, "other-token");
+    expect(server.last().headers["x-vigrise-delegation"]).toBe("other-token");
+    await client.delegated("lasting-token").listBuckets();
+    expect(server.last().headers["x-vigrise-delegation"]).toBe("lasting-token");
+  });
+
+  it.each(["bad\r\nheader", "bad\0token"])("rejects an invalid delegation header %j", (token) => {
+    expect(() => new StorageClient({ credentials }).delegated(token)).toThrow(StorageError);
+  });
+});

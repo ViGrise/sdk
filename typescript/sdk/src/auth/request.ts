@@ -37,7 +37,7 @@ export function bodyBytes(input: SignInput): Uint8Array {
   return typeof input.body === "string" ? new TextEncoder().encode(input.body) : (input.body ?? new Uint8Array());
 }
 
-/** Signs `host`, `content-type` when present, and every `x-vgr-*` header. */
+/** Signs `host`, `content-type` and `x-vigrise-delegation` when present, and every `x-vgr-*` header. */
 export function plan(input: SignInput, payloadHash: string): SigningPlan {
   if (input.credentials.accessKeyId.startsWith("VGST") && !input.credentials.sessionToken) {
     throw new Error("Temporary credentials require a session token");
@@ -56,7 +56,9 @@ export function plan(input: SignInput, payloadHash: string): SigningPlan {
   if (input.credentials.sessionToken) all.push(["x-vgr-security-token", input.credentials.sessionToken]);
   const signedHeaders = [
     ...new Set(
-      all.map(([n]) => n.toLowerCase()).filter((n) => n === "host" || n === "content-type" || n.startsWith("x-vgr-")),
+      all
+        .map(([n]) => n.toLowerCase())
+        .filter((n) => n === "host" || n === "content-type" || n === "x-vigrise-delegation" || n.startsWith("x-vgr-")),
     ),
   ].sort();
   return {
