@@ -85,13 +85,18 @@ jobs:
       - run: npm run check:package
 
   python:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     defaults:
       run:
         working-directory: python
     strategy:
       matrix:
-        python-version: ["3.9", "3.13"]
+        include:
+          # The oldest supported Python has builds only for older runner images.
+          - python-version: "3.9"
+            os: ubuntu-24.04
+          - python-version: "3.13"
+            os: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
