@@ -134,7 +134,11 @@ export class StorageClient {
     });
   }
 
-  /** Returns a client that carries the token until the cutoff; presign always carries it. */
+  /**
+   * @internal ViGrise services only. Returns a client that carries the token until the cutoff.
+   * Past the cutoff, calls run on the service's own rights. The caller must check the deadline
+   * before starting a new operation. Presign always carries the token.
+   */
   delegated(delegationToken: string, until?: Date): StorageClient {
     if (/[\x00-\x08\x0a-\x1f\x7f]/.test(delegationToken)) {
       throw new StorageError(0, "TransportError", "Invalid delegation token");
@@ -444,7 +448,7 @@ export class StorageClient {
     return { url: raw.url, expiresAt: raw.expires_at };
   }
 
-  /** Creates a URL with the supplied delegation token when present. */
+  /** @internal ViGrise services only. Creates a URL with the supplied delegation token when present. */
   presignDelegated(bucket: string, request: PresignRequest, delegationToken?: string): Promise<Presigned> {
     return (delegationToken === undefined ? this : this.delegated(delegationToken)).presign(bucket, request);
   }

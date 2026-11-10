@@ -22,6 +22,7 @@ No feature is on by default. `vigrise::auth` is always available.
 | `openapi` | `utoipa` schemas for the wire types |
 | `accounts` | `vigrise::accounts`: OAuth2/OIDC helpers and back-channel logout |
 | `accounts-testing` | `accounts::testing::TestSigner` for app tests |
+| `service-delegation` | Internal ViGrise service delegation helpers (use with `storage` or `verify`) |
 | `storage` | `vigrise::storage`: the Storage client |
 | `speech` | `vigrise::speech`: the Speech client and webhook verification |
 

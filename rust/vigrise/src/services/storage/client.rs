@@ -68,10 +68,11 @@ impl StorageClient {
 
   /// A client whose calls carry `delegation_token`, for a service acting for a
   /// person. Past `until`, calls go out with no token and run on the service's
-  /// own rights, so work the person started in time can finish; the service
-  /// decides beforehand whether an operation may start. `presign` always
+  /// own rights, so work the person started in time can finish. The caller
+  /// must check the deadline before starting a new operation. `presign` always
   /// carries the token. With no `until`, every call carries the token and the
   /// platform refuses it once it has expired.
+  #[cfg(feature = "service-delegation")]
   pub fn delegated(
     &self,
     delegation_token: &str,
@@ -666,6 +667,7 @@ impl StorageClient {
   /// [`presign`](Self::presign) for a person this service acts for: with
   /// `delegation_token`, the URL expires no later than the person's
   /// authorization does, and `expires_at` states the real expiry.
+  #[cfg(feature = "service-delegation")]
   pub async fn presign_delegated(
     &self,
     bucket: &str,

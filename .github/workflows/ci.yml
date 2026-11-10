@@ -34,9 +34,11 @@ jobs:
       - run: cargo clippy --features reqwest -- -D warnings
       - run: cargo clippy --features speech -- -D warnings
       - run: cargo clippy --features storage -- -D warnings
+      - run: cargo clippy --features storage,verify,service-delegation -- -D warnings
       - run: cargo clippy --features accounts -- -D warnings
       - run: cargo clippy --all-targets --all-features -- -D warnings
       - run: cargo test
+      - run: cargo test --features service-delegation
 
   rust-sso:
     runs-on: ubuntu-latest

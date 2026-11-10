@@ -1,4 +1,4 @@
-#![cfg(feature = "storage")]
+#![cfg(all(feature = "storage", feature = "service-delegation"))]
 
 use std::sync::{Arc, Mutex};
 

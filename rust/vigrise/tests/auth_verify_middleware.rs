@@ -73,7 +73,6 @@ impl Authorizer for PersonPlatform {
   }
 }
 
-/// Names Storage as the next hop of one request, and of its first action only.
 struct DelegatingResolver;
 
 impl ActionResolver for DelegatingResolver {
@@ -91,6 +90,7 @@ impl ActionResolver for DelegatingResolver {
     }])
   }
 
+  #[cfg(feature = "service-delegation")]
   fn delegation_audience(&self, _parts: &Parts) -> Option<String> {
     Some("storage".into())
   }
@@ -924,7 +924,10 @@ async fn the_delegation_context_travels_between_the_request_the_platform_and_the
   let asked = asked.lock().unwrap();
   assert_eq!(asked.len(), 2);
   assert_eq!(asked[0].delegation_token.as_deref(), Some("presented"));
+  #[cfg(feature = "service-delegation")]
   assert_eq!(asked[0].delegation_audience.as_deref(), Some("storage"));
+  #[cfg(not(feature = "service-delegation"))]
+  assert_eq!(asked[0].delegation_audience, None);
   assert_eq!(asked[1].delegation_token.as_deref(), Some("presented"));
   assert_eq!(asked[1].delegation_audience, None);
 }
