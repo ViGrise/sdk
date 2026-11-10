@@ -375,9 +375,11 @@ async fn authorize(
       delegation_audience: None,
     }
   };
+  let request = build(resolved);
+  #[cfg(feature = "service-delegation")]
   let request = AuthorizeRequest {
     delegation_audience: verifier.resolver.delegation_audience(parts),
-    ..build(resolved)
+    ..request
   };
   let usage = request.usage.clone();
   let mut allowed = decide(verifier, &request, &sts).await?;

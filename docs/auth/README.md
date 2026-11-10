@@ -18,10 +18,25 @@ string to sign is `VGR4-HMAC-SHA256`, the timestamp, the scope and the hash of
 the canonical request, each on its own line. Every signature covers `host`,
 `x-vgr-date` (`yyyymmddThhmmssZ`) and `x-vgr-content-sha256`; temporary
 credentials also sign `x-vgr-security-token`. Signatures also cover `content-type`,
-all `x-vgr-*` headers and `x-vigrise-delegation` when present. The delegation
-token is an opaque value supplied by the platform; callers put it in that
-header before signing and send the same header with the request. The result travels in
+all `x-vgr-*` headers and `x-vigrise-delegation` when present. The result travels in
 `Authorization: VGR4-HMAC-SHA256 Credential=<access key>/<scope>, SignedHeaders=<names>, Signature=<hex>`.
+
+The delegation token is an opaque value supplied by the platform. Only ViGrise
+services can present a delegation token. A service puts it in that header before
+signing and sends the same header with the request. Rust service integrations
+enable the opt-in `service-delegation` Cargo feature alongside `storage` or
+`verify` to use the Storage delegation helpers or the resolver's
+`delegation_audience` hook. The authorization wire types remain public with
+`verify`. TypeScript and Python delegation helpers are internal service
+integration APIs.
+
+A delegated Storage client sends the token until its cutoff, then sends calls
+on the service's own rights. The caller must check the deadline before starting
+a new operation. Presigning always sends the token, and the platform caps the
+URL expiry at the person's authorization deadline. With no cutoff, every call
+sends the token. TypeScript takes a `Date` cutoff; Python takes a timezone-aware
+`datetime`. Delegated clients share the original client's signer and transport;
+Python clients also share its close lifetime.
 
 ## Signing a request
 

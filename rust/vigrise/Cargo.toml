@@ -16,6 +16,7 @@ include = ["src/**", "examples/**", "README.md", "LICENSE"]
 
 [features]
 default = []
+service-delegation = []
 reqwest = ["dep:reqwest"]
 sts = ["reqwest", "dep:tokio", "tokio/sync", "chrono/serde"]
 verify = ["sts", "dep:axum", "dep:bytes", "dep:http-body", "dep:http-body-util", "dep:tokio", "tokio/rt", "dep:uuid", "dep:tracing"]

@@ -134,7 +134,9 @@ class _DelegatedStorage:
   def delegated(
     self: _Storage, delegation_token: str, until: Optional[datetime] = None
   ) -> _Storage:
-    """Returns a client carrying the token until the cutoff; presign always carries it.
+    """Internal to ViGrise services. Returns a client carrying the token until the cutoff.
+    Past the cutoff, calls run on the service's own rights. The caller must check the
+    deadline before starting a new operation. Presign always carries the token.
     The returned client shares the HTTP connection pool and its lifetime with this client.
     `until` is a timezone-aware datetime; omitted, the token accompanies every call.
     """
@@ -386,7 +388,7 @@ class StorageClient(_DelegatedStorage):
   def presign_delegated(
     self, bucket: str, request: PresignRequest, delegation_token: Optional[str] = None
   ) -> Presigned:
-    """Creates a URL with the supplied delegation token when present."""
+    """Internal to ViGrise services. Creates a URL with the supplied delegation token."""
     client = self if delegation_token is None else self.delegated(delegation_token)
     return client.presign(bucket, request)
 
@@ -633,7 +635,7 @@ class AsyncStorageClient(_DelegatedStorage):
   async def presign_delegated(
     self, bucket: str, request: PresignRequest, delegation_token: Optional[str] = None
   ) -> Presigned:
-    """Creates a URL with the supplied delegation token when present."""
+    """Internal to ViGrise services. Creates a URL with the supplied delegation token."""
     client = self if delegation_token is None else self.delegated(delegation_token)
     return await client.presign(bucket, request)
 

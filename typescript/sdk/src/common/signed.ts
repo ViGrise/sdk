@@ -82,7 +82,12 @@ export class SignedHttp {
       throw failures.transport((error as Error).message, error);
     }
     if (!response.ok) {
-      if ((response.status === 401 || response.status === 403) && typeof this.options.credentials === "function") {
+      // Delegated refusals can concern the person's authorization.
+      if (
+        (response.status === 401 || response.status === 403) &&
+        !new Headers(headers).has("x-vigrise-delegation") &&
+        typeof this.options.credentials === "function"
+      ) {
         this.options.credentials.invalidate?.();
       }
       throw failures.response(response.status, await response.text());

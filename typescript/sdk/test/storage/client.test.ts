@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { StorageClient, StorageError } from "../../src/services/storage/index.js";
 import { fakeServer, jsonReply, type FakeServer } from "../helpers/fake-server.js";
@@ -451,5 +451,33 @@ describe("StorageClient delegation", () => {
 
   it.each(["bad\r\nheader", "bad\0token"])("rejects an invalid delegation header %j", (token) => {
     expect(() => new StorageClient({ credentials }).delegated(token)).toThrow(StorageError);
+  });
+});
+
+describe("StorageClient delegated resources", () => {
+  it("keeps the resolved endpoint when the environment changes", async () => {
+    const first = await fakeServer(() => jsonReply({ buckets: [bucket] }));
+    const second = await fakeServer(() => jsonReply({ buckets: [] }));
+    servers.push(first, second);
+    try {
+      vi.stubEnv("VIGRISE_ENDPOINT_URL_STORAGE", first.url);
+      const client = new StorageClient({ credentials });
+      vi.stubEnv("VIGRISE_ENDPOINT_URL_STORAGE", second.url);
+      expect(await client.delegated("sealed-token").listBuckets()).toHaveLength(1);
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it.each([401, 403])("preserves the service session on a delegated %i refusal", async (status) => {
+    let invalidated = 0;
+    const server = await fakeServer(() => jsonReply({ error: { code: "AccessDenied", message: "no" } }, status));
+    servers.push(server);
+    const provider = Object.assign(() => credentials, { invalidate: () => void (invalidated += 1) });
+    const client = new StorageClient({ endpoint: server.url, credentials: provider });
+    await expect(client.delegated("sealed-token").listBuckets()).rejects.toBeInstanceOf(StorageError);
+    expect(invalidated).toBe(0);
+    await expect(client.listBuckets()).rejects.toBeInstanceOf(StorageError);
+    expect(invalidated).toBe(1);
   });
 });

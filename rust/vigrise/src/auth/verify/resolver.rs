@@ -36,6 +36,7 @@ pub trait ActionResolver: Send + Sync + 'static {
   /// Catalog namespace of the service this request goes on to call for its
   /// caller. When the caller is a person, the platform answers with a
   /// delegation token for that service.
+  #[cfg(feature = "service-delegation")]
   fn delegation_audience(&self, parts: &Parts) -> Option<String> {
     let _ = parts;
     None
