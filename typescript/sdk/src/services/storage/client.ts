@@ -120,7 +120,7 @@ export class StorageClient {
   private readonly http: SignedHttp;
   private delegation?: { token: string; until?: number };
 
-  constructor(private readonly options: StorageClientOptions = {}) {
+  constructor(options: StorageClientOptions = {}) {
     this.http = new SignedHttp({
       service: "storage",
       endpoint: options.endpoint,
@@ -139,7 +139,7 @@ export class StorageClient {
     if (/[\x00-\x08\x0a-\x1f\x7f]/.test(delegationToken)) {
       throw new StorageError(0, "TransportError", "Invalid delegation token");
     }
-    const client = new StorageClient(this.options);
+    const client: StorageClient = Object.assign(Object.create(Object.getPrototypeOf(this)), this);
     client.delegation = { token: delegationToken, until: until?.getTime() };
     return client;
   }
