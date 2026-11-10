@@ -75,6 +75,7 @@ impl SignedHttp {
     mut headers: HeaderMap,
     payload: Payload,
   ) -> Result<reqwest::Response, SendError> {
+    let delegated = headers.contains_key(crate::auth::X_VIGRISE_DELEGATION);
     let url = format!("{}{path}", self.endpoint);
     let uri: http::Uri = url
       .parse()
@@ -130,7 +131,8 @@ impl SignedHttp {
     }
     let status = response.status().as_u16();
     let body = response.bytes().await.unwrap_or_default();
-    if status == 401 || status == 403 {
+    // Delegated refusals can concern the person's authorization.
+    if (status == 401 || status == 403) && !delegated {
       self.credentials.invalidate();
     }
     Err(SendError::Refused { status, body })

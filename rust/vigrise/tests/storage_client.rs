@@ -67,3 +67,54 @@ async fn presign_carries_the_delegation_token_past_the_deadline() {
     ]
   );
 }
+
+#[derive(Debug, Default)]
+struct SessionProvider {
+  invalidated: std::sync::atomic::AtomicUsize,
+}
+
+impl vigrise::auth::CredentialsProvider for SessionProvider {
+  fn credentials(&self) -> vigrise::auth::CredentialsFuture<'_> {
+    Box::pin(async {
+      Ok(Credentials::new("VGSTTEST", "secret").with_session_token("session-token"))
+    })
+  }
+
+  fn invalidate(&self) -> bool {
+    self
+      .invalidated
+      .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+    true
+  }
+}
+
+#[tokio::test]
+async fn delegation_refusal_preserves_service_session() {
+  use std::sync::atomic::Ordering;
+
+  for status in [StatusCode::UNAUTHORIZED, StatusCode::FORBIDDEN] {
+    let app = Router::new().fallback(move || async move {
+      (
+        status,
+        r#"{"error":{"code":"AccessDenied","message":"no"}}"#,
+      )
+    });
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let url = format!("http://{}", listener.local_addr().unwrap());
+    let server = tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
+    let provider = Arc::new(SessionProvider::default());
+    let client = StorageClient::new(url, provider.clone());
+    assert!(
+      client
+        .delegated("sealed-token", None)
+        .unwrap()
+        .list_buckets()
+        .await
+        .is_err()
+    );
+    assert_eq!(provider.invalidated.load(Ordering::SeqCst), 0);
+    assert!(client.list_buckets().await.is_err());
+    assert_eq!(provider.invalidated.load(Ordering::SeqCst), 1);
+    server.abort();
+  }
+}

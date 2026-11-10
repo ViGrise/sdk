@@ -19,9 +19,10 @@ class Failures:
 
 
 class _Sender:
-  def _refused(self, status: int) -> None:
+  def _refused(self, status: int, request: httpx.Request) -> None:
     """Tells a credentials provider that the service refused its credentials, for example a revoked session."""
-    if status in (401, 403):
+    # Delegated refusals can concern the person's authorization.
+    if status in (401, 403) and "x-vigrise-delegation" not in request.headers:
       invalidate = getattr(self.credentials, "invalidate", None)
       if callable(invalidate):
         invalidate()
@@ -77,7 +78,7 @@ class SyncSender(_Sender):
     if not response.is_success:
       body = response.read()
       response.close()
-      self._refused(response.status_code)
+      self._refused(response.status_code, built)
       raise self.failures.response(response.status_code, body)
     return response
 
@@ -108,6 +109,6 @@ class AsyncSender(_Sender):
     if not response.is_success:
       body = await response.aread()
       await response.aclose()
-      self._refused(response.status_code)
+      self._refused(response.status_code, built)
       raise self.failures.response(response.status_code, body)
     return response

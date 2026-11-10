@@ -468,4 +468,16 @@ describe("StorageClient delegated resources", () => {
       vi.unstubAllEnvs();
     }
   });
+
+  it.each([401, 403])("preserves the service session on a delegated %i refusal", async (status) => {
+    let invalidated = 0;
+    const server = await fakeServer(() => jsonReply({ error: { code: "AccessDenied", message: "no" } }, status));
+    servers.push(server);
+    const provider = Object.assign(() => credentials, { invalidate: () => void (invalidated += 1) });
+    const client = new StorageClient({ endpoint: server.url, credentials: provider });
+    await expect(client.delegated("sealed-token").listBuckets()).rejects.toBeInstanceOf(StorageError);
+    expect(invalidated).toBe(0);
+    await expect(client.listBuckets()).rejects.toBeInstanceOf(StorageError);
+    expect(invalidated).toBe(1);
+  });
 });

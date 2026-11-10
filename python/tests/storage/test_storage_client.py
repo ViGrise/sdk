@@ -605,3 +605,27 @@ async def test_invalid_delegation_header_is_a_storage_error(make_client, token):
   with pytest.raises(StorageError) as raised:
     client.delegated(token)
   assert (raised.value.status, raised.value.code) == (0, "TransportError")
+
+
+@pytest.mark.parametrize("status", [401, 403])
+async def test_delegation_refusal_preserves_service_session(make_client, status):
+  class Provider:
+    invalidated = 0
+
+    def __call__(self):
+      return CREDENTIALS
+
+    def invalidate(self):
+      self.invalidated += 1
+
+  provider = Provider()
+  client, _ = make_client(
+    lambda r: json_response({"error": {"code": "AccessDenied", "message": "no"}}, status)
+  )
+  client._sender.credentials = provider
+  with pytest.raises(StorageError):
+    await call(client.delegated("sealed-token"), "list_buckets")
+  assert provider.invalidated == 0
+  with pytest.raises(StorageError):
+    await call(client, "list_buckets")
+  assert provider.invalidated == 1
